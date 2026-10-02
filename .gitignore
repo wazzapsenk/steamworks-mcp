@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+# Playwright browser profile (contains your Steamworks session cookies)
+.steamworks-mcp/

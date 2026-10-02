@@ -1,0 +1,67 @@
+# Example project for steamworks-mcp. Art and screenshots are generated placeholders.
+appId: 480
+name: Demo Game
+sourceLanguage: english
+targetLanguages: [turkish, german, japanese]
+
+store:
+  shortDescription: >-
+    A fast-paced arcade brawler where every round reshuffles the arena. Grab a friend, pick a weapon, and survive the chaos.
+  about: |
+    [h2]Every round is different[/h2]
+    The arena rebuilds itself between rounds, so no two fights play the same.
+
+    [h2]Features[/h2]
+    [list]
+    [*] Local co-op for up to 4 players
+    [*] 30 weapons with unique physics
+    [*] Daily challenges with online leaderboards
+    [/list]
+  tags: [Action, Arcade, Local Co-Op, Indie]
+  supportedLanguages:
+    english: { interface: true, fullAudio: true, subtitles: true }
+    turkish: { interface: true, subtitles: true }
+    german: { interface: true, subtitles: true }
+    japanese: { interface: true, subtitles: true }
+  systemRequirements:
+    windows:
+      minimum:
+        os: Windows 10 64-bit
+        processor: Intel Core i3-6100
+        memory: 4 GB RAM
+        graphics: GTX 750 Ti
+        directx: Version 11
+        storage: 2 GB available space
+  screenshotsDir: store/screenshots
+  art:
+    keyArt: store/art/keyart.png
+    logo: store/art/logo.png
+
+achievements:
+  - id: ACH_FIRST_WIN
+    name: First Blood
+    description: Win your first round.
+    icon: achievements/first_win.png
+  - id: ACH_SPEEDRUN
+    name: Blink and You'll Miss It
+    description: Win a round in under 30 seconds.
+    hidden: true
+    icon: achievements/speedrun.png
+
+cloud:
+  byteQuota: 104857600
+  fileQuota: 50
+  autoCloud:
+    roots:
+      - root: WinAppDataLocalLow
+        subdirectory: DemoStudio/DemoGame
+        pattern: "*.sav"
+        os: windows
+        recursive: false
+
+app:
+  installFolder: DemoGame
+  launchOptions:
+    - executable: DemoGame.exe
+      os: windows
+      arch: "64"

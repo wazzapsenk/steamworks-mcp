@@ -1,0 +1,168 @@
+# steamworks-mcp
+
+**Your Steam store page and Steamworks settings as code — localized by your AI assistant.**
+
+An [MCP](https://modelcontextprotocol.io) server for game developers who are tired of re-entering the same store
+descriptions, translations, capsules, achievements and Steam Cloud settings for every game. Works with **Claude**
+(Desktop, Code), **ChatGPT** (developer mode connectors) and any other MCP client.
+
+> Not affiliated with or endorsed by Valve. "Steam" and "Steamworks" are trademarks of Valve Corporation.
+
+## What it does
+
+| Problem | Tool(s) |
+|---|---|
+| Store text + achievements written once, in one file | `steamworks.yaml` (`project_init`, `project_read`) |
+| Translating everything into 10+ languages, keeping it in sync | `localization_status` → `localization_pending` → *the model translates* → `localization_set` |
+| Capsules in 11 different sizes | `assets_generate` — one key art + one logo → every capsule, library and icon image at the exact size |
+| Achievement icons + locked variants | `achievement_icons_prepare` |
+| "Did I upload enough screenshots / right size?" | `screenshots_check`, `project_validate` |
+| Knowing what to enter where in Steamworks | `export_bundle` → `STEAMWORKS_CHECKLIST.md`, per-language JSON, achievement localization CSV |
+| Is Steam in sync with my file? | `steam_achievements_diff` (Web API) |
+| Builds, branches, leaderboards | `steam_app_builds`, `steam_leaderboards`, `steam_leaderboard_create` (Web API) |
+| Actually filling the Steamworks forms | `steamworks_open` / `inspect` / `fill` / `upload` / `click` (browser, see below) |
+
+### Translations are done by your assistant, not by a paid API
+
+The server doesn't call any translation service. `localization_pending` hands the model the texts that still need
+translating, with context, length hints and format rules. The model translates them and `localization_set` saves them.
+The server checks every translation: Steam BBCode tags must match the source, unknown keys are rejected, and changing
+the source text marks the old translations as **stale** so they get redone.
+
+```
+my-game/
+├── steamworks.yaml            ← source text + settings (you edit this)
+├── localization/
+│   ├── turkish.yaml           ← translations (the model writes these)
+│   ├── german.yaml
+│   └── .lock.json             ← which source text each translation was made from
+├── store/art/keyart.png, logo.png
+├── store/screenshots/*.png    ← shot1_japanese.png = Japanese variant of shot1.png
+├── achievements/*.png
+└── steamworks-out/            ← generated: assets/, achievements/, store/<lang>.json, checklist, CSV
+```
+
+See [`examples/demo-game/steamworks.yaml`](examples/demo-game/steamworks.yaml) for a complete example.
+
+### Steamworks has no API for store text, achievements or cloud settings
+
+Valve's partner Web API can read the achievement schema and manage builds and leaderboards, but it **cannot** edit the
+store page, create achievements, or change Steam Cloud and installation settings. Those exist only in the Steamworks
+web UI. So this server has two halves:
+
+1. **Files + Web API.** Deterministic, fully tested. Generates everything you need and checks it against Steam's rules.
+2. **Browser tools.** Opens a real, visible Chromium window with a persistent profile. **You log in yourself**
+   (password and Steam Guard); the server never sees your credentials. The assistant then reads the page
+   (`steamworks_inspect` lists every field with a selector and label), previews changes (`steamworks_fill` with
+   `dryRun: true` shows a before/after diff), fills the form, and uploads images. `steamworks_click` refuses to run
+   until you've confirmed the click in chat. Nothing is saved or published without your OK.
+
+The browser tools don't hard-code Steamworks selectors, so they keep working when Valve tweaks the UI. The trade-off is
+that the assistant has to read each page first.
+
+## Install
+
+Requires Node.js 20+.
+
+```bash
+git clone https://github.com/wazzapsenk/steamworks-mcp.git
+cd steamworks-mcp
+npm install
+npm run build
+# Optional, for the browser tools:
+npx playwright install chromium
+```
+
+### Environment
+
+| Variable | Purpose |
+|---|---|
+| `STEAMWORKS_MCP_ROOT` | Folder that contains your game projects. Tools refuse paths outside it. |
+| `STEAMWORKS_PUBLISHER_KEY` | Steamworks **publisher** Web API key (Users & Permissions → Manage Groups → Web API key). Optional; only `steam_*` tools need it. |
+| `STEAMWORKS_MCP_TOKEN` | Required token for HTTP mode. |
+| `STEAMWORKS_MCP_BROWSER_PROFILE` | Where the Steamworks login is stored (default `~/.steamworks-mcp/browser-profile`). |
+
+The publisher key is a secret: keep it in your MCP client's `env` block or a local `.env` file, and never commit it.
+
+## Connect it
+
+### Claude Code
+
+```bash
+claude mcp add steamworks -e STEAMWORKS_MCP_ROOT=D:/Games -e STEAMWORKS_PUBLISHER_KEY=xxxx -- node /path/to/steamworks-mcp/dist/index.js
+```
+
+### Claude Desktop
+
+`claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "steamworks": {
+      "command": "node",
+      "args": ["/path/to/steamworks-mcp/dist/index.js"],
+      "env": {
+        "STEAMWORKS_MCP_ROOT": "D:/Games",
+        "STEAMWORKS_PUBLISHER_KEY": "xxxx"
+      }
+    }
+  }
+}
+```
+
+### ChatGPT (developer mode)
+
+ChatGPT connects to **remote** MCP servers over HTTPS, so run the HTTP transport and expose it through a tunnel:
+
+```bash
+STEAMWORKS_MCP_TOKEN=$(openssl rand -hex 24) STEAMWORKS_MCP_ROOT=D:/Games node dist/index.js --http --port 8787
+cloudflared tunnel --url http://localhost:8787
+```
+
+The tunnel's public hostname has to be allowed explicitly (DNS-rebinding protection), e.g.
+`STEAMWORKS_MCP_ALLOWED_HOSTS=your-tunnel.trycloudflare.com,localhost`.
+
+In ChatGPT: **Settings → Apps & Connectors → Advanced → Developer mode**, then create a connector with the URL
+`https://<your-tunnel>/mcp?token=<STEAMWORKS_MCP_TOKEN>`. Clients that can send headers should use
+`Authorization: Bearer <token>` instead of the query string.
+
+⚠️ Anyone who has that URL and token can read and write files under `STEAMWORKS_MCP_ROOT` and drive your logged-in
+Steamworks browser. Use a long random token, a narrow root folder, and stop the tunnel when you're done.
+
+## A typical session
+
+> **You:** Set up the Steam page for my game in `D:/Games/SkyRaid`. Translate everything into Turkish, German, Japanese
+> and Simplified Chinese.
+
+1. `project_init` → you fill in `steamworks.yaml` (or ask the assistant to draft it from your design doc).
+2. `project_validate` → fix what it reports.
+3. For each language: `localization_pending` → translate → `localization_set`, until `localization_status` is all green.
+4. `assets_generate`, `achievement_icons_prepare`, `screenshots_check`.
+5. `export_bundle` → open `steamworks-out/STEAMWORKS_CHECKLIST.md`.
+6. Either enter values by hand, or: `steamworks_open { page: "storePage" }` → log in → let the assistant inspect, fill
+   (dry run first), upload, and save with your OK.
+7. After publishing achievements: `steam_achievements_diff` to confirm Steam matches your file.
+
+## Development
+
+```bash
+npm run dev          # stdio, from source
+npm run dev:http     # HTTP, from source
+npm test             # unit + in-memory MCP end-to-end tests
+node scripts/smoke-http.mjs   # after npm run build: HTTP transport + auth smoke test
+```
+
+## Roadmap
+
+- Page recipes verified against the live Steamworks UI: store description per language, achievements (create +
+  icons), achievement localization, Steam Cloud, launch options. Contributions from people with Steamworks access are
+  very welcome.
+- Read and write the store page **Localization** tab's import/export file directly. Its format isn't documented; if
+  you can share an export with the text removed, please open an issue.
+- Localized capsules and screenshots per language.
+- Stats definitions (progress stats for achievements).
+
+## License
+
+MIT

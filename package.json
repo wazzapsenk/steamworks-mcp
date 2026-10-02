@@ -1,0 +1,55 @@
+{
+  "name": "steamworks-mcp",
+  "version": "0.1.0",
+  "description": "MCP server that keeps a Steam game's store page, achievements, Steam Cloud and app settings as code, localizes them, and prepares everything for Steamworks. Works with Claude, ChatGPT and any MCP client.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "steam",
+    "steamworks",
+    "gamedev",
+    "localization",
+    "claude",
+    "chatgpt"
+  ],
+  "author": "Burak Kaan Sahin",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "steamworks-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/index.ts",
+    "dev:http": "tsx src/index.ts --http",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "smoke": "node scripts/smoke-http.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "express": "^5.2.1",
+    "sharp": "^0.35.5",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.63.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.4",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}
