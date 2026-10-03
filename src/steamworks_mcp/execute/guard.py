@@ -33,6 +33,7 @@ ALLOWED_WRITES = [
     re.compile(r"^/images/uploadachievement$"),
     re.compile(r"^/admin/game/uploadloc/\d+$"),
     re.compile(r"^/admin/game/save/\d+$"),  # the store page form; saved into the unpublished draft
+    re.compile(r"^/depots/upload/\d+$"),  # the Depots page's save (unpublished app data)
     re.compile(r"^/apps/diff/\d+$"),  # the Publish page's read-only "View Diffs"
 ]
 

@@ -532,7 +532,15 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
     async def apply(
         path: str,
         section: Literal[
-            "cloud", "installation", "achievements", "store_text", "store_page", "store_assets", "leaderboards", "build"
+            "cloud",
+            "installation",
+            "achievements",
+            "store_text",
+            "store_page",
+            "store_assets",
+            "depots",
+            "leaderboards",
+            "build",
         ],
         app: Literal["main", "demo", "playtest"] = "main",
         dry_run: bool = True,
@@ -549,7 +557,9 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         description in every approved language), "store_page" (the store page form: links, support info, legal
         line, system requirements, platforms, language table, genres, categories, third-party DRM/accounts; empty
         fields never clear Steam's), "store_assets" (uploads prepare_images' capsules and library images into the
-        slots Steam has no image for yet; never replaces one). Every call saves a snapshot of what Steam had first.
+        slots Steam has no image for yet; never replaces one, and also sets the library logo position), "depots"
+        (OS, architecture and language of depots that already exist, through the Depots page's own Save). Every
+        call saves a snapshot of what Steam had first.
 
         Args:
             path: Folder that holds steamworks.yaml.
@@ -587,6 +597,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "store_text",
             "store_page",
             "store_assets",
+            "depots",
         ],
         app: Literal["main", "demo", "playtest"] = "main",
     ) -> dict[str, Any]:

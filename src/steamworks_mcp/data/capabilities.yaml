@@ -133,8 +133,11 @@ areas:
   - id: depots
     name: Depots, OS support, packages
     api: {status: never}
-    browser: {status: unverified}
+    browser: {status: partial, how: "Depots page Save (depots/upload), apply(section='depots')"}
     default_mode: MANUAL
+    notes: >-
+      OS, architecture and language of existing depots were written, read back and restored live through the page's
+      own Save. Creating depots and editing packages stay manual: package changes go live at once.
   - id: pricing
     name: Pricing and discounts
     api: {status: never}

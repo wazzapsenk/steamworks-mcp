@@ -170,6 +170,20 @@ What it showed beyond the recordings:
   - Store tags (`/tagdata/forcetagranking`; the page says the changes "have been successfully published").
   - Package names and contents (`/store/ajaxpackagesave/{packageId}`; renaming publishes right away).
 
+## Depots
+
+- **How the page holds the depots.** `GET /apps/depots/{appid}` holds them twice:
+  - as `var depots = {"<id>": {"name", "config": {...}}}` in the page's script;
+  - as rows: `li > span.appdepot`, each with `.depotid`, an Edit button (`.editme`) and, in a hidden edit panel,
+    the selects `language`, `oslist` (`""` = all, `windows`, `macos`, `linux`, `windows,linux`, …), `osarch`, …
+- **Save** (`#submitter`) builds the whole list from those rows and posts it as
+  `POST /depots/upload/{appid}` with `depots=<JSON list>`. A depot left out of the list would be removed, so the tool
+  never builds the list itself: it changes the selects of the rows it needs and clicks the page's own Save.
+- **Recorded live on a test app:**
+  - Setting a depot to Windows/64-bit showed up in the depot's `config` and as the only pending change of the
+    `depots` app section.
+  - Writing the empty values back removed the change again (no pending changes left).
+
 ## Achievements
 
 - `GET /apps/fetchachievements/{appid}` → `{"achievements":[…],"languages":{"english":true,…}}`. `languages` lists the

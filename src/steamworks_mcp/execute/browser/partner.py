@@ -141,6 +141,30 @@ async def set_library_logo_position(
     )
 
 
+# ---------------------------------------------------------------------------------------------------- depots
+
+
+async def read_depots(t: Transport, appid: int) -> dict[str, Any]:
+    """``{depot id: {"name", "config": {language, oslist, osarch, ...}}}`` as the Depots page holds them."""
+    res = _checked(await t.get(f"/apps/depots/{appid}"), "Depots page")
+    m = re.search(r"var depots\s*=\s*(\{.*?\});\s*$", res.text, re.M) or re.search(
+        r"var depots\s*=\s*(\{.*?\});", res.text
+    )
+    if not m:
+        raise FormatError("The Depots page changed (its depot list was not found).")
+    data = json.loads(m.group(1))
+    return {str(k): {"name": v.get("name", ""), "config": dict(v.get("config") or {})} for k, v in data.items()}
+
+
+async def save_depots(t: Transport, appid: int, changes: dict[str, dict[str, str]]) -> None:
+    """Change settings of existing depots through the Depots page itself (it posts the whole list, so the page builds
+    it; a depot left out of the list would be removed). Saved into the unpublished app data."""
+    res = await t.save_depots(appid, changes)
+    refused = re.search(r"(?i)error|fail", res.text) and not re.search(r"(?i)success", res.text)
+    if res.status == 0 or res.status >= 400 or refused:
+        raise RuntimeError(f"depots save: {res.text[:200] or res.status}")
+
+
 # ---------------------------------------------------------------------------------------------------- achievements
 
 

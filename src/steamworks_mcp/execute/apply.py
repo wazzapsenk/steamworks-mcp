@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from steamworks_mcp.execute import store_assets, store_page, sync
+from steamworks_mcp.execute import depots, store_assets, store_page, sync
 from steamworks_mcp.execute.browser import partner as P
 from steamworks_mcp.execute.browser.transport import Transport
 from steamworks_mcp.manifest import paths as fp
@@ -92,6 +92,8 @@ async def read_section(t: Transport, section: str, appid: int) -> dict[str, Any]
         return await store_page.read_section(t, appid)
     if section == "store_assets":
         return await store_assets.read_section(t, appid)
+    if section == "depots":
+        return await depots.read_section(t, appid)
     raise ValueError(f"section must be one of {', '.join(sync.SECTIONS)}")
 
 
@@ -143,6 +145,8 @@ def _plan(
         return store_page.plan(current["item_id"], desired, current, force)
     if section == "store_assets":
         return store_assets.plan(current["item_id"], desired, current)
+    if section == "depots":
+        return depots.plan(appid, desired, current, force)
     return sync.plan_store(appid, current["item_id"], desired, current, force)
 
 
@@ -159,6 +163,8 @@ def desired_from_values(
         return store_page.desired(values, current, remove_extra)
     if section == "store_assets":
         return store_assets.desired(ProjectFiles(root).state_dir / "exports" / "images", values)
+    if section == "depots":
+        return depots.desired(values, app)
     if section == "cloud":
         return sync.desired_cloud(values, app, current)
     if section == "installation":
@@ -375,6 +381,13 @@ async def restore_snapshot(
         desired = {lang: f for lang, f in target["languages"].items() if isinstance(f, dict) and f}
     elif section == "store_page":
         desired = {"inputs": target["form"], "problems": []}
+    elif section == "depots":
+        desired = {
+            "settings": {
+                d: {k: str((v.get("config") or {}).get(k) or "") for k in depots.KEYS}
+                for d, v in target["depots"].items()
+            }
+        }
     else:
         desired = target
     round_trip = not consent.restore_verified(appid)

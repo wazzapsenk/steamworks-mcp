@@ -26,7 +26,7 @@ Last reviewed: 2026-10-03.
 | Capsules, screenshots, trailers, library assets | — | ⚠️ partial: Graphical Assets upload (admin/game/save ... tab_graphicalassets), apply(section='store_assets') | ARTIFACT | Images are cropped from the user's own art at the exact sizes; artwork is never generated. Capsules, page background and library images were uploaded live into empty slots; existing images are never replaced. Screenshots, trailers and the library logo position are still uploaded by hand. |
 | App icon and shortcut icon | — | ❔ unverified | ARTIFACT |  |
 | Install folder and launch options (with localized descriptions) | — | ✅ verified: apps/setappinstallfolder, setlaunchoption | MANUAL → BROWSER |  |
-| Depots, OS support, packages | — | ❔ unverified | MANUAL |  |
+| Depots, OS support, packages | — | ⚠️ partial: Depots page Save (depots/upload), apply(section='depots') | MANUAL | OS, architecture and language of existing depots were written, read back and restored live through the page's own Save. Creating depots and editing packages stay manual: package changes go live at once. |
 | Pricing and discounts | — | — | MANUAL |  |
 | Content survey, mature content, AI disclosure, ratings | — | — | MANUAL | Never automated; the tool prepares the answers. |
 | What is still unpublished | — | ✅ verified: apps/diff (the Publish page's read-only "View Diffs") | MANUAL → BROWSER |  |

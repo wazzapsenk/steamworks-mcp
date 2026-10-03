@@ -17,7 +17,7 @@ from mcp import Client
 
 from steamworks_mcp import project as proj
 from steamworks_mcp.config import Config, load_config
-from steamworks_mcp.execute import guard, importer, store_assets, store_page, sync
+from steamworks_mcp.execute import depots, guard, importer, store_assets, store_page, sync
 from steamworks_mcp.execute.api import DISPLAY_TYPES, PartnerApi, SteamApiError, plan_leaderboards, run_steamcmd
 from steamworks_mcp.execute.apply import ApplyRefused, Consent, apply_section, restore_snapshot, save_snapshot
 from steamworks_mcp.execute.browser import partner as P
@@ -557,6 +557,36 @@ async def test_store_assets_fill_only_empty_slots(tmp_path: Path) -> None:
         store_assets.plan("2000000", {"images": {}, "logo_position": position}, {**current, "logo_position": same})
         == []
     )
+
+
+async def test_depot_settings_change_only_existing_depots() -> None:
+    values = {
+        "apps": {
+            "main": {
+                "builds": {
+                    "depots": [
+                        {"name": "windows", "depot_id": 1000001, "os": "windows", "arch": "64"},
+                        {"name": "german", "depot_id": 1000003, "os": "all", "language": "german"},
+                    ]
+                }
+            }
+        }
+    }
+    current = {"depots": {"1000001": {"name": "Content", "config": {}}, "1000002": {"name": "Other", "config": {}}}}
+    ops = depots.plan(1000000, depots.desired(values, "main"), current)
+    assert [(op.action, op.target) for op in ops] == [("skip", "1000003"), ("save", "settings of 1 depot(s)")]
+    assert ops[1].after == {"1000001": {"oslist": "windows", "osarch": "64"}}  # language stays "all" (empty)
+    sent: list[tuple[int, dict[str, dict[str, str]]]] = []
+
+    class Recorder:
+        async def save_depots(self, appid: int, changes: dict[str, dict[str, str]]) -> Response:
+            sent.append((appid, changes))
+            return Response(200, "https://partner.steamgames.com/depots/upload/1000000", '{"success": 1}')
+
+    await ops[1].run(Recorder())  # type: ignore[arg-type]
+    assert sent == [(1000000, {"1000001": {"oslist": "windows", "osarch": "64"}})]  # never the whole list
+    done = {"depots": {"1000001": {"name": "Content", "config": {"oslist": "windows", "osarch": "64"}}}}
+    assert depots.changes(depots.desired(values, "main"), done) == {}
 
 
 async def test_store_text_never_sends_an_empty_value() -> None:

@@ -60,6 +60,8 @@ class Transport(Protocol):
         self, page: str, selector: str, action: str, changes: list[tuple[str, str | None]]
     ) -> Response: ...
 
+    async def save_depots(self, appid: int, changes: dict[str, dict[str, str]]) -> Response: ...
+
 
 # ---------------------------------------------------------------------------------------------------- replay
 
@@ -137,6 +139,11 @@ class ReplayTransport:
         self.sent.append(Sent("FORM", action, {k: "<removed>" if v is None else v for k, v in changes}))
         self._take("GET", page)
         return self._take("POST", action)
+
+    async def save_depots(self, appid: int, changes: dict[str, dict[str, str]]) -> Response:
+        guard.check("POST", f"{BASE}/depots/upload/{appid}")
+        self.sent.append(Sent("DEPOTS", f"/depots/upload/{appid}", {"changes": json.dumps(changes, sort_keys=True)}))
+        return self._take("POST", f"/depots/upload/{appid}")
 
 
 # ---------------------------------------------------------------------------------------------------- playwright
@@ -231,6 +238,25 @@ class PlaywrightTransport:
         if r["status"] == 0:
             raise RuntimeError(f"{page}: {r['text']}")
         return Response(r["status"], r["url"], r["text"])
+
+    async def save_depots(self, appid: int, changes: dict[str, dict[str, str]]) -> Response:
+        """The Depots page's own Save: change the selects of the given depot rows, click Save, read its answer."""
+        guard.check("GET", f"{BASE}/apps/depots/{appid}")
+        guard.check("POST", f"{BASE}/depots/upload/{appid}")
+        await self.page.goto(f"{BASE}/apps/depots/{appid}", wait_until="domcontentloaded")
+        for depot, keys in changes.items():
+            row = self.page.locator(".appdepot").filter(has=self.page.locator(f'.depotid:text-is("{int(depot)}")'))
+            if await row.count() != 1:
+                return Response(0, str(self.page.url), f"depot {depot} not found on the page")
+            await row.locator(".editme").click()  # the selects sit in the row's hidden edit panel
+            for key, value in keys.items():
+                await row.locator(f"select.{key}").select_option(value=value)
+        answer = self.page.locator("#depots_upload_response")
+        async with self.page.expect_response(lambda r: "/depots/upload/" in r.url) as info:
+            await self.page.locator("#submitter").click()
+        res = await info.value
+        await self.page.wait_for_timeout(500)
+        return Response(res.status, res.url, (await res.text()) + " " + (await answer.inner_text()))
 
 
 def form_body(form: dict[str, str]) -> str:
