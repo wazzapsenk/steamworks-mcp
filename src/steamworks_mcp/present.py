@@ -1018,3 +1018,43 @@ def check_code(data: dict[str, Any]) -> dict[str, Any]:
             "fix them in the code only if the user asks."
         )
     return result(data, summary, outcome="ok", next=steps, display=display)
+
+
+# ---------------------------------------------------------------------------------------------------- SDK code
+
+WHERE = {
+    "SteamBootstrap.cs": "Assets/Scripts/, on a GameObject in the first scene",
+    "SteamIds.cs": "Assets/Scripts/",
+    "SteamProgress.cs": "Assets/Scripts/",
+    "SteamLeaderboards.cs": "Assets/Scripts/",
+    "SaveLocation.cs": "Assets/Scripts/",
+    "steam_service.gd": "the project, added as the autoload SteamService",
+    "save_location.gd": "the project",
+    "SteamGame.h": "the game's source folder",
+    "DefaultEngine.steam.ini": "merged into Config/DefaultEngine.ini",
+    "Build.cs.steam.txt": "merged into <Game>.Build.cs and <Game>.uproject",
+}
+
+
+def integration_code(data: dict[str, Any]) -> dict[str, Any]:
+    files = data.get("files") or {}
+    names = data.get("names_from_steamworks_yaml") or {}
+    used = [
+        plural(len(names.get("achievements") or []), "achievement"),
+        plural(len(names.get("stats") or []), "stat"),
+        plural(len(names.get("leaderboards") or []), "leaderboard"),
+    ]
+    summary = (
+        f"Wrote {plural(len(files), 'file')} for {data.get('target_name')} to {data.get('folder')}, using "
+        f"{used[0]}, {used[1]} and {used[2]} from steamworks.yaml."
+    )
+    display = join(
+        table(["File", "Goes to"], [[name, WHERE.get(name, "the project")] for name in files]),
+        section("Notes", "\n".join(f"- {n}" for n in data.get("notes") or [])),
+    )
+    steps = [
+        "Show the user what each file does. Copy files into the game project only when the user asks; this server "
+        "never writes there.",
+        "After copying, run check_code to confirm the project passes the Steamworks rules.",
+    ]
+    return result(data, summary, next=steps, display=display)

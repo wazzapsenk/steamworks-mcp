@@ -31,6 +31,7 @@ from steamworks_mcp.export import package, preview, vdf
 from steamworks_mcp.gates.engine import evaluate_gates
 from steamworks_mcp.gates.report import gap_report as gap_report_fn
 from steamworks_mcp.generate import deterministic as gen_det
+from steamworks_mcp.generate import integration
 from steamworks_mcp.generate import text as gen_text
 from steamworks_mcp.interview.forms import field_id, form_model
 from steamworks_mcp.interview.questions import Question, next_questions
@@ -444,6 +445,33 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             scripts = vdf.build_scripts(project.values(), root, project.files.export_dir(2) / "steam")
             out["scripts"] = scripts if isinstance(scripts, dict) else {"not_yet": scripts}
         return present.generate(out, section, stage)
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
+    @user_errors
+    def integration_code(
+        path: str,
+        features: list[Literal["init", "achievements", "stats", "leaderboards", "cloud"]] | None = None,
+        target: Literal["unity-steamworks-net", "unity-facepunch", "godot", "unreal", "cpp"] | None = None,
+        source_dir: str | None = None,
+    ) -> dict[str, Any]:
+        """Steamworks SDK code for the game's engine that uses exactly the app id and the achievement, stat and
+        leaderboard names in steamworks.yaml: starting Steam (restart through Steam, checked init, callbacks,
+        shutdown), unlocking achievements and setting stats (StoreStats included), uploading leaderboard scores, and
+        where to save files for Steam Cloud. Written to .steam-mcp/exports/code/<target>/, never into the game.
+
+        Args:
+            path: The game's folder (with steamworks.yaml).
+            features: Which parts (default all): init, achievements, stats, leaderboards, cloud.
+            target: unity-steamworks-net, unity-facepunch, godot (GodotSteam 4), unreal or cpp. Default: from the
+                engine and the Steam wrapper the code already uses.
+            source_dir: The engine project folder, when it is not `path` itself.
+        """
+        project = open_project(path)
+        source = project_dir(source_dir) if source_dir else project.files.root
+        out_dir = project.files.state_dir / "exports" / "code"
+        result = integration.generate(project.values(), source, out_dir, list(features or []) or None, target)
+        result["folder"] = (out_dir / result["target"]).relative_to(project.files.root).as_posix()
+        return present.integration_code(result)
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
