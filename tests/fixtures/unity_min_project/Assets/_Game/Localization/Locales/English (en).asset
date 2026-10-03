@@ -1,0 +1,8 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_Name: English (en)
+  m_LocaleName: English (en)
+  m_Identifier:
+    m_Code: en

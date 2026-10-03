@@ -1,0 +1,3 @@
+{
+  "maps": [{"bindings": [{"path": "<Gamepad>/buttonSouth", "action": "Jump"}]}]
+}

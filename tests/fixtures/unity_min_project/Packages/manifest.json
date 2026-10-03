@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "com.rlabrecque.steamworks.net": "https://github.com/rlabrecque/Steamworks.NET.git?path=/com.rlabrecque.steamworks.net#2024.8.0",
+    "com.unity.inputsystem": "1.11.0",
+    "com.unity.localization": "1.5.3",
+    "com.unity.netcode.gameobjects": "2.0.0",
+    "com.example.steam-build-pipeline": "1.1.1",
+    "com.unity.modules.audio": "1.0.0"
+  }
+}

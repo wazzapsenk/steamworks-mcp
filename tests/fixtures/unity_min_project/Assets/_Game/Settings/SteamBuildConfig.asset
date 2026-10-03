@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Name: SteamBuildConfig
+  m_EditorClassIdentifier: Example.SteamBuildPipeline.Editor::SteamBuildConfig
+  steamCmdPath: C:\tools\steamcmd.exe
+  steamUsername: never_read_this_user
+  buildOutputRoot: Builds
+  steamWorkingDir: Tools/Steam
+  environments:
+  - name: Prod
+    appId: 1000000
+    depots:
+    - depotId: 1000002
+      depotPathLabel: windows
+    allowedBranches:
+    - default
+    - beta
+    notes: 
+  - name: Demo
+    appId: 1000001
+    depots:
+    - depotId: 1000003
+      depotPathLabel: demo_windows
+    allowedBranches:
+    - default
+    notes: 
