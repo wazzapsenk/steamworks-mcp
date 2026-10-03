@@ -11,6 +11,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, Any, Literal, TypeVar
 
+from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, RevocationOptions
 from mcp.server.mcpserver import Context, Elicit, MCPServer, Resolve
 from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import BaseModel
@@ -37,6 +38,7 @@ from steamworks_mcp.manifest.io import ManifestError, atomic_write, load_drafts
 from steamworks_mcp.manifest.paths import FieldPathError, iter_fields
 from steamworks_mcp.manifest.state import TransitionError, is_empty
 from steamworks_mcp.media import images
+from steamworks_mcp.oauth import LocalOAuth
 from steamworks_mcp.references.analyze import analyze
 from steamworks_mcp.references.fetch import FetchError, ReferenceFetcher
 from steamworks_mcp.scanners import run_scanners
@@ -96,8 +98,23 @@ changes and agreed (user_confirmed=true). Nothing is ever published by this serv
 """
 
 
-def create_server(config: Config, executor: Executor | None = None) -> MCPServer:
-    server = MCPServer("steamworks-mcp", instructions=INSTRUCTIONS)
+def create_server(config: Config, executor: Executor | None = None, oauth: LocalOAuth | None = None) -> MCPServer:
+    if oauth is None:
+        server = MCPServer("steamworks-mcp", instructions=INSTRUCTIONS)
+    else:
+        server = MCPServer(
+            "steamworks-mcp",
+            instructions=INSTRUCTIONS,
+            auth_server_provider=oauth,
+            auth=AuthSettings(
+                issuer_url=oauth.public_url,
+                resource_server_url=oauth.resource_url,
+                validate_token_resource=True,
+                client_registration_options=ClientRegistrationOptions(enabled=True),
+                revocation_options=RevocationOptions(enabled=True),
+            ),
+        )
+        server.custom_route("/oauth/approve", methods=["GET", "POST"])(oauth.approval_page)
     execu = executor or Executor(config)
 
     def project_dir(path: str | None) -> Path:

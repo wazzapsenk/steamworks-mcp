@@ -58,6 +58,11 @@ class Config:
     allowed_hosts: tuple[str, ...] = ()
     """Extra Host header values accepted over HTTP (e.g. a tunnel's hostname)."""
     allowed_origins: tuple[str, ...] = ()
+    public_url: str | None = None
+    """STEAMWORKS_MCP_PUBLIC_URL: the https address clients reach the HTTP server at (e.g. a tunnel). Turns on the
+    built-in OAuth sign-in for clients such as ChatGPT."""
+    oauth_redirects: tuple[str, ...] = ()
+    """Extra OAuth redirect URI prefixes accepted at client registration."""
     """Origin header values accepted over HTTP (browser-based clients)."""
     cache_dir: Path = field(default_factory=default_cache_dir)
     steamcmd_path: str | None = None
@@ -100,6 +105,8 @@ def load_config(env: Mapping[str, str] | None = None, dotenv: Path | None = None
         http_token=get("STEAMWORKS_MCP_TOKEN"),
         allowed_hosts=_csv(get("STEAMWORKS_MCP_ALLOWED_HOSTS")),
         allowed_origins=_csv(get("STEAMWORKS_MCP_ALLOWED_ORIGINS")),
+        public_url=(get("STEAMWORKS_MCP_PUBLIC_URL") or "").rstrip("/") or None,
+        oauth_redirects=_csv(get("STEAMWORKS_MCP_OAUTH_REDIRECTS")),
         cache_dir=Path(c).expanduser() / "references" if (c := get("STEAMWORKS_MCP_CACHE")) else default_cache_dir(),
         steamcmd_path=get("STEAMCMD_PATH"),
         steamcmd_username=get("STEAMCMD_USERNAME"),

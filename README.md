@@ -6,7 +6,8 @@ legwork and you approving every step.**
 An [MCP](https://modelcontextprotocol.io) server for game developers. It knows Valve's release requirements, finds
 what your project already has, asks you for the rest, drafts store text, achievements and settings, checks them
 against Valve's rules, and either hands you correctly named files with a checklist or applies them to Steamworks
-after you approved them. Works with **Claude** (Code, Desktop), **ChatGPT** and any other MCP client.
+after you approved them. Works with **Claude** (Code, Desktop, claude.ai), **ChatGPT**, **Codex** and any other MCP
+client.
 
 > Not affiliated with or endorsed by Valve. "Steam" and "Steamworks" are trademarks of Valve Corporation.
 
@@ -87,6 +88,7 @@ is optional; the real environment wins over `.env`. Never commit `.env`.
 | `STEAM_MCP_BROWSER` | `1` turns the BROWSER mode on. |
 | `STEAMWORKS_MCP_TOKEN` | Bearer token (24+ characters) for the HTTP transport. |
 | `STEAMWORKS_MCP_ALLOWED_HOSTS`, `STEAMWORKS_MCP_ALLOWED_ORIGINS` | Extra Host / Origin values accepted over HTTP. |
+| `STEAMWORKS_MCP_PUBLIC_URL`, `STEAMWORKS_MCP_OAUTH_REDIRECTS` | The server's public https address (turns on OAuth sign-in) and extra allowed OAuth redirects. |
 | `STEAM_MCP_BROWSER_REMOTE` | `1` also allows the BROWSER mode over HTTP (not recommended). |
 | `STEAMWORKS_MCP_CACHE`, `STEAMWORKS_MCP_HOME` | Reference cache and per-user data (default `~/.steamworks-mcp`). |
 
@@ -155,26 +157,46 @@ claude mcp add steamworks -e STEAMWORKS_MCP_ROOT=/path/to/your/games -- uv --dir
 `uv --directory` runs the server in the steamworks-mcp folder, so it reads the `.env` there; keys don't have to be
 in the client's configuration. `--env-file <path>` points to another file.
 
-### ChatGPT and other remote clients
+### Remote clients: ChatGPT, Codex, claude.ai
 
-Remote clients need the Streamable HTTP transport, reachable over HTTPS (for example through a tunnel):
+Remote clients use the Streamable HTTP transport, reachable over HTTPS (for example through a tunnel):
 
 ```bash
-STEAMWORKS_MCP_TOKEN=$(openssl rand -hex 24) uv run steamworks-mcp --http --port 8787
+STEAMWORKS_MCP_TOKEN=$(openssl rand -hex 24) \
+STEAMWORKS_MCP_PUBLIC_URL=https://your-tunnel.example.com \
+uv run steamworks-mcp --http --port 8787
 cloudflared tunnel --url http://localhost:8787
 ```
 
-- The server binds to `127.0.0.1` and **always** requires `Authorization: Bearer <STEAMWORKS_MCP_TOKEN>`.
-  Tokens in the URL are not accepted (they end up in logs).
-- Host and Origin headers are checked against DNS rebinding: allow the tunnel's hostname with
-  `STEAMWORKS_MCP_ALLOWED_HOSTS=your-tunnel.example.com` (and `STEAMWORKS_MCP_ALLOWED_ORIGINS` for browser-based
-  clients).
-- In ChatGPT: **Settings → Apps & Connectors → Advanced → Developer mode**, then add a connector with the URL
-  `https://<your-tunnel>/mcp`. The client has to send the token as `Authorization: Bearer`; clients that only
-  support OAuth cannot connect yet.
+The server binds to `127.0.0.1`, checks Host and Origin headers (the public URL's host is allowed automatically;
+others with `STEAMWORKS_MCP_ALLOWED_HOSTS` / `STEAMWORKS_MCP_ALLOWED_ORIGINS`) and accepts two kinds of sign-in, like
+any standard remote MCP server:
 
-Anyone with the URL and the token can read and write the game projects under `STEAMWORKS_MCP_ROOT`. Use a narrow
-root folder and stop the tunnel when you're done. The BROWSER mode stays off over HTTP unless you also set
+- **OAuth 2.1** (ChatGPT, claude.ai, `codex mcp login`). With `STEAMWORKS_MCP_PUBLIC_URL` set, the server publishes
+  the MCP authorization metadata, lets clients register, and runs the authorization-code flow with PKCE. When a client
+  connects for the first time, a page of this server opens: it says which app asks for access and where the result
+  goes, and you approve by typing `STEAMWORKS_MCP_TOKEN` there. Codes are only sent to ChatGPT, Claude and loopback
+  addresses (more with `STEAMWORKS_MCP_OAUTH_REDIRECTS`). Refresh tokens are kept hashed in
+  `~/.steamworks-mcp/oauth.json`; delete that file to sign every client out.
+- **Bearer token** for clients that send a header: `Authorization: Bearer <STEAMWORKS_MCP_TOKEN>`. Tokens in the URL
+  are never accepted (they end up in logs).
+
+**ChatGPT:** Settings → Apps & Connectors → Advanced → Developer mode, then create a connector with the URL
+`https://your-tunnel.example.com/mcp` and OAuth authentication.
+
+**Codex** (`~/.codex/config.toml`), with the token in an environment variable:
+
+```toml
+[mcp_servers.steamworks]
+url = "https://your-tunnel.example.com/mcp"
+bearer_token_env_var = "STEAMWORKS_MCP_TOKEN"
+```
+
+Codex can also run the server locally over stdio: `command = "uv"`,
+`args = ["--directory", "/path/to/steamworks-mcp", "run", "steamworks-mcp"]`.
+
+Anyone who has the token can read and write the game projects under `STEAMWORKS_MCP_ROOT`. Use a long random token,
+a narrow root folder, and stop the tunnel when you're done. The BROWSER mode stays off over HTTP unless you also set
 `STEAM_MCP_BROWSER_REMOTE=1`.
 
 ## A typical session

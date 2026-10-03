@@ -1,9 +1,11 @@
 """Command line: ``steamworks-mcp`` (stdio) or ``steamworks-mcp --http`` (Streamable HTTP).
 
-HTTP is for remote clients such as ChatGPT. It binds to 127.0.0.1 by default, always requires a bearer token
-(``STEAMWORKS_MCP_TOKEN``, 24+ characters) and validates Host/Origin headers. Listening on another interface also
-needs ``--host`` and ``STEAMWORKS_MCP_ALLOWED_HOSTS``. BROWSER mode over HTTP additionally needs
-``STEAM_MCP_BROWSER_REMOTE=1``.
+HTTP is for remote clients such as ChatGPT and Codex. It binds to 127.0.0.1 by default, always requires a token
+(``STEAMWORKS_MCP_TOKEN``, 24+ characters) and validates Host/Origin headers. Clients send the token as
+``Authorization: Bearer``; with ``STEAMWORKS_MCP_PUBLIC_URL`` set, clients that sign in with OAuth (ChatGPT) can also
+connect through the built-in authorization server (:mod:`steamworks_mcp.oauth`), approving with the same token.
+Listening on another interface also needs ``--host`` and ``STEAMWORKS_MCP_ALLOWED_HOSTS``. BROWSER mode over HTTP
+additionally needs ``STEAM_MCP_BROWSER_REMOTE=1``.
 """
 
 from __future__ import annotations
@@ -13,8 +15,10 @@ import hmac
 import sys
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from steamworks_mcp.config import Config, load_config
+from steamworks_mcp.oauth import LocalOAuth
 from steamworks_mcp.server import create_server
 
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
@@ -53,6 +57,12 @@ def http_problems(config: Config, host: str) -> list[str]:
         problems.append(f"STEAMWORKS_MCP_TOKEN must be at least {MIN_TOKEN} characters.")
     if host not in LOOPBACK and not config.allowed_hosts:
         problems.append(f"Listening on {host} needs STEAMWORKS_MCP_ALLOWED_HOSTS (the hostnames clients will use).")
+    if config.public_url:
+        parts = urlsplit(config.public_url)
+        if not parts.hostname or (parts.scheme != "https" and parts.hostname not in LOOPBACK):
+            problems.append("STEAMWORKS_MCP_PUBLIC_URL must be an https:// address (http only for localhost).")
+        elif parts.path not in ("", "/"):
+            problems.append("STEAMWORKS_MCP_PUBLIC_URL is the server's origin only, without a path.")
     if config.browser_enabled and not config.browser_remote:
         problems.append("BROWSER mode over HTTP needs STEAM_MCP_BROWSER_REMOTE=1 in addition to STEAM_MCP_BROWSER=1.")
     return problems
@@ -64,11 +74,24 @@ def build_http_app(config: Config, host: str, port: int, path: str = "/mcp") -> 
     hosts = [f"{h}:{port}" for h in ("127.0.0.1", "localhost", "[::1]")]
     if host not in LOOPBACK:
         hosts.append(f"{host}:{port}")
-    for h in config.allowed_hosts:
+    extra = list(config.allowed_hosts)
+    if config.public_url:
+        extra.append(urlsplit(config.public_url).netloc)
+    for h in extra:
         hosts += [h, f"{h}:*"]
     security = TransportSecuritySettings(allowed_hosts=hosts, allowed_origins=list(config.allowed_origins))
-    app = create_server(config).streamable_http_app(streamable_http_path=path, transport_security=security, host=host)
     assert config.http_token
+    if config.public_url:  # OAuth for ChatGPT & co.; the SDK checks every /mcp request (the static token included)
+        oauth = LocalOAuth(
+            server_token=config.http_token,
+            public_url=config.public_url,
+            resource_url=config.public_url + path,
+            store=config.home_dir / "oauth.json",
+            extra_redirects=config.oauth_redirects,
+        )
+        server = create_server(config, oauth=oauth)
+        return server.streamable_http_app(streamable_http_path=path, transport_security=security, host=host)
+    app = create_server(config).streamable_http_app(streamable_http_path=path, transport_security=security, host=host)
     return BearerAuth(app, config.http_token)
 
 
