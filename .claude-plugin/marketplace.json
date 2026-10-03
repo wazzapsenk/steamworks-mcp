@@ -1,0 +1,13 @@
+{
+  "name": "steamworks-mcp",
+  "owner": { "name": "Burak Kaan Sahin" },
+  "description": "steamworks-mcp: a release assistant for Steam games.",
+  "plugins": [
+    {
+      "name": "steamworks",
+      "source": "./",
+      "description": "Release assistant for Steam games: store page, achievements, translations, images, checks against Valve's rules, and Steamworks only after you approve.",
+      "version": "0.3.0"
+    }
+  ]
+}

@@ -21,8 +21,14 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "steamworks"
 
-# Files that legitimately carry the author's name (license and package metadata).
-AUTHOR_METADATA = {"LICENSE", "pyproject.toml"}
+# Files that legitimately carry the author's name (license, package and plugin metadata).
+AUTHOR_METADATA = {
+    "LICENSE",
+    "pyproject.toml",
+    ".claude-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    ".cursor-plugin/plugin.json",
+}
 
 FIXTURE_PATTERNS: dict[str, re.Pattern[str]] = {
     "cookie header": re.compile(r'"name":\s*"(cookie|set-cookie)"', re.IGNORECASE),
@@ -139,7 +145,7 @@ def test_repository_has_no_denylisted_terms() -> None:
     owner = repo_owner()
     hits = []
     for path in committable_files():
-        if path.name in AUTHOR_METADATA:
+        if path.relative_to(ROOT).as_posix() in AUTHOR_METADATA:
             continue
         text = text_of(path)
         if text is None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import re
 import subprocess
 import sys
@@ -12,6 +13,7 @@ import anyio
 import pytest
 from mcp import Client
 
+from steamworks_mcp import __version__
 from steamworks_mcp.capabilities import capabilities
 from steamworks_mcp.config import Config
 from steamworks_mcp.data import data_files, load_yaml
@@ -150,3 +152,25 @@ def test_handwritten_skills_name_every_tool_of_their_prompt() -> None:
         skill = (ROOT / "skills" / gen.NAMES[name] / "SKILL.md").read_text(encoding="utf-8")
         used = {t for t in tools if re.search(rf"\b{t}\b", prompts[name])}
         assert used and not {t for t in used if not re.search(rf"\b{t}\b", skill)}, name
+
+
+def test_plugin_manifests_agree() -> None:
+    """The Claude Code plugin, its marketplace entry and the Cursor plugin describe the same release."""
+    claude = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    market = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+    cursor = json.loads((ROOT / ".cursor-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    version = re.sub(r"\.dev\d+$", "", __version__)
+    entry = market["plugins"][0]
+    assert claude["version"] == cursor["version"] == entry["version"] == version
+    assert claude["name"] == cursor["name"] == entry["name"] and entry["source"] == "./"
+    assert claude["description"] == cursor["description"]
+    for manifest, root_var in ((claude, "${CLAUDE_PLUGIN_ROOT}"), (cursor, "${CURSOR_PLUGIN_ROOT}")):
+        server = manifest["mcpServers"]["steamworks"]
+        assert server["command"] == "uv" and server["args"] == [
+            "run",
+            "--quiet",
+            "--project",
+            root_var,
+            "steamworks-mcp",
+        ]
+    assert (ROOT / cursor["skills"]).is_dir()

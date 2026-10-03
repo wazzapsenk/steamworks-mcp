@@ -1,6 +1,6 @@
 [project]
 name = "steamworks-mcp"
-version = "0.2.0.dev0"
+version = "0.3.0.dev0"
 description = "MCP server that takes a Steam game from nothing configured to released: release gates, gap reports, interviews, generators, validators, export packages and optional Steamworks automation."
 readme = "README.md"
 license = "MIT"

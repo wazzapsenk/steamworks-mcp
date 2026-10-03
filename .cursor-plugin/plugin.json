@@ -1,0 +1,19 @@
+{
+  "name": "steamworks",
+  "displayName": "Steamworks Release Assistant",
+  "version": "0.3.0",
+  "description": "Release assistant for Steam games: finds what your project has, asks you the rest, writes and checks the store page, achievements and settings against Valve's rules, and fills Steamworks only after you approve. Never publishes.",
+  "author": { "name": "Burak Kaan Sahin" },
+  "homepage": "https://github.com/wazzapsenk/steamworks-mcp",
+  "repository": "https://github.com/wazzapsenk/steamworks-mcp",
+  "license": "MIT",
+  "keywords": ["steam", "steamworks", "gamedev", "release", "store-page", "achievements", "localization", "mcp"],
+  "category": "developer-tools",
+  "skills": "./skills/",
+  "mcpServers": {
+    "steamworks": {
+      "command": "uv",
+      "args": ["run", "--quiet", "--project", "${CURSOR_PLUGIN_ROOT}", "steamworks-mcp"]
+    }
+  }
+}

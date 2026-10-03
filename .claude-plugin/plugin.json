@@ -1,0 +1,35 @@
+{
+  "name": "steamworks",
+  "version": "0.3.0",
+  "description": "Release assistant for Steam games: finds what your project has, asks you the rest, writes and checks the store page, achievements and settings against Valve's rules, and fills Steamworks only after you approve. Never publishes.",
+  "author": { "name": "Burak Kaan Sahin" },
+  "homepage": "https://github.com/wazzapsenk/steamworks-mcp",
+  "repository": "https://github.com/wazzapsenk/steamworks-mcp",
+  "license": "MIT",
+  "keywords": ["steam", "steamworks", "gamedev", "release", "store-page", "achievements", "localization", "mcp"],
+  "mcpServers": {
+    "steamworks": {
+      "command": "uv",
+      "args": ["run", "--quiet", "--project", "${CLAUDE_PLUGIN_ROOT}", "steamworks-mcp"],
+      "env": {
+        "STEAMWORKS_MCP_ROOT": "${user_config.games_folder}",
+        "STEAMWORKS_PUBLISHER_KEY": "${user_config.publisher_key}"
+      }
+    }
+  },
+  "userConfig": {
+    "games_folder": {
+      "type": "string",
+      "title": "Games folder",
+      "description": "The folder that holds your game projects. Leave empty to use the folder Claude Code runs in.",
+      "required": false
+    },
+    "publisher_key": {
+      "type": "string",
+      "title": "Steamworks publisher Web API key (optional)",
+      "description": "Only for builds, beta branches and leaderboards. Leave empty if you don't have one.",
+      "sensitive": true,
+      "required": false
+    }
+  }
+}
