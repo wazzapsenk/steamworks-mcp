@@ -1,5 +1,6 @@
 // Live check of the partner Web API tools. Needs STEAMWORKS_PUBLISHER_KEY in .env (never printed).
 // Usage: npx tsx scripts/live/webapi.ts <appId>
+import "./root.js";
 import { SteamWebApi } from "../../src/steam/webapi.js";
 
 try {

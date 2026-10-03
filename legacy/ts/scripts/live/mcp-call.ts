@@ -1,5 +1,6 @@
 // Calls one steamworks-mcp tool in-process, exactly as an MCP client would.
 // Usage: npx tsx scripts/live/mcp-call.ts <tool> '<json args>'   (or @file.json)
+import "./root.js";
 import fs from "node:fs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";

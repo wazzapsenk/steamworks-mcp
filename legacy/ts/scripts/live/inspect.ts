@@ -1,5 +1,6 @@
 // Live, read-only check of steamworks_inspect on real Steamworks pages. Nothing is filled, clicked or saved.
 // Usage: npx tsx scripts/live/inspect.ts <appId> [page ...]   (pages: storePage achievements achievementLocalization cloud installation landing)
+import "./root.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { inspectPage } from "../../src/browser/forms.js";

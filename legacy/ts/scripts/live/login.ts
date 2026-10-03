@@ -1,5 +1,6 @@
 // Live check: opens Steamworks in the persistent browser profile, waits for you to log in, then lists your apps.
 // Usage: npx tsx scripts/live/login.ts [minutes=20]
+import "./root.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { closeBrowser, getPage, isLoggedIn } from "../../src/browser/session.js";

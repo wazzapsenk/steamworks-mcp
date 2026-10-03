@@ -1,7 +1,7 @@
 # Steamworks partner site: observed behaviour
 
 **Undocumented.** Everything here was observed on the Steamworks partner site (partner.steamgames.com) in
-October 2026, on an unreleased test app, by the recording scripts in `scripts/live/`. Valve does not document these
+October 2026, on an unreleased test app, by the recording scripts in `legacy/ts/scripts/live/`. Valve does not document these
 pages or endpoints and can change them at any time. The tool only relies on them in the opt-in `BROWSER` mode.
 
 The recordings behind every statement are in [`tests/fixtures/steamworks/`](../tests/fixtures/steamworks/README.md)

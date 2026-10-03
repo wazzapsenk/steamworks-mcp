@@ -7,7 +7,7 @@ Two kinds of checks:
 * A local denylist: ``SANITIZE_DENYLIST`` in ``.env`` (account name, persona, e-mail, studio and app names, local
   paths). The list never leaves the developer's machine; without it only the generic checks run.
 
-The fixtures are produced by ``scripts/live/sanitize.ts`` from raw recordings that never enter the repository.
+The fixtures are produced by ``legacy/ts/scripts/live/sanitize.ts`` from raw recordings that never enter the repository.
 """
 
 from __future__ import annotations
@@ -35,7 +35,9 @@ FIXTURE_PATTERNS: dict[str, re.Pattern[str]] = {
     "unreplaced hex id": re.compile(r"(?<![0-9a-fA-F])(?!f+\d{4}(?![0-9a-fA-F]))[0-9a-fA-F]{24,}"),
     "steamid64": re.compile(r"7656119(?!0000000001|7960265728)\d{10}"),
     "e-mail": re.compile(r"[\w.+-]+@(?!example\.com)[\w-]+\.[\w.-]+"),
-    "partner id": re.compile(r'(?:partnerid=|g_nPrimaryPublisher = |data-publisherid=\\?"|publisherid=\\?")(?!900000\b|0\b)\d'),
+    "partner id": re.compile(
+        r'(?:partnerid=|g_nPrimaryPublisher = |data-publisherid=\\?"|publisherid=\\?")(?!900000\b|0\b)\d'
+    ),
     "turkish text": TURKISH_CHARS,
     "antivirus injection": re.compile(r"kaspersky", re.IGNORECASE),
 }
@@ -103,7 +105,9 @@ def test_fixtures_exist() -> None:
 def test_fixture_has_no_generic_leaks(path: Path) -> None:
     text = text_of(path)
     assert text is not None
-    problems = [f"{label}: …{snippet(text, m.start())}…" for label, rx in FIXTURE_PATTERNS.items() if (m := rx.search(text))]
+    problems = [
+        f"{label}: …{snippet(text, m.start())}…" for label, rx in FIXTURE_PATTERNS.items() if (m := rx.search(text))
+    ]
     assert not problems, "\n".join(problems)
 
 
@@ -114,7 +118,9 @@ def test_fixtures_have_no_denylisted_terms() -> None:
     hits = []
     for path in fixture_files():
         lower = (text_of(path) or "").lower()
-        hits += [f"{path.relative_to(ROOT).as_posix()}: term #{i + 1}" for i, t in enumerate(terms) if t.lower() in lower]
+        hits += [
+            f"{path.relative_to(ROOT).as_posix()}: term #{i + 1}" for i, t in enumerate(terms) if t.lower() in lower
+        ]
     assert not hits, "\n".join(hits)
 
 
@@ -145,5 +151,7 @@ def test_repository_has_no_denylisted_terms() -> None:
         lower = text.lower()
         if owner:
             lower = lower.replace(owner, "github.com/<owner>")
-        hits += [f"{path.relative_to(ROOT).as_posix()}: term #{i + 1}" for i, t in enumerate(terms) if t.lower() in lower]
+        hits += [
+            f"{path.relative_to(ROOT).as_posix()}: term #{i + 1}" for i, t in enumerate(terms) if t.lower() in lower
+        ]
     assert not hits, "\n".join(hits)

@@ -14,6 +14,7 @@
 //   - Writes only touch rows this script created (marker "SWMCP_REC" / "SWMCPRec" / "-swmcp-rec").
 //   - Cleanup restores the baseline captured by the read steps; it never deletes rows without a marker,
 //     except achievements whose API name starts with TEST_STEAMWORKS_MCP (left over from earlier tool tests).
+import "./root.js";
 import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";

@@ -8,6 +8,11 @@ descriptions, translations, capsules, achievements and Steam Cloud settings for 
 
 > Not affiliated with or endorsed by Valve. "Steam" and "Steamworks" are trademarks of Valve Corporation.
 
+> **Rewrite in progress.** The server is being rebuilt in Python as a full release assistant (release gates, gap
+> reports, interviews, generators, validators, export packages, optional Steamworks automation). The TypeScript
+> v0.1 described below now lives in [`legacy/ts/`](legacy/ts/) and still works: run every `npm`/`npx`/`node` command
+> below from that folder. It will be removed once the Python server can do everything it does.
+
 ## What it does
 
 | Problem | Tool(s) |

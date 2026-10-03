@@ -14,6 +14,7 @@
 //   - e-mail addresses -> user@example.com; antivirus script injections (removed)
 //   - Turkish-language sample text (the public repo is English-only) -> "[turkish text removed]"
 // The script ends with the same checks as tests/test_fixture_sanitization.py and exits 1 on any finding.
+import "./root.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { HarEntry, HarFile } from "./har.js";
@@ -244,7 +245,7 @@ async function main(): Promise<void> {
   const hex = new HexMap();
   const denylist = (process.env.SANITIZE_DENYLIST ?? "").split(",").map((t) => t.trim()).filter(Boolean);
   await fs.mkdir(OUT, { recursive: true });
-  for (const e of await fs.readdir(OUT)) await fs.rm(path.join(OUT, e), { recursive: true, force: true });
+  for (const e of await fs.readdir(OUT)) if (e !== "README.md") await fs.rm(path.join(OUT, e), { recursive: true, force: true });
   let leaks = 0;
   let bytes = 0;
   // Reads first so the big store document stays in store/read.
