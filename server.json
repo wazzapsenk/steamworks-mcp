@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.wazzapsenk/steamworks-mcp",
+  "title": "Steamworks Release Assistant",
+  "description": "Put a game on Steam: store page, achievements, Valve-rule checks, market data, Steamworks.",
+  "repository": {
+    "url": "https://github.com/wazzapsenk/steamworks-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://burakkaan.dev/steamworks-mcp",
+  "version": "0.3.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "steamworks-mcp",
+      "version": "0.3.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "STEAMWORKS_MCP_ROOT",
+          "description": "The folder that holds your game projects. Default: the folder the app starts the server in.",
+          "isRequired": false,
+          "format": "filepath"
+        },
+        {
+          "name": "STEAMWORKS_PUBLISHER_KEY",
+          "description": "Optional Steamworks publisher Web API key, only for builds, beta branches and leaderboards.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+# Pushing a tag like v0.3.0 tests the code, publishes the package to PyPI and the entry to the MCP Registry.
+# No tokens: PyPI trusts this workflow (trusted publishing, set up once on pypi.org) and the MCP Registry trusts
+# GitHub's OIDC token for the io.github.wazzapsenk namespace.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: The tag matches the version
+        run: |
+          version="$(uv version --short)"
+          if [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match the version $version in pyproject.toml." >&2
+            exit 1
+          fi
+
+      - name: Test
+        run: |
+          uv sync --locked --extra browser
+          uv run ruff check src tests scripts
+          uv run mypy
+          uv run pytest
+
+      - name: Build
+        run: uv build
+
+      - name: Publish to PyPI
+        run: uv publish --trusted-publishing always
+
+      - name: Publish to the MCP Registry
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish

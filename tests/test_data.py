@@ -181,3 +181,18 @@ def test_plugin_manifests_agree() -> None:
             "steamworks-mcp",
         ]
     assert (ROOT / cursor["skills"]).is_dir() and any((ROOT / cursor["rules"]).glob("*.mdc"))
+
+
+def test_mcp_registry_entry_matches_the_package() -> None:
+    """server.json (the MCP Registry entry) names this package and version, and the README proves ownership."""
+    import tomllib
+
+    entry = json.loads((ROOT / "server.json").read_text(encoding="utf-8"))
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    package = entry["packages"][0]
+    assert entry["version"] == package["version"] == project["version"] == __version__
+    assert package["registryType"] == "pypi" and package["identifier"] == project["name"]
+    assert package["transport"] == {"type": "stdio"}
+    assert len(entry["description"]) <= 100 and len(entry["title"]) <= 100
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert f"<!-- mcp-name: {entry['name']} -->" in readme

@@ -8,6 +8,8 @@ Works with **Claude** (Desktop, Code and claude.ai) and **ChatGPT**. Free and op
 
 **37 tools · 36 skills · 24 code rules · 124 release checks · 114 store-text rules · Unity, Godot and Unreal**
 
+<!-- mcp-name: io.github.wazzapsenk/steamworks-mcp -->
+
 > Not affiliated with or endorsed by Valve. "Steam" and "Steamworks" are trademarks of Valve Corporation.
 
 **Contents:** [How it works](#how-it-works) · [Install](#install) · [Your first conversation](#your-first-conversation) ·
@@ -64,7 +66,7 @@ can talk to it.
 In a terminal:
 
 ```bash
-uvx --from git+https://github.com/wazzapsenk/steamworks-mcp steamworks-mcp setup
+uvx steamworks-mcp setup
 ```
 
 It asks where your games are and connects Claude Desktop (and Claude Code, if you have it). Restart Claude Desktop.
@@ -88,7 +90,7 @@ These apps reach the server over the internet, through a secure address on your 
 from Cloudflare; on Windows `winget install --id Cloudflare.cloudflared`, on a Mac `brew install cloudflared`), then:
 
 ```bash
-uvx --from git+https://github.com/wazzapsenk/steamworks-mcp steamworks-mcp remote
+uvx steamworks-mcp remote
 ```
 
 It asks where your games are (the first time), opens the address and prints what to paste:
@@ -104,7 +106,7 @@ window open while you work. The address changes every time you start it (update 
 ### Check the installation
 
 ```bash
-uvx --from git+https://github.com/wazzapsenk/steamworks-mcp steamworks-mcp doctor
+uvx steamworks-mcp doctor
 ```
 
 Other apps (Codex, Cursor and anything else that supports MCP) and connecting by hand:

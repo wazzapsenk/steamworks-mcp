@@ -24,7 +24,6 @@ from steamworks_mcp import __version__
 from steamworks_mcp.config import SETTINGS_FILE, home_dir, load_config, parse_dotenv
 
 SERVER_NAME = "steamworks"
-SOURCE = "git+https://github.com/wazzapsenk/steamworks-mcp"
 CODEX_TIMEOUT = 900  # build uploads and Steamworks writes can take minutes
 
 Ask = Callable[[str], str]
@@ -34,10 +33,10 @@ Ask = Callable[[str], str]
 
 
 def launch_command() -> list[str]:
-    """How the apps start this server: this very installation, unless it runs from a throwaway uvx cache."""
+    """How the apps start this server: this very installation, unless it runs from uvx's cache (then uvx again)."""
     exe = Path(sys.executable)
     if any(part.lower() in ("uv", "archive-v0") for part in exe.parts) and "cache" in str(exe).lower():
-        return ["uvx", "--from", SOURCE, "steamworks-mcp"]
+        return ["uvx", "steamworks-mcp"]
     return [str(exe), "-m", "steamworks_mcp"]
 
 

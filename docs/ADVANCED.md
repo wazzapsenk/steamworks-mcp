@@ -83,6 +83,17 @@ The one thing Steam makes live without a Publish step is store tags. `apply(sect
 with `goes_live_now=true` on top of the usual confirmation, and never removes community tags. Packages, which
 Steam also changes at once, are never edited.
 
+## Updating
+
+`uvx steamworks-mcp` keeps the downloaded version in uv's cache. To move to the newest release, clear it once:
+
+```bash
+uv cache clean steamworks-mcp
+```
+
+The next start (your app, or any `uvx steamworks-mcp` command) downloads the newest version. The Claude Code plugin
+updates with `claude plugin update steamworks@steamworks-mcp`.
+
 ## Connect it by hand
 
 `steamworks-mcp setup` does this for Claude Desktop, Claude Code, Cursor and Codex. By hand:
@@ -120,7 +131,7 @@ once:
 
 ```bash
 git clone https://github.com/wazzapsenk/steamworks-mcp ~/.cursor/plugins/local/steamworks
-uvx --from git+https://github.com/wazzapsenk/steamworks-mcp steamworks-mcp setup --only-settings
+uvx steamworks-mcp setup --only-settings
 ```
 
 Or only the server, in `~/.cursor/mcp.json` (or `.cursor/mcp.json` in a project):

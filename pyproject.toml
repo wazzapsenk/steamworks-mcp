@@ -1,16 +1,18 @@
 [project]
 name = "steamworks-mcp"
-version = "0.3.0.dev0"
-description = "MCP server that takes a Steam game from nothing configured to released: release gates, gap reports, interviews, generators, validators, export packages and optional Steamworks automation."
-readme = "README.md"
+version = "0.3.0"
+description = "Release assistant for Steam games, as an MCP server for Claude and ChatGPT: store page, achievements, checks against Valve's rules, market data, and Steamworks only after you approve."
+dynamic = ["readme"]
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Burak Kaan Sahin" }]
 requires-python = ">=3.11"
-keywords = ["mcp", "model-context-protocol", "steam", "steamworks", "gamedev", "release", "localization"]
+keywords = ["mcp", "mcp-server", "model-context-protocol", "steam", "steamworks", "gamedev", "release", "localization", "claude", "chatgpt"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
   "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -34,7 +36,10 @@ steamworks-mcp = "steamworks_mcp.__main__:main"
 browser = ["playwright>=1.48"]
 
 [project.urls]
+Homepage = "https://burakkaan.dev/steamworks-mcp"
 Repository = "https://github.com/wazzapsenk/steamworks-mcp"
+Documentation = "https://github.com/wazzapsenk/steamworks-mcp/blob/main/docs/ADVANCED.md"
+Issues = "https://github.com/wazzapsenk/steamworks-mcp/issues"
 
 [dependency-groups]
 dev = [
@@ -45,14 +50,41 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling>=1.27"]
+requires = ["hatchling>=1.27", "hatch-fancy-pypi-readme>=24.1"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/steamworks_mcp"]
 
+# Only what belongs in a source release: local-only files (notes, specs, settings) must never ship.
 [tool.hatch.build.targets.sdist]
-exclude = ["tests/fixtures", "spikes", ".steamworks-mcp"]
+include = [
+  "src",
+  "tests",
+  "docs",
+  "skills",
+  "rules",
+  "examples",
+  "scripts",
+  ".claude-plugin",
+  ".cursor-plugin",
+  "server.json",
+  "README.md",
+  "LICENSE",
+  "pyproject.toml",
+]
+exclude = ["tests/fixtures", ".steam-mcp"]
+
+# PyPI shows the README as the package page: relative links become links into the repository.
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '\]\((?!https?://|#|mailto:)([^)\s]+)\)'
+replacement = '](https://github.com/wazzapsenk/steamworks-mcp/blob/main/\g<1>)'
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
