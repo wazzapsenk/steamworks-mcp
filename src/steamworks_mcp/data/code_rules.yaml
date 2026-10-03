@@ -187,21 +187,21 @@ rules:
     title: The game forces a fixed resolution
     why: Steam Deck's screen is 1280x800 (16:10); a forced resolution looks blurry or stretched and fails Deck review.
     fix: Default to the display's native resolution and let players change it in the settings.
-    source: https://partner.steamgames.com/doc/steamdeck/recommendations
+    source: https://partner.steamgames.com/doc/steamhardware/recommendations
   - id: no_gamepad_input
     group: steamworks-steam-deck
     severity: warning
     title: No gamepad input found
     why: Steam Deck and most living-room players use a controller; a mouse-only game cannot be Deck Verified.
     fix: Map every action to a gamepad as well (Unity Input System, Godot joypad events, Unreal gamepad keys) or support Steam Input.
-    source: https://partner.steamgames.com/doc/steamdeck/recommendations
+    source: https://partner.steamgames.com/doc/steamhardware/recommendations
   - id: anticheat_proton
     group: steamworks-steam-deck
     severity: info
     title: An anti-cheat service is used
     why: Easy Anti-Cheat and BattlEye only run on Steam Deck and Linux when Proton support is turned on for the game.
     fix: Turn on Proton/Linux support in the anti-cheat service's dashboard and test the game on Steam Deck.
-    source: https://partner.steamgames.com/doc/steamdeck/recommendations
+    source: https://partner.steamgames.com/doc/steamhardware/recommendations
   - id: registry_saves
     group: steamworks-saves-cloud
     severity: warning

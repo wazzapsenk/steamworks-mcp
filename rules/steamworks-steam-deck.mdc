@@ -19,18 +19,18 @@ Steam Deck runs at 1280x800 (16:10) with a controller: do not force a fixed reso
 
 - Why: Steam Deck's screen is 1280x800 (16:10); a forced resolution looks blurry or stretched and fails Deck review.
 - Fix: Default to the display's native resolution and let players change it in the settings.
-- Source: https://partner.steamgames.com/doc/steamdeck/recommendations
+- Source: https://partner.steamgames.com/doc/steamhardware/recommendations
 
 ## No gamepad input found (warning)
 
 - Why: Steam Deck and most living-room players use a controller; a mouse-only game cannot be Deck Verified.
 - Fix: Map every action to a gamepad as well (Unity Input System, Godot joypad events, Unreal gamepad keys) or support Steam Input.
-- Source: https://partner.steamgames.com/doc/steamdeck/recommendations
+- Source: https://partner.steamgames.com/doc/steamhardware/recommendations
 
 ## An anti-cheat service is used (info)
 
 - Why: Easy Anti-Cheat and BattlEye only run on Steam Deck and Linux when Proton support is turned on for the game.
 - Fix: Turn on Proton/Linux support in the anti-cheat service's dashboard and test the game on Steam Deck.
-- Source: https://partner.steamgames.com/doc/steamdeck/recommendations
+- Source: https://partner.steamgames.com/doc/steamhardware/recommendations
 
 With the steamworks-mcp server connected, `check_code(path)` finds these problems in the whole project, with file and line (`check_code(path, rules=["steamworks-steam-deck"])` for this group only).

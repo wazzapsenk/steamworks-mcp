@@ -15,6 +15,7 @@ Study the Steam store pages of the games closest to the game in `<path>` before 
 1. Call study_market. If it finds no usable tags, ask me which Steam tags describe the game best (most specific first) and call it again with tags=[...].
 2. Read every page it returns and label it with its vocabulary: how the short description opens, the job of each sentence, how About is built and in what order, the tone, and one technique sentence in your own words. Save all notes with save_market_study; fix and resend rejected ones.
 3. Tell me in a few lines what these games do: the most common opening, the usual About order, the tones, two or three techniques worth using and one thing to avoid. Never quote their pages and never suggest naming them on our page.
-4. Offer to write the store text now (the write_store_page prompt): its briefs include the study and two strategies built on it, market_common and market_contrast.
+4. Offer more, optional: compare_games (prices, reviews, modes and Steam features side by side), study_reviews (what players of these games praise and criticize; label with save_review_study) and price_brief (their prices per country).
+5. Offer to write the store text now (the write_store_page prompt): its briefs include the study and two strategies built on it, market_common and market_contrast.
 
 Never claim something was done in Steamworks unless a tool reported it as applied, never approve values without the user's agreement, and never publish: the user publishes in Steamworks.

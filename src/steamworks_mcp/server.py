@@ -987,17 +987,22 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         """Walk a game from nothing configured to released on Steam."""
         return (
             f"Help me release the game in `{path}` on Steam. Work in this order and keep me in the loop:\n"
-            "1. init_project (or scan_project if steamworks.yaml exists), then gap_report.\n"
+            "1. status: where the game stands. If it is not tracked yet, init_project (or scan_project if "
+            "steamworks.yaml exists), then gap_report.\n"
             "2. start_interview: ask me the questions in small batches and save my answers with set_field.\n"
             "3. generate the drafts (store_short, store_long, achievements, cloud, builds, requirements, code); show "
             "me each one and approve_fields only what I agree with. Before the store text, offer a market study "
             "(the market_research prompt).\n"
             "4. validate, translate every text into every target language (the localize_everything prompt: "
             "localization_pending / localization_set), prepare_images.\n"
-            "5. export_package for the next gate; with the publisher key or the BROWSER mode, apply section by section "
+            "5. In the game's code: integration_code for the Steam SDK code that matches steamworks.yaml, then "
+            "check_code; explain what it finds and fix it only when I ask.\n"
+            "6. Before release: price_brief for the price, and the event calendar (get_spec_info('events')) for the "
+            "date.\n"
+            "7. export_package for the next gate; with the publisher key or the BROWSER mode, apply section by section "
             "(always a dry run first, then only with my OK).\n"
-            "Never claim something is done in Steamworks unless a tool reported it applied, and never publish: I do "
-            "that myself."
+            "Show each result's display as it is. Never claim something is done in Steamworks unless a tool reported "
+            "it applied, and never publish: I do that myself."
         )
 
     @server.prompt(title="Write the store page")
@@ -1032,7 +1037,10 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "3. Tell me in a few lines what these games do: the most common opening, the usual About order, the "
             "tones, two or three techniques worth using and one thing to avoid. Never quote their pages and never "
             "suggest naming them on our page.\n"
-            "4. Offer to write the store text now (the write_store_page prompt): its briefs include the study and "
+            "4. Offer more, optional: compare_games (prices, reviews, modes and Steam features side by side), "
+            "study_reviews (what players of these games praise and criticize; label with save_review_study) and "
+            "price_brief (their prices per country).\n"
+            "5. Offer to write the store text now (the write_store_page prompt): its briefs include the study and "
             "two strategies built on it, market_common and market_contrast."
         )
 
@@ -1062,8 +1070,12 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             f"Design the Steam achievements for the game in `{path}`. Start with generate(section='code') to see "
             "which achievements and stats the code already uses, then generate(section='achievements') and write "
             "names, descriptions and icon briefs for the ones missing. Keep a balance of progression, skill and "
-            "secret/funny ones, save them with set_field(source='generated'), run validate(section='achievements') "
-            "and show me the list for approval."
+            "secret/funny ones; an achievement with a progress bar needs a stat (achievements.<id>.progress). Save "
+            "them with set_field(source='generated'), run validate(section='achievements') and show me the list for "
+            "approval. Once I approved them: prepare_images makes the icons, integration_code(features="
+            "['achievements', "
+            "'stats']) writes the code that unlocks them with these exact names, and check_code confirms the game "
+            "uses no other names."
         )
 
     @server.prompt(title="Review a gate")

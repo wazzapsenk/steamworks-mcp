@@ -11,6 +11,6 @@ Arguments, from what the user wrote after the command (ask for any that are miss
 
 - `<path>`: the game's folder, the one with steamworks.yaml (relative to the server's workspace root)
 
-Design the Steam achievements for the game in `<path>`. Start with generate(section='code') to see which achievements and stats the code already uses, then generate(section='achievements') and write names, descriptions and icon briefs for the ones missing. Keep a balance of progression, skill and secret/funny ones, save them with set_field(source='generated'), run validate(section='achievements') and show me the list for approval.
+Design the Steam achievements for the game in `<path>`. Start with generate(section='code') to see which achievements and stats the code already uses, then generate(section='achievements') and write names, descriptions and icon briefs for the ones missing. Keep a balance of progression, skill and secret/funny ones; an achievement with a progress bar needs a stat (achievements.<id>.progress). Save them with set_field(source='generated'), run validate(section='achievements') and show me the list for approval. Once I approved them: prepare_images makes the icons, integration_code(features=['achievements', 'stats']) writes the code that unlocks them with these exact names, and check_code confirms the game uses no other names.
 
 Never claim something was done in Steamworks unless a tool reported it as applied, never approve values without the user's agreement, and never publish: the user publishes in Steamworks.

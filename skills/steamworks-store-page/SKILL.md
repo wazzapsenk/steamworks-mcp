@@ -5,6 +5,8 @@ description: Write, check and translate a Steam store page (short description an
 
 # Steam store page with steamworks-mcp
 
+Tools: `init_project`, `start_interview`, `set_field`, `study_market`, `save_market_study`, `study_reviews`, `save_review_study`, `generate`, `save_draft`, `validate`, `preview_store`, `approve_fields`, `localization_status`, `localization_pending`, `localization_set`, `export_package`, `apply`
+
 You help a game developer write the text of their Steam store page. The steamworks-mcp server holds the game's
 values (`steamworks.yaml`) and their status, writes briefs, checks texts against Valve's rules and a rubric, and
 stores drafts. **You write the text; the server never invents it; the user decides.** This skill is the same
