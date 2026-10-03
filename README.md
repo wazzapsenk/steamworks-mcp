@@ -4,7 +4,8 @@
 your store page with you, checks everything against Valve's rules, and fills in Steamworks only after you say yes.
 It never publishes anything: you press Publish.
 
-Works with **Claude** (Desktop, Code and claude.ai) and **ChatGPT**. Free and open source ([MIT](LICENSE)).
+Works with **Claude** (Desktop, Code and claude.ai), **ChatGPT** (web and desktop app) and **Codex** (app, CLI and
+IDE extension). Free and open source ([MIT](LICENSE)).
 
 **37 tools · 36 skills · 24 code rules · 124 release checks · 114 store-text rules · Unity, Godot and Unreal**
 
@@ -49,14 +50,14 @@ it is right), or **done in Steamworks**.
 ## Install
 
 You need [uv](https://docs.astral.sh/uv/getting-started/installation/), a small tool that runs Python programs (one
-command to install), and Claude or ChatGPT. You do **not** need Steam keys or a Steam login to start.
+command to install), and Claude, ChatGPT or Codex. You do **not** need Steam keys or a Steam login to start.
 
 The server speaks both MCP transports:
 
 | Transport | For | Started by |
 |---|---|---|
-| **stdio** (the default) | Apps that start the server on your computer: Claude Desktop, Claude Code, Codex, Cursor | the app itself (`steamworks-mcp`); `setup` and the plugin configure it |
-| **Streamable HTTP** | Apps that connect over the internet: ChatGPT, claude.ai | `steamworks-mcp remote` (with a secure address), or `steamworks-mcp --http` (local only, [details](docs/ADVANCED.md#remote-clients-chatgpt-claudeai)) |
+| **stdio** (the default) | Apps that start the server on your computer: Claude Desktop, Claude Code, Codex (app, CLI, IDE extension), Cursor | the app itself (`steamworks-mcp`); `setup` and the plugin configure it |
+| **Streamable HTTP** | Apps that connect over the internet: ChatGPT (web and desktop app), claude.ai | `steamworks-mcp remote` (with a secure address), or `steamworks-mcp --http` (local only, [details](docs/ADVANCED.md#remote-clients-chatgpt-claudeai)) |
 
 Over HTTP every request needs sign-in (OAuth, or a bearer token); over stdio only the app that started the server
 can talk to it.
@@ -83,7 +84,7 @@ In Claude Code, type:
 
 It asks for your games folder. That's it.
 
-### ChatGPT and claude.ai
+### ChatGPT (web or desktop app) and claude.ai
 
 These apps reach the server over the internet, through a secure address on your computer. Install
 [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) once (free,
@@ -95,13 +96,27 @@ uvx steamworks-mcp remote
 
 It asks where your games are (the first time), opens the address and prints what to paste:
 
-- **ChatGPT**: Settings > Apps & Connectors > Advanced settings > Developer mode, then create a connector (in the
-  desktop app: Settings > Plugins > MCPs > Add). Custom connectors need developer mode; check that your plan has it.
+- **ChatGPT on the web**: Settings > Apps & Connectors > Advanced settings > Developer mode, then create a connector.
+- **ChatGPT desktop app** (Windows, macOS): Settings > Plugins > MCPs > Add.
 - **claude.ai**: Settings > Connectors > Add custom connector.
 
-Paste the address, choose OAuth, and type the access code it shows when a steamworks-mcp page asks for it. Keep the
-window open while you work. The address changes every time you start it (update the connector then);
+Paste the address, choose OAuth, and type the access code it shows when a steamworks-mcp page asks for it. Custom
+connectors in ChatGPT need developer mode; check that your plan has it. Keep the window open while you work. The
+address changes every time you start it (update the connector then);
 [a fixed address](docs/ADVANCED.md#remote-clients-chatgpt-claudeai) needs a little more setup.
+
+### Codex (app, CLI and IDE extension)
+
+The same command as for Claude Desktop:
+
+```bash
+uvx steamworks-mcp setup
+```
+
+It asks where your games are and which apps to connect; say yes to Codex. The server goes into
+`~/.codex/config.toml`, which the Codex app, the CLI and the IDE extension all read, so one setup covers all three.
+Codex starts the server on your computer: no tunnel and no access code. Tools that only read run without asking;
+Codex asks before every tool that changes something. Restart Codex.
 
 ### Check the installation
 
@@ -109,8 +124,7 @@ window open while you work. The address changes every time you start it (update 
 uvx steamworks-mcp doctor
 ```
 
-Other apps (Codex, Cursor and anything else that supports MCP) and connecting by hand:
-[docs/ADVANCED.md](docs/ADVANCED.md).
+Other apps (Cursor and anything else that supports MCP) and connecting by hand: [docs/ADVANCED.md](docs/ADVANCED.md).
 
 ## Your first conversation
 

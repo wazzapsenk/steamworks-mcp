@@ -169,7 +169,7 @@ prompts, so there it needs `"approve"`.
 
 ### Remote clients: ChatGPT, claude.ai
 
-**The easy way:** `steamworks-mcp remote` ([README](../README.md#chatgpt-and-claudeai)). It keeps an access code
+**The easy way:** `steamworks-mcp remote` ([README](../README.md#chatgpt-web-or-desktop-app-and-claudeai)). It keeps an access code
 in `~/.steamworks-mcp/settings.env` (made once), opens a Cloudflare quick tunnel to the local server, starts the HTTP
 server with OAuth sign-in on that address and prints what to paste into ChatGPT and claude.ai. Ctrl+C stops both.
 The BROWSER mode stays off over the internet unless `STEAM_MCP_BROWSER_REMOTE=1` is set.
