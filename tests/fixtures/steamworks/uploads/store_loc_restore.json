@@ -1,0 +1,8 @@
+{
+  "itemid": "2000000",
+  "languages": {
+    "english": {
+      "app[content][short_description]": "[steamworks-mcp test] ExampleGame is a fast arcade shooter where every shot ricochets. Bank shots off walls, chain combos across the arena and climb the daily leaderboards. Placeholder text written by an automated test."
+    }
+  }
+}

@@ -1,0 +1,33 @@
+[
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/fetchachievements/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "achievements": [
+        {
+          "stat_id": 3,
+          "bit_id": 0,
+          "api_name": "SWMCP_REC_A",
+          "display_name": {
+            "english": "Recording Test A",
+            "german": "Aufnahme-Test A"
+          },
+          "description": {
+            "english": "Fixture recording, safe to delete.",
+            "german": "Fixture-Aufnahme, kann gelöscht werden."
+          },
+          "permission": 0,
+          "hidden": "1",
+          "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0002.jpg",
+          "icon_gray": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0003.jpg",
+          "progress": false
+        }
+      ],
+      "languages": {
+        "english": true
+      }
+    }
+  }
+]

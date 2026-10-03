@@ -1,0 +1,447 @@
+[
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/fetchachievements/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "achievements": [
+        {
+          "stat_id": 1,
+          "bit_id": 0,
+          "api_name": "TEST_STEAMWORKS_MCP",
+          "display_name": {
+            "english": "steamworks-mcp test",
+            "turkish": "[turkish text removed]",
+            "german": "steamworks-mcp-Test"
+          },
+          "description": {
+            "english": "Created by an automated test (updated).",
+            "turkish": "[turkish text removed]",
+            "german": "Von einem automatisierten Test erstellt (aktualisiert)."
+          },
+          "permission": 0,
+          "hidden": "0",
+          "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0002.jpg",
+          "icon_gray": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0003.jpg",
+          "progress": false
+        },
+        {
+          "stat_id": 1,
+          "bit_id": 1,
+          "api_name": "TEST_STEAMWORKS_MCP_2",
+          "display_name": {
+            "english": "steamworks-mcp test 2",
+            "turkish": "[turkish text removed]",
+            "german": "steamworks-mcp-Test 2"
+          },
+          "description": {
+            "english": "Second test achievement, hidden.",
+            "turkish": "[turkish text removed]",
+            "german": "Zweiter Test-Erfolg, versteckt."
+          },
+          "permission": 0,
+          "hidden": "1",
+          "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0004.jpg",
+          "icon_gray": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0005.jpg",
+          "progress": false
+        }
+      ],
+      "languages": {
+        "english": true
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/fetchachievements/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "achievements": [
+        {
+          "stat_id": 1,
+          "bit_id": 0,
+          "api_name": "TEST_STEAMWORKS_MCP",
+          "display_name": {
+            "english": "steamworks-mcp test",
+            "turkish": "[turkish text removed]",
+            "german": "steamworks-mcp-Test"
+          },
+          "description": {
+            "english": "Created by an automated test (updated).",
+            "turkish": "[turkish text removed]",
+            "german": "Von einem automatisierten Test erstellt (aktualisiert)."
+          },
+          "permission": 0,
+          "hidden": "0",
+          "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0002.jpg",
+          "icon_gray": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0003.jpg",
+          "progress": false
+        },
+        {
+          "stat_id": 1,
+          "bit_id": 1,
+          "api_name": "TEST_STEAMWORKS_MCP_2",
+          "display_name": {
+            "english": "steamworks-mcp test 2",
+            "turkish": "[turkish text removed]",
+            "german": "steamworks-mcp-Test 2"
+          },
+          "description": {
+            "english": "Second test achievement, hidden.",
+            "turkish": "[turkish text removed]",
+            "german": "Zweiter Test-Erfolg, versteckt."
+          },
+          "permission": 0,
+          "hidden": "1",
+          "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0004.jpg",
+          "icon_gray": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0005.jpg",
+          "progress": false
+        }
+      ],
+      "languages": {
+        "english": true
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/getachievementcounts/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "total": 2,
+      "unlocalized": {
+        "names": 0,
+        "descs": 0
+      },
+      "english": {
+        "names": 2,
+        "descs": 2
+      },
+      "german": {
+        "names": 2,
+        "descs": 2
+      },
+      "french": {
+        "names": 0,
+        "descs": 0
+      },
+      "italian": {
+        "names": 0,
+        "descs": 0
+      },
+      "koreana": {
+        "names": 0,
+        "descs": 0
+      },
+      "spanish": {
+        "names": 0,
+        "descs": 0
+      },
+      "schinese": {
+        "names": 0,
+        "descs": 0
+      },
+      "tchinese": {
+        "names": 0,
+        "descs": 0
+      },
+      "russian": {
+        "names": 0,
+        "descs": 0
+      },
+      "thai": {
+        "names": 0,
+        "descs": 0
+      },
+      "japanese": {
+        "names": 0,
+        "descs": 0
+      },
+      "portuguese": {
+        "names": 0,
+        "descs": 0
+      },
+      "polish": {
+        "names": 0,
+        "descs": 0
+      },
+      "danish": {
+        "names": 0,
+        "descs": 0
+      },
+      "dutch": {
+        "names": 0,
+        "descs": 0
+      },
+      "finnish": {
+        "names": 0,
+        "descs": 0
+      },
+      "norwegian": {
+        "names": 0,
+        "descs": 0
+      },
+      "swedish": {
+        "names": 0,
+        "descs": 0
+      },
+      "hungarian": {
+        "names": 0,
+        "descs": 0
+      },
+      "czech": {
+        "names": 0,
+        "descs": 0
+      },
+      "romanian": {
+        "names": 0,
+        "descs": 0
+      },
+      "turkish": {
+        "names": 2,
+        "descs": 2
+      },
+      "arabic": {
+        "names": 0,
+        "descs": 0
+      },
+      "brazilian": {
+        "names": 0,
+        "descs": 0
+      },
+      "bulgarian": {
+        "names": 0,
+        "descs": 0
+      },
+      "greek": {
+        "names": 0,
+        "descs": 0
+      },
+      "ukrainian": {
+        "names": 0,
+        "descs": 0
+      },
+      "vietnamese": {
+        "names": 0,
+        "descs": 0
+      },
+      "latam": {
+        "names": 0,
+        "descs": 0
+      },
+      "indonesian": {
+        "names": 0,
+        "descs": 0
+      },
+      "malay": {
+        "names": 0,
+        "descs": 0
+      },
+      "token": {
+        "names": 0,
+        "descs": 0
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/deleteachievement/1000000/1/0",
+    "query": {},
+    "status": 200,
+    "request": {
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "deleted": true
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/fetchachievements/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "achievements": [
+        {
+          "stat_id": 1,
+          "bit_id": 1,
+          "api_name": "TEST_STEAMWORKS_MCP_2",
+          "display_name": {
+            "english": "steamworks-mcp test 2",
+            "turkish": "[turkish text removed]",
+            "german": "steamworks-mcp-Test 2"
+          },
+          "description": {
+            "english": "Second test achievement, hidden.",
+            "turkish": "[turkish text removed]",
+            "german": "Zweiter Test-Erfolg, versteckt."
+          },
+          "permission": 0,
+          "hidden": "1",
+          "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0004.jpg",
+          "icon_gray": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0005.jpg",
+          "progress": false
+        }
+      ],
+      "languages": {
+        "english": true
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/getachievementcounts/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "total": 1,
+      "unlocalized": {
+        "names": 0,
+        "descs": 0
+      },
+      "english": {
+        "names": 1,
+        "descs": 1
+      },
+      "german": {
+        "names": 1,
+        "descs": 1
+      },
+      "french": {
+        "names": 0,
+        "descs": 0
+      },
+      "italian": {
+        "names": 0,
+        "descs": 0
+      },
+      "koreana": {
+        "names": 0,
+        "descs": 0
+      },
+      "spanish": {
+        "names": 0,
+        "descs": 0
+      },
+      "schinese": {
+        "names": 0,
+        "descs": 0
+      },
+      "tchinese": {
+        "names": 0,
+        "descs": 0
+      },
+      "russian": {
+        "names": 0,
+        "descs": 0
+      },
+      "thai": {
+        "names": 0,
+        "descs": 0
+      },
+      "japanese": {
+        "names": 0,
+        "descs": 0
+      },
+      "portuguese": {
+        "names": 0,
+        "descs": 0
+      },
+      "polish": {
+        "names": 0,
+        "descs": 0
+      },
+      "danish": {
+        "names": 0,
+        "descs": 0
+      },
+      "dutch": {
+        "names": 0,
+        "descs": 0
+      },
+      "finnish": {
+        "names": 0,
+        "descs": 0
+      },
+      "norwegian": {
+        "names": 0,
+        "descs": 0
+      },
+      "swedish": {
+        "names": 0,
+        "descs": 0
+      },
+      "hungarian": {
+        "names": 0,
+        "descs": 0
+      },
+      "czech": {
+        "names": 0,
+        "descs": 0
+      },
+      "romanian": {
+        "names": 0,
+        "descs": 0
+      },
+      "turkish": {
+        "names": 1,
+        "descs": 1
+      },
+      "arabic": {
+        "names": 0,
+        "descs": 0
+      },
+      "brazilian": {
+        "names": 0,
+        "descs": 0
+      },
+      "bulgarian": {
+        "names": 0,
+        "descs": 0
+      },
+      "greek": {
+        "names": 0,
+        "descs": 0
+      },
+      "ukrainian": {
+        "names": 0,
+        "descs": 0
+      },
+      "vietnamese": {
+        "names": 0,
+        "descs": 0
+      },
+      "latam": {
+        "names": 0,
+        "descs": 0
+      },
+      "indonesian": {
+        "names": 0,
+        "descs": 0
+      },
+      "malay": {
+        "names": 0,
+        "descs": 0
+      },
+      "token": {
+        "names": 0,
+        "descs": 0
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/deleteachievement/1000000/1/1",
+    "query": {},
+    "status": 200,
+    "request": {
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "deleted": true
+    }
+  }
+]

@@ -1,0 +1,19 @@
+"lang"
+{
+	"english"
+	{
+		"Tokens"
+		{
+			"NEW_ACHIEVEMENT_3_0_NAME"	"Recording Test A"
+			"NEW_ACHIEVEMENT_3_0_DESC"	"Fixture recording, safe to delete."
+		}
+	}
+	"german"
+	{
+		"Tokens"
+		{
+			"NEW_ACHIEVEMENT_3_0_NAME"	"Aufnahme-Test A (Datei)"
+			"NEW_ACHIEVEMENT_3_0_DESC"	"Fixture-Aufnahme, kann gelöscht werden."
+		}
+	}
+}

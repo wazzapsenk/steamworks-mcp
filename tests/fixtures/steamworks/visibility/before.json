@@ -1,0 +1,39 @@
+[
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/diff/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "section": "technical",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "opened": "App section \"stats\" has uncommitted changes. Revision 1 was last modified by Redacted on 2 Oct @ 5:23pm<br>App section \"ufs\" has uncommitted changes. Revision 1 was last modified by Redacted on 2 Oct @ 5:27pm<br>App section \"config\" has uncommitted changes. Revision 2 was last modified by Redacted on 2 Oct @ 5:29pm<br>App section \"common\" has uncommitted changes. Revision 2 was last modified by Redacted on 2 Oct @ 5:29pm<br>",
+      "diff": "<br>=== \"stats\" section is new ===<br><br>=== \"ufs\" section is new ===<br><br>=== Changes to \"config\" section (Revision 1 vs 2 )===<br><span TITLE=\"i=0\">&quot;1000000&quot;\n{\n</span><del class=\"diff_delete\">\t&quot;installdir&quot;\t\t&quot;ExampleGame&quot;\n</del><ins class=\"diff_insert\">\t&quot;installdir&quot;\t&quot;ExampleGame&quot;\n\t&quot;launch&quot;\n\t{\n\t\t&quot;0&quot;\n\t\t{\n\t\t\t&quot;executable&quot;\t&quot;ExampleGame.exe&quot;\n\t\t\t&quot;type&quot;\t&quot;default&quot;\n\t\t\t&quot;config&quot;\n\t\t\t{\n\t\t\t\t&quot;oslist&quot;\t&quot;windows&quot;\n\t\t\t\t&quot;osarch&quot;\t&quot;64&quot;\n\t\t\t}\n\t\t\t&quot;description&quot;\t&quot;Play ExampleGame&quot;\n\t\t\t&quot;description_loc&quot;\n\t\t\t{\n\t\t\t\t&quot;english&quot;\t&quot;Play ExampleGame&quot;\n\t\t\t\t&quot;turkish&quot;\t&[turkish text removed]&quot;\n\t\t\t}\n\t\t}\n\t}\n</ins><span TITLE=\"i=297\">}\n</span><br>=== Changes to \"common\" section (Revision 1 vs 2 )===<br><span TITLE=\"i=0\">&quot;1000000&quot;\n{\n</span><del class=\"diff_delete\">\t&quot;name&quot;\t\t&quot;ExampleGame&quot;\n\t&quot;section_type&quot;\t\t&quot;ownersonly&quot;\n\t&quot;type&quot;\t\t&quot;Game&quot;\n\t&quot;ReleaseState&quot;\t\t&quot;unavailable&quot;\n</del><ins class=\"diff_insert\">\t&quot;name&quot;\t&quot;ExampleGame&quot;\n\t&quot;section_type&quot;\t&quot;ownersonly&quot;\n\t&quot;type&quot;\t&quot;Game&quot;\n\t&quot;ReleaseState&quot;\t&quot;unavailable&quot;\n</ins><span TITLE=\"i=103\">}\n</span>"
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://store.steampowered.com/api/appdetails",
+    "query": {
+      "appids": "1000000",
+      "l": "english"
+    },
+    "status": 200,
+    "response": {
+      "1000000": {
+        "success": false
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/",
+    "query": {
+      "gameid": "1000000"
+    },
+    "status": 403,
+    "response": {}
+  }
+]

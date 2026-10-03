@@ -1,0 +1,77 @@
+[
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/fetchachievements/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "achievements": [
+        {
+          "stat_id": 3,
+          "bit_id": 0,
+          "api_name": "SWMCP_REC_A",
+          "display_name": {
+            "english": "Recording Test A",
+            "german": "Aufnahme-Test A"
+          },
+          "description": {
+            "english": "Fixture recording, safe to delete.",
+            "german": "Fixture-Aufnahme, kann gelöscht werden."
+          },
+          "permission": 0,
+          "hidden": "1",
+          "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0002.jpg",
+          "icon_gray": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0003.jpg",
+          "progress": false
+        }
+      ],
+      "languages": {
+        "english": true
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/uploadachievementloc",
+    "query": {},
+    "status": 200,
+    "request": {
+      "multipart": "------WebKitFormBoundaryeMS8ywJYHiLkw82B\r\nContent-Disposition: form-data; name=\"sessionid\"\r\n\r\nffffffffffffffffffff0001\r\n------WebKitFormBoundaryeMS8ywJYHiLkw82B\r\nContent-Disposition: form-data; name=\"MAX_FILE_SIZE\"\r\n\r\n9000000\r\n------WebKitFormBoundaryeMS8ywJYHiLkw82B\r\nContent-Disposition: form-data; name=\"appID\"\r\n\r\n1000000\r\n------WebKitFormBoundaryeMS8ywJYHiLkw82B\r\nContent-Disposition: form-data; name=\"kv\"; filename=\"achievement_loc_german.vdf\"\r\nContent-Type: application/octet-stream\r\n\r\n\"lang\"\n{\n\t\"Language\"\t\"german\"\n\t\"Tokens\"\n\t{\n\t\t\"NEW_ACHIEVEMENT_3_0_NAME\"\t\"Aufnahme-Test A (Datei)\"\n\t\t\"NEW_ACHIEVEMENT_3_0_DESC\"\t\"Fixture-Aufnahme (Datei).\"\n\t}\n}\n\r\n------WebKitFormBoundaryeMS8ywJYHiLkw82B--\r\n"
+    },
+    "response": {
+      "success": false,
+      "message": "App doesn't support language 'german'."
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/fetchachievements/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "achievements": [
+        {
+          "stat_id": 3,
+          "bit_id": 0,
+          "api_name": "SWMCP_REC_A",
+          "display_name": {
+            "english": "Recording Test A",
+            "german": "Aufnahme-Test A"
+          },
+          "description": {
+            "english": "Fixture recording, safe to delete.",
+            "german": "Fixture-Aufnahme, kann gelöscht werden."
+          },
+          "permission": 0,
+          "hidden": "1",
+          "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0002.jpg",
+          "icon_gray": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0003.jpg",
+          "progress": false
+        }
+      ],
+      "languages": {
+        "english": true
+      }
+    }
+  }
+]

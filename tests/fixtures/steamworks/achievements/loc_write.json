@@ -1,0 +1,56 @@
+[
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/fetchachievements/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "achievements": [
+        {
+          "stat_id": 3,
+          "bit_id": 0,
+          "api_name": "SWMCP_REC_A",
+          "display_name": {
+            "english": "Recording Test A",
+            "german": "Aufnahme-Test A"
+          },
+          "description": {
+            "english": "Fixture recording, safe to delete.",
+            "german": "Fixture-Aufnahme, kann gelöscht werden."
+          },
+          "permission": 0,
+          "hidden": "1",
+          "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0002.jpg",
+          "icon_gray": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0003.jpg",
+          "progress": false
+        }
+      ],
+      "languages": {
+        "english": true
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/uploadachievementloc",
+    "query": {},
+    "status": 200,
+    "request": {
+      "multipart": "------WebKitFormBoundarythMsHOkd6cigTkow\r\nContent-Disposition: form-data; name=\"sessionid\"\r\n\r\nffffffffffffffffffff0001\r\n------WebKitFormBoundarythMsHOkd6cigTkow\r\nContent-Disposition: form-data; name=\"MAX_FILE_SIZE\"\r\n\r\n9000000\r\n------WebKitFormBoundarythMsHOkd6cigTkow\r\nContent-Disposition: form-data; name=\"appID\"\r\n\r\n1000000\r\n------WebKitFormBoundarythMsHOkd6cigTkow\r\nContent-Disposition: form-data; name=\"kv\"; filename=\"achievement_loc_upload.vdf\"\r\nContent-Type: application/octet-stream\r\n\r\n\"lang\"\n{\n\t\"english\"\n\t{\n\t\t\"Tokens\"\n\t\t{\n\t\t\t\"NEW_ACHIEVEMENT_3_0_NAME\"\t\"Recording Test A\"\n\t\t\t\"NEW_ACHIEVEMENT_3_0_DESC\"\t\"Fixture recording, safe to delete.\"\n\t\t}\n\t}\n\t\"german\"\n\t{\n\t\t\"Tokens\"\n\t\t{\n\t\t\t\"NEW_ACHIEVEMENT_3_0_NAME\"\t\"Aufnahme-Test A (Datei)\"\n\t\t\t\"NEW_ACHIEVEMENT_3_0_DESC\"\t\"Fixture-Aufnahme, kann gelöscht werden.\"\n\t\t}\n\t}\n}\n\r\n------WebKitFormBoundarythMsHOkd6cigTkow--\r\n"
+    },
+    "response": {
+      "success": true,
+      "message": [
+        "2 achievements processed.",
+        "Localized names: 0",
+        "Localized descriptions: 0",
+        "Converted from non-localized names: 0",
+        "Converted from non-localized descriptions: 0",
+        "Names with no localization token: 0",
+        "Descriptions with no localization token: 0",
+        "Names with no localization for German: 0",
+        "Descriptions with no localization for German: 0"
+      ]
+    }
+  }
+]

@@ -8,3 +8,12 @@ coverage/
 .DS_Store
 # Playwright browser profile (contains your Steamworks session cookies)
 .steamworks-mcp/
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/

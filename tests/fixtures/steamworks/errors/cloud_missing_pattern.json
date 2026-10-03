@@ -1,0 +1,21 @@
+[
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/setautocloudpath/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "index": "3",
+      "root": "WinAppDataLocalLow",
+      "path": "SWMCPRec/NoPattern",
+      "pattern": "",
+      "oslist": "",
+      "recursive": "false",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": true,
+      "message": "Application auto-cloud path set successfully."
+    }
+  }
+]

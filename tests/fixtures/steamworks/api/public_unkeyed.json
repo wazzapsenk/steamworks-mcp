@@ -1,0 +1,25 @@
+[
+  {
+    "method": "GET",
+    "url": "https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/",
+    "query": {
+      "gameid": "1000000"
+    },
+    "status": 403,
+    "response": {}
+  },
+  {
+    "method": "GET",
+    "url": "https://store.steampowered.com/api/appdetails",
+    "query": {
+      "appids": "1000000",
+      "l": "english"
+    },
+    "status": 200,
+    "response": {
+      "1000000": {
+        "success": false
+      }
+    }
+  }
+]

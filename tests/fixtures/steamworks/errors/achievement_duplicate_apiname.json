@@ -1,0 +1,268 @@
+[
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/fetchachievements/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "achievements": [
+        {
+          "stat_id": 3,
+          "bit_id": 0,
+          "api_name": "SWMCP_REC_A",
+          "display_name": {
+            "english": "Recording Test A",
+            "german": "Aufnahme-Test A"
+          },
+          "description": {
+            "english": "Fixture recording, safe to delete.",
+            "german": "Fixture-Aufnahme, kann gelöscht werden."
+          },
+          "permission": 0,
+          "hidden": "1",
+          "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0002.jpg",
+          "icon_gray": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0003.jpg",
+          "progress": false
+        }
+      ],
+      "languages": {
+        "english": true
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/fetchachievements/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "achievements": [
+        {
+          "stat_id": 3,
+          "bit_id": 0,
+          "api_name": "SWMCP_REC_A",
+          "display_name": {
+            "english": "Recording Test A",
+            "german": "Aufnahme-Test A"
+          },
+          "description": {
+            "english": "Fixture recording, safe to delete.",
+            "german": "Fixture-Aufnahme, kann gelöscht werden."
+          },
+          "permission": 0,
+          "hidden": "1",
+          "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0002.jpg",
+          "icon_gray": "https://shared.akamai.steamstatic.com/community_assets/images/apps/1000000/ffffffffffffffffffffffffffffffffffff0003.jpg",
+          "progress": false
+        }
+      ],
+      "languages": {
+        "english": true
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/newachievement/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "maxstatid": "3",
+      "maxbitid": "0",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": 1,
+      "achievement": {
+        "stat_id": 3,
+        "bit_id": 1,
+        "api_name": "NEW_ACHIEVEMENT_3_1",
+        "display_name": "NEW_ACHIEVEMENT_NAME_3_1",
+        "description": "NEW_ACHIEVEMENT_DESC_3_1",
+        "permission": 0,
+        "hidden": "",
+        "icon": "",
+        "icon_gray": "",
+        "progress": false
+      },
+      "maxstatid": 3,
+      "maxbitid": 1
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/getachievementcounts/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "total": 1,
+      "unlocalized": {
+        "names": 0,
+        "descs": 0
+      },
+      "english": {
+        "names": 1,
+        "descs": 1
+      },
+      "german": {
+        "names": 1,
+        "descs": 1
+      },
+      "french": {
+        "names": 0,
+        "descs": 0
+      },
+      "italian": {
+        "names": 0,
+        "descs": 0
+      },
+      "koreana": {
+        "names": 0,
+        "descs": 0
+      },
+      "spanish": {
+        "names": 0,
+        "descs": 0
+      },
+      "schinese": {
+        "names": 0,
+        "descs": 0
+      },
+      "tchinese": {
+        "names": 0,
+        "descs": 0
+      },
+      "russian": {
+        "names": 0,
+        "descs": 0
+      },
+      "thai": {
+        "names": 0,
+        "descs": 0
+      },
+      "japanese": {
+        "names": 0,
+        "descs": 0
+      },
+      "portuguese": {
+        "names": 0,
+        "descs": 0
+      },
+      "polish": {
+        "names": 0,
+        "descs": 0
+      },
+      "danish": {
+        "names": 0,
+        "descs": 0
+      },
+      "dutch": {
+        "names": 0,
+        "descs": 0
+      },
+      "finnish": {
+        "names": 0,
+        "descs": 0
+      },
+      "norwegian": {
+        "names": 0,
+        "descs": 0
+      },
+      "swedish": {
+        "names": 0,
+        "descs": 0
+      },
+      "hungarian": {
+        "names": 0,
+        "descs": 0
+      },
+      "czech": {
+        "names": 0,
+        "descs": 0
+      },
+      "romanian": {
+        "names": 0,
+        "descs": 0
+      },
+      "turkish": {
+        "names": 0,
+        "descs": 0
+      },
+      "arabic": {
+        "names": 0,
+        "descs": 0
+      },
+      "brazilian": {
+        "names": 0,
+        "descs": 0
+      },
+      "bulgarian": {
+        "names": 0,
+        "descs": 0
+      },
+      "greek": {
+        "names": 0,
+        "descs": 0
+      },
+      "ukrainian": {
+        "names": 0,
+        "descs": 0
+      },
+      "vietnamese": {
+        "names": 0,
+        "descs": 0
+      },
+      "latam": {
+        "names": 0,
+        "descs": 0
+      },
+      "indonesian": {
+        "names": 0,
+        "descs": 0
+      },
+      "malay": {
+        "names": 0,
+        "descs": 0
+      },
+      "token": {
+        "names": 0,
+        "descs": 0
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/saveachievement/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "statid": "3",
+      "bitid": "1",
+      "apiname": "SWMCP_REC_A",
+      "displayname": "\"Recording duplicate\"",
+      "description": "\"Duplicate API name test.\"",
+      "permission": "0",
+      "hidden": "true",
+      "progressStat": "-1",
+      "progressMin": "",
+      "progressMax": "",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": 1,
+      "saved": true,
+      "achievement": {
+        "stat_id": 3,
+        "bit_id": 1,
+        "api_name": "SWMCP_REC_A",
+        "display_name": "Recording duplicate",
+        "description": "Duplicate API name test.",
+        "permission": 0,
+        "hidden": "1",
+        "icon": "",
+        "icon_gray": "",
+        "progress": false
+      }
+    }
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/setappinstallfolder/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "installfolder": "ExampleGame",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": true,
+      "message": "Application install folder updated successfully."
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/setlaunchoption/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "index": "1",
+      "executable": "SWMCPRec.exe",
+      "arguments": "-swmcp-rec",
+      "workingdir": "",
+      "type": "option1",
+      "description": "Recording test option",
+      "osversion": "windows",
+      "osarch": "64",
+      "oscpu": "",
+      "betakey": "",
+      "ownsdlc": "",
+      "realm": "",
+      "steamdeck": "",
+      "description_english": "Recording test option",
+      "description_german": "Aufnahme-Testoption",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": true,
+      "message": "Application launch option set successfully."
+    }
+  }
+]

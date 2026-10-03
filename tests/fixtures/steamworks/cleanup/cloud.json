@@ -1,0 +1,93 @@
+[
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/setautocloudoverride/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "index": "1",
+      "root": "",
+      "os": "",
+      "useinstead": "",
+      "addpath": "",
+      "replacepath": "",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": true,
+      "message": "Application auto-cloud override set successfully."
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/setautocloudpath/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "index": "3",
+      "root": "",
+      "path": "",
+      "pattern": "",
+      "oslist": "",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": true,
+      "message": "Application auto-cloud path set successfully."
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/setautocloudpath/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "index": "2",
+      "root": "",
+      "path": "",
+      "pattern": "",
+      "oslist": "",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": true,
+      "message": "Application auto-cloud path set successfully."
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/setautocloudpath/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "index": "1",
+      "root": "",
+      "path": "",
+      "pattern": "",
+      "oslist": "",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": true,
+      "message": "Application auto-cloud path set successfully."
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/setufsparameters/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "cb": "104857600",
+      "cfiles": "100",
+      "appidRedirect": "0",
+      "hideInClient": "1",
+      "syncOnSuspend": "0",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": true,
+      "message": "Steam Cloud enabled for this game."
+    }
+  }
+]

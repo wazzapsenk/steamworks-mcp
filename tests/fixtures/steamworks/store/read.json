@@ -1,0 +1,136 @@
+[
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/admin/game/downloadloc/2000000",
+    "query": {
+      "language": "all",
+      "format": "json"
+    },
+    "status": 200,
+    "response": {
+      "itemid": "2000000",
+      "languages": {
+        "english": {
+          "app[content][about]": "[p]steamworks-mcp test: About This Game placeholder.[/p]",
+          "app[content][short_description]": "[steamworks-mcp test] ExampleGame is a fast arcade shooter where every shot ricochets. Bank shots off walls, chain combos across the arena and climb the daily leaderboards. Placeholder text written by an automated test."
+        },
+        "french": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "italian": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "german": {
+          "app[content][about]": "steamworks-mcp-Test (2): Platzhalter für „Über dieses Spiel“.",
+          "app[content][short_description]": "[steamworks-mcp test] ExampleGame ist ein schneller Arcade-Shooter, in dem jeder Schuss abprallt. Spiele Bandenschüsse über die Wände, verkette Combos in der Arena und erklimme die täglichen Bestenlisten. Platzhaltertext eines automatisierten Tests."
+        },
+        "spanish": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "bulgarian": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "czech": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "danish": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "dutch": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "finnish": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "greek": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "hungarian": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "indonesian": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "japanese": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "koreana": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "malay": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "norwegian": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "polish": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "brazilian": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "portuguese": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "romanian": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "russian": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "schinese": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "latam": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "swedish": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "thai": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "tchinese": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "turkish": {
+          "app[content][about]": "[turkish text removed]",
+          "app[content][short_description]": "[turkish text removed]"
+        },
+        "ukrainian": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        },
+        "vietnamese": {
+          "app[content][about]": "",
+          "app[content][short_description]": ""
+        }
+      }
+    }
+  }
+]

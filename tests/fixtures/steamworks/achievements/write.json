@@ -1,0 +1,262 @@
+[
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/fetchachievements/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "achievements": [],
+      "languages": {
+        "english": true
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/fetchachievements/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "achievements": [],
+      "languages": {
+        "english": true
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/newachievement/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "maxstatid": "0",
+      "maxbitid": "-1",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": 1,
+      "achievement": {
+        "stat_id": 3,
+        "bit_id": 0,
+        "api_name": "NEW_ACHIEVEMENT_3_0",
+        "display_name": "NEW_ACHIEVEMENT_NAME_3_0",
+        "description": "NEW_ACHIEVEMENT_DESC_3_0",
+        "permission": 0,
+        "hidden": "",
+        "icon": "",
+        "icon_gray": "",
+        "progress": false
+      },
+      "maxstatid": 3,
+      "maxbitid": 0
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://partner.steamgames.com/apps/getachievementcounts/1000000",
+    "query": {},
+    "status": 200,
+    "response": {
+      "total": 0,
+      "unlocalized": {
+        "names": 0,
+        "descs": 0
+      },
+      "english": {
+        "names": 0,
+        "descs": 0
+      },
+      "german": {
+        "names": 0,
+        "descs": 0
+      },
+      "french": {
+        "names": 0,
+        "descs": 0
+      },
+      "italian": {
+        "names": 0,
+        "descs": 0
+      },
+      "koreana": {
+        "names": 0,
+        "descs": 0
+      },
+      "spanish": {
+        "names": 0,
+        "descs": 0
+      },
+      "schinese": {
+        "names": 0,
+        "descs": 0
+      },
+      "tchinese": {
+        "names": 0,
+        "descs": 0
+      },
+      "russian": {
+        "names": 0,
+        "descs": 0
+      },
+      "thai": {
+        "names": 0,
+        "descs": 0
+      },
+      "japanese": {
+        "names": 0,
+        "descs": 0
+      },
+      "portuguese": {
+        "names": 0,
+        "descs": 0
+      },
+      "polish": {
+        "names": 0,
+        "descs": 0
+      },
+      "danish": {
+        "names": 0,
+        "descs": 0
+      },
+      "dutch": {
+        "names": 0,
+        "descs": 0
+      },
+      "finnish": {
+        "names": 0,
+        "descs": 0
+      },
+      "norwegian": {
+        "names": 0,
+        "descs": 0
+      },
+      "swedish": {
+        "names": 0,
+        "descs": 0
+      },
+      "hungarian": {
+        "names": 0,
+        "descs": 0
+      },
+      "czech": {
+        "names": 0,
+        "descs": 0
+      },
+      "romanian": {
+        "names": 0,
+        "descs": 0
+      },
+      "turkish": {
+        "names": 0,
+        "descs": 0
+      },
+      "arabic": {
+        "names": 0,
+        "descs": 0
+      },
+      "brazilian": {
+        "names": 0,
+        "descs": 0
+      },
+      "bulgarian": {
+        "names": 0,
+        "descs": 0
+      },
+      "greek": {
+        "names": 0,
+        "descs": 0
+      },
+      "ukrainian": {
+        "names": 0,
+        "descs": 0
+      },
+      "vietnamese": {
+        "names": 0,
+        "descs": 0
+      },
+      "latam": {
+        "names": 0,
+        "descs": 0
+      },
+      "indonesian": {
+        "names": 0,
+        "descs": 0
+      },
+      "malay": {
+        "names": 0,
+        "descs": 0
+      },
+      "token": {
+        "names": 0,
+        "descs": 0
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/saveachievement/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "statid": "3",
+      "bitid": "0",
+      "apiname": "SWMCP_REC_A",
+      "displayname": "{\"english\":\"Recording Test A\",\"german\":\"Aufnahme-Test A\"}",
+      "description": "{\"english\":\"Fixture recording, safe to delete.\",\"german\":\"Fixture-Aufnahme, kann gelöscht werden.\"}",
+      "permission": "0",
+      "hidden": "true",
+      "progressStat": "-1",
+      "progressMin": "",
+      "progressMax": "",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": 1,
+      "saved": true,
+      "achievement": {
+        "stat_id": 3,
+        "bit_id": 0,
+        "api_name": "SWMCP_REC_A",
+        "display_name": {
+          "english": "Recording Test A",
+          "german": "Aufnahme-Test A"
+        },
+        "description": {
+          "english": "Fixture recording, safe to delete.",
+          "german": "Fixture-Aufnahme, kann gelöscht werden."
+        },
+        "permission": 0,
+        "hidden": "1",
+        "icon": "",
+        "icon_gray": "",
+        "progress": false
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/images/uploadachievement",
+    "query": {},
+    "status": 200,
+    "request": {
+      "multipart": "------WebKitFormBoundarygBP3lWeLXeiHuDOn\r\nContent-Disposition: form-data; name=\"sessionid\"\r\n\r\nffffffffffffffffffff0001\r\n------WebKitFormBoundarygBP3lWeLXeiHuDOn\r\nContent-Disposition: form-data; name=\"MAX_FILE_SIZE\"\r\n\r\n3000000\r\n------WebKitFormBoundarygBP3lWeLXeiHuDOn\r\nContent-Disposition: form-data; name=\"appID\"\r\n\r\n1000000\r\n------WebKitFormBoundarygBP3lWeLXeiHuDOn\r\nContent-Disposition: form-data; name=\"statID\"\r\n\r\n3\r\n------WebKitFormBoundarygBP3lWeLXeiHuDOn\r\nContent-Disposition: form-data; name=\"bit\"\r\n\r\n0\r\n------WebKitFormBoundarygBP3lWeLXeiHuDOn\r\nContent-Disposition: form-data; name=\"requestType\"\r\n\r\nachievement\r\n------WebKitFormBoundarygBP3lWeLXeiHuDOn\r\nContent-Disposition: form-data; name=\"image\"; filename=\"test_icon.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n[binary file omitted: 3583 bytes]\r\n------WebKitFormBoundarygBP3lWeLXeiHuDOn--\r\n"
+    },
+    "response": {
+      "success": true,
+      "message": "Your achievement image was successfully uploaded."
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/images/uploadachievement",
+    "query": {},
+    "status": 200,
+    "request": {
+      "multipart": "------WebKitFormBoundary12iOvlnaohzGxBYm\r\nContent-Disposition: form-data; name=\"sessionid\"\r\n\r\nffffffffffffffffffff0001\r\n------WebKitFormBoundary12iOvlnaohzGxBYm\r\nContent-Disposition: form-data; name=\"MAX_FILE_SIZE\"\r\n\r\n3000000\r\n------WebKitFormBoundary12iOvlnaohzGxBYm\r\nContent-Disposition: form-data; name=\"appID\"\r\n\r\n1000000\r\n------WebKitFormBoundary12iOvlnaohzGxBYm\r\nContent-Disposition: form-data; name=\"statID\"\r\n\r\n3\r\n------WebKitFormBoundary12iOvlnaohzGxBYm\r\nContent-Disposition: form-data; name=\"bit\"\r\n\r\n0\r\n------WebKitFormBoundary12iOvlnaohzGxBYm\r\nContent-Disposition: form-data; name=\"requestType\"\r\n\r\nachievement_gray\r\n------WebKitFormBoundary12iOvlnaohzGxBYm\r\nContent-Disposition: form-data; name=\"image\"; filename=\"test_icon_gray.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n[binary file omitted: 2789 bytes]\r\n------WebKitFormBoundary12iOvlnaohzGxBYm--\r\n"
+    },
+    "response": {
+      "success": true,
+      "message": "Your achievement image was successfully uploaded."
+    }
+  }
+]

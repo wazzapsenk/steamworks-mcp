@@ -1,0 +1,38 @@
+[
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/setufsparameters/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "cb": "10000000001",
+      "cfiles": "100",
+      "appidRedirect": "0",
+      "hideInClient": "1",
+      "syncOnSuspend": "0",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": true,
+      "message": "Steam Cloud enabled for this game."
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/setufsparameters/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "cb": "104857600",
+      "cfiles": "10001",
+      "appidRedirect": "0",
+      "hideInClient": "1",
+      "syncOnSuspend": "0",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": true,
+      "message": "Steam Cloud enabled for this game."
+    }
+  }
+]

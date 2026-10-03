@@ -1,0 +1,28 @@
+[
+  {
+    "method": "POST",
+    "url": "https://partner.steamgames.com/apps/setlaunchoption/1000000",
+    "query": {},
+    "status": 200,
+    "request": {
+      "index": "2",
+      "executable": "",
+      "arguments": "-swmcp-rec-empty",
+      "workingdir": "",
+      "type": "option2",
+      "description": "Empty executable test",
+      "osversion": "windows",
+      "osarch": "64",
+      "oscpu": "",
+      "betakey": "",
+      "ownsdlc": "",
+      "realm": "",
+      "steamdeck": "",
+      "sessionid": "ffffffffffffffffffff0001"
+    },
+    "response": {
+      "success": true,
+      "message": "Application launch option set successfully."
+    }
+  }
+]
