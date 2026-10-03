@@ -42,8 +42,10 @@ def is_empty(value: Any) -> bool:
         return True
     if isinstance(value, str):
         return value.strip() == ""
-    if isinstance(value, (list, dict)):
+    if isinstance(value, list):
         return len(value) == 0
+    if isinstance(value, dict):  # a unit whose parts are all unknown is still missing
+        return all(is_empty(v) for v in value.values())
     return False
 
 
@@ -142,6 +144,15 @@ class State(BaseModel):
         fs.status, fs.applied_at, fs.updated_at = "applied", at or now(), now()
         return fs
 
+    def confirm_checklist(self, path: str, notes: str = "") -> FieldState:
+        """A manual step (``checklist.<rule id>``) the user says is done in Steamworks."""
+        if not path.startswith("checklist."):
+            raise TransitionError(f"{path}: not a checklist item")
+        at = now()
+        fs = FieldState(status="applied", source="user", confidence=1.0, updated_at=at, applied_at=at, notes=notes)
+        self.fields[path] = fs
+        return fs
+
     # ------------------------------------------------------------------ reconcile with the values file
 
     def reconcile(self, values: dict[str, Any]) -> list[str]:
@@ -171,7 +182,7 @@ class State(BaseModel):
                 fs.updated_at = now()
                 changed.append(path)
         for path, fs in self.fields.items():
-            if path.startswith("localization.") or path in current:
+            if path.startswith(("localization.", "checklist.")) or path in current:
                 continue
             if fs.status != "missing":  # the value (e.g. an achievement) was removed from the file
                 fs.status, fs.value_hash, fs.updated_at = "missing", None, now()

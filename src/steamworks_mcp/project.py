@@ -205,14 +205,14 @@ def _merge_one(project: Project, f: Finding, report: MergeReport) -> None:
         return
     project.manifest.set(f.field, f.value)
     stored = fp.get(project.values(), f.field)
-    for path, value in _tracked_under(project, f.field, stored):
+    for path, value in tracked_under(project, f.field, stored):
         project.state.record_value(
             path, value, "scan", confidence=f.confidence, evidence=f.evidence, notes=f.note or None
         )
     report.applied.append({"field": f.field, "value": f.value, "confidence": f.confidence, "note": f.note})
 
 
-def _tracked_under(project: Project, path: str, stored: Any) -> list[tuple[str, Any]]:
+def tracked_under(project: Project, path: str, stored: Any) -> list[tuple[str, Any]]:
     """Tracked fields at or below ``path`` (a list of objects is tracked per item field)."""
     fields = [(p, v) for p, v in fp.iter_fields(project.values()) if p == path or p.startswith(path + ".")]
     return fields or [(path, stored)]
