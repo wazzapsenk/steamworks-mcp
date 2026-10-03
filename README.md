@@ -105,9 +105,22 @@ apps:
 
 ### Publisher Web API key
 
-Steamworks → **Users & Permissions → Manage Groups** → your group → create a Web API key. The key acts with the
-group's permissions on the group's apps. Keep it in `.env` (or your MCP client's `env` block) and never commit it;
-the server never shows it in results, errors or logs.
+Needed only for the API mode (builds, beta branches, leaderboards, reading the achievement schema). Creating it takes
+an administrator of your Steamworks account:
+
+1. **Users & Permissions → Manage Groups → Create new group**, for example `MCP`. Valve recommends a group of its
+   own for each key: the key only reaches the apps of its group.
+2. Add only the apps this tool should manage to that group.
+3. Open the group and choose **Create WebAPI Key**.
+4. Under **Key Permissions** tick **General** only. This tool needs nothing else; leave **Microtransactions**,
+   **Economy** and especially **Financial** (sales data) unticked.
+5. **Whitelisted IPs** is optional. If your machine has a fixed public IP, adding it blocks the key everywhere else
+   (other addresses get `403 Forbidden`); leave it empty otherwise.
+6. **Save Changes**, then copy the key from the right-hand side into `.env`:
+   `STEAMWORKS_PUBLISHER_KEY=...`
+
+Treat the key like a password: keep it in `.env` (never committed) and out of screenshots and chats. The server never
+shows it in results, errors or logs. If it ever leaks, delete it on the same page and create a new one.
 
 ### steamcmd builder account
 
@@ -156,7 +169,24 @@ claude mcp add steamworks -e STEAMWORKS_MCP_ROOT=/path/to/your/games -- uv --dir
 `uv --directory` runs the server in the steamworks-mcp folder, so it reads the `.env` there; keys don't have to be
 in the client's configuration. `--env-file <path>` points to another file.
 
-### Remote clients: ChatGPT, Codex, claude.ai
+### Codex
+
+Codex (CLI, IDE extension or app) runs the server locally like Claude does. In `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.steamworks]
+command = "uv"
+args = ["--directory", "/path/to/steamworks-mcp", "run", "steamworks-mcp"]
+env = { STEAMWORKS_MCP_ROOT = "/path/to/your/games" }
+default_tools_approval_mode = "writes"
+tool_timeout_sec = 900  # build uploads and Steamworks writes can take minutes
+```
+
+`"writes"` lets Codex call the read-only tools (gap report, validate, inspect…) without asking and asks before every
+tool that changes something. The tools say which they are (MCP tool annotations). `codex exec` runs without
+prompts, so there it needs `"approve"`.
+
+### Remote clients: ChatGPT, claude.ai
 
 Remote clients use the Streamable HTTP transport, reachable over HTTPS (for example through a tunnel):
 
@@ -183,16 +213,16 @@ any standard remote MCP server:
 **ChatGPT:** Settings → Apps & Connectors → Advanced → Developer mode, then create a connector with the URL
 `https://your-tunnel.example.com/mcp` and OAuth authentication.
 
-**Codex** (`~/.codex/config.toml`), with the token in an environment variable:
+ChatGPT connects from OpenAI's servers, so it cannot reach `localhost`: it needs the public address above. Local
+clients (Claude Code and Desktop, Codex) don't.
+
+A remote Codex setup works too, with the token in an environment variable:
 
 ```toml
 [mcp_servers.steamworks]
 url = "https://your-tunnel.example.com/mcp"
 bearer_token_env_var = "STEAMWORKS_MCP_TOKEN"
 ```
-
-Codex can also run the server locally over stdio: `command = "uv"`,
-`args = ["--directory", "/path/to/steamworks-mcp", "run", "steamworks-mcp"]`.
 
 Anyone who has the token can read and write the game projects under `STEAMWORKS_MCP_ROOT`. Use a long random token,
 a narrow root folder, and stop the tunnel when you're done. The BROWSER mode stays off over HTTP unless you also set

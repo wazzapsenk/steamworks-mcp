@@ -203,3 +203,13 @@ async def test_resources_and_prompts(workspace: Path) -> None:
         assert {"release_assistant", "write_store_page", "design_achievements", "review_gate"} <= prompts
         msg = await client.get_prompt("review_gate", {"path": "game", "gate": "2"})
         assert "gap_report(gate=2)" in msg.messages[0].content.text  # type: ignore[union-attr]
+
+
+async def test_tool_annotations_tell_clients_what_is_safe(tmp_path: Path) -> None:
+    async with Client(create_server(Config(workspace_root=tmp_path))) as client:
+        tools = {t.name: t.annotations for t in (await client.list_tools()).tools}
+    for name in ("server_info", "gap_report", "validate", "get_spec_info", "steamworks_inspect"):
+        assert tools[name] is not None and tools[name].read_only_hint is True, name
+    for name in ("apply", "set_build_live"):
+        assert tools[name] is not None and tools[name].destructive_hint is True, name
+    assert tools["set_field"] is not None and tools["set_field"].read_only_hint is False

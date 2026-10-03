@@ -14,6 +14,7 @@ from typing import Annotated, Any, Literal, TypeVar
 from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, RevocationOptions
 from mcp.server.mcpserver import Context, Elicit, MCPServer, Resolve
 from mcp.server.mcpserver.exceptions import ToolError
+from mcp.types import ToolAnnotations
 from pydantic import BaseModel
 
 from steamworks_mcp import __version__
@@ -120,7 +121,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
     def project_dir(path: str | None) -> Path:
         return resolve_in_workspace(config.workspace_root, path)
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
     def init_project(
         path: str,
@@ -150,7 +151,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             result["scan"] = _scan(root, project_dir(source_dir) if source_dir else root)
         return result
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
     def scan_project(path: str, source_dir: str | None = None) -> dict[str, Any]:
         """Scan the game project and merge what is found into steamworks.yaml as drafts (source "scan", with file and
@@ -187,7 +188,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
     def open_project(path: str) -> proj.Project:
         return proj.Project.open(project_dir(path))
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True))
     @user_errors
     def gap_report(path: str, gate: int | None = None, include_info: bool = False) -> dict[str, Any]:
         """What is still missing before each release gate, and how each item gets done.
@@ -203,7 +204,6 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             include_info: Also list the background notes (permissions, timings) that never block.
         """
         project = open_project(path)
-        project.save()  # persist the reconciliation (edited values -> needs_review)
         return gap_report_fn(
             project.values(),
             project.state,
@@ -236,7 +236,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             return None
         return Elicit("A few questions about your game for its Steam release.", form_model(questions))
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
     def start_interview(
         path: str,
@@ -280,7 +280,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             out["how_to_answer"] = "set_field(path, values={<question id>: <answer>, ...})"
         return out
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world_hint=False))
     @user_errors
     def set_field(
         path: str,
@@ -312,7 +312,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         project.save()
         return out
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
     def approve_fields(path: str, fields: list[str]) -> dict[str, Any]:
         """Mark values as approved by the user (after showing them). Patterns work: "achievements.*.name".
@@ -322,7 +322,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         project.save()
         return out
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
     def mark_applied(path: str, fields: list[str], notes: str = "") -> dict[str, Any]:
         """The user confirms something is done in Steamworks: a manual step ("checklist.<rule id>" from gap_report),
@@ -333,7 +333,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         project.save()
         return out
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True))
     @user_errors
     def get_spec_info(kind: str) -> dict[str, Any]:
         """Reference data (the tool equivalent of this server's resources, for clients that only use tools).
@@ -346,7 +346,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
 
     # ------------------------------------------------------------------ generators & validators
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
     def generate(path: str, section: str, stage: str | None = None) -> dict[str, Any]:
         """Produce drafts for a part of the release.
@@ -380,7 +380,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             out["scripts"] = scripts if isinstance(scripts, dict) else {"not_yet": scripts}
         return out
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
     def save_draft(path: str, field: str, value: str, strategy: str | None = None, notes: str = "") -> dict[str, Any]:
         """Store a text YOU wrote as a draft (it does not change steamworks.yaml). The server rejects text that breaks
@@ -392,7 +392,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             project.values(), project.files, field, value, strategy, config.cache_dir, notes=notes
         )
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True))
     @user_errors
     def validate(path: str, section: str = "all", llm_judgements: list[dict[str, Any]] | None = None) -> dict[str, Any]:
         """Review what is in steamworks.yaml (and the translations) without changing it.
@@ -412,7 +412,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             llm_judgements=llm_judgements,
         )
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
     def preview_store(
         path: str, short_draft: str | None = None, about_draft: str | None = None, fold_px: int = preview.FOLD_PX
@@ -432,7 +432,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         atomic_write(out, preview.store_preview(values["game"].get("name") or "Your game", short, about, fold_px))
         return {"file": out.relative_to(project.files.root).as_posix(), "fold_px": fold_px, "fold_verified": False}
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
     def prepare_images(path: str, only: list[str] | None = None, achievement_icons: bool = True) -> dict[str, Any]:
         """Make every store, library and icon image from assets.key_art + assets.logo (or hand-made
@@ -453,7 +453,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         result["preview"] = (out_dir / "preview.html").relative_to(root).as_posix()
         return result
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True))
     @user_errors
     def fetch_reference(appid: int, tags: list[str] | None = None, refresh: bool = False) -> dict[str, Any]:
         """Fetch a successful Steam game's public data (on this machine, cached) and return derived measurements
@@ -475,7 +475,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         )
         return result.model_dump(mode="json")
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
     def localization_status(path: str) -> dict[str, Any]:
         """Per target language: how many player-facing texts are translated, missing, or stale (the source changed
@@ -490,7 +490,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         project.save()
         return {"languages": [s.__dict__ for s in statuses]}
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True))
     @user_errors
     def localization_pending(path: str, language: str, limit: int = 30) -> dict[str, Any]:
         """Texts YOU should translate into `language` (Steam API code), with context, length limits and glossary terms
@@ -503,7 +503,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "submit": "localization_set(path, language, translations={key: text})",
         }
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
     def localization_set(
         path: str, language: str, translations: dict[str, str], source: Literal["generated", "user"] = "generated"
@@ -516,7 +516,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         project.save()
         return out
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
     def export_package(path: str, gate: int) -> dict[str, Any]:
         """Write everything needed to finish a gate by hand to .steam-mcp/exports/gate_<gate>/: correctly named
@@ -530,7 +530,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
 
     # ------------------------------------------------------------------ execution (API, BROWSER, steamcmd)
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(destructive_hint=True, open_world_hint=True))
     @user_errors
     async def apply(
         path: str,
@@ -568,7 +568,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             upload_icons=upload_icons,
         )
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True))
     @user_errors
     async def steamworks_inspect(
         path: str,
@@ -593,7 +593,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         "snapshots" lists the snapshots saved before writes (local)."""
         return await execu.inspect(open_project(path), what, app)
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(destructive_hint=True, open_world_hint=True))
     @user_errors
     def set_build_live(
         path: str,
@@ -619,7 +619,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
 
     if config.browser_enabled:
 
-        @server.tool()
+        @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True))
         @user_errors
         async def steamworks_open(accept_risks: bool = False) -> dict[str, Any]:
             """Open the Steamworks site in a browser window for the BROWSER mode. The first time this returns terms
@@ -627,7 +627,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             this tool never types passwords or Steam Guard codes and never reads cookie values."""
             return await execu.open(accept_risks)
 
-        @server.tool()
+        @server.tool(annotations=ToolAnnotations(destructive_hint=True, open_world_hint=True))
         @user_errors
         async def restore_snapshot(
             path: str, snapshot: str | None = None, dry_run: bool = True, user_confirmed: bool = False
@@ -718,7 +718,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "for each) and what can be applied. Suggest the next three actions."
         )
 
-    @server.tool()
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True))
     def server_info() -> dict[str, Any]:
         """Version, workspace root and which optional features are enabled (no secrets)."""
         return {
