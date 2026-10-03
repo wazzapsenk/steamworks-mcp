@@ -1,110 +1,139 @@
 # steamworks-mcp
 
-**Your Steam store page and Steamworks settings as code — localized by your AI assistant.**
+**A release assistant for Steam games: from "nothing configured" to "released", with your AI assistant doing the
+legwork and you approving every step.**
 
-An [MCP](https://modelcontextprotocol.io) server for game developers who are tired of re-entering the same store
-descriptions, translations, capsules, achievements and Steam Cloud settings for every game. Works with **Claude**
-(Desktop, Code), **ChatGPT** (developer mode connectors) and any other MCP client.
+An [MCP](https://modelcontextprotocol.io) server for game developers. It knows Valve's release requirements, finds
+what your project already has, asks you for the rest, drafts store text, achievements and settings, checks them
+against Valve's rules, and either hands you correctly named files with a checklist or applies them to Steamworks
+after you approved them. Works with **Claude** (Code, Desktop), **ChatGPT** and any other MCP client.
 
 > Not affiliated with or endorsed by Valve. "Steam" and "Steamworks" are trademarks of Valve Corporation.
 
-> **Rewrite in progress.** The server is being rebuilt in Python as a full release assistant (release gates, gap
-> reports, interviews, generators, validators, export packages, optional Steamworks automation). The TypeScript
-> v0.1 described below now lives in [`legacy/ts/`](legacy/ts/) and still works: run every `npm`/`npx`/`node` command
-> below from that folder. It will be removed once the Python server can do everything it does.
+> **Status: 0.2 in development.** This is the Python rewrite. The TypeScript v0.1 still lives in
+> [`legacy/ts/`](legacy/ts/) until the new execution layer has been checked on a real demo or playtest app; it also
+> holds the recorder for the Steamworks test fixtures.
 
 ## What it does
 
-| Problem | Tool(s) |
+| Step | Tools |
 |---|---|
-| Store text + achievements written once, in one file | `steamworks.yaml` (`project_init`, `project_read`) |
-| Translating everything into 10+ languages, keeping it in sync | `localization_status` → `localization_pending` → *the model translates* → `localization_set` |
-| Capsules in 11 different sizes | `assets_generate` — one key art + one logo → every capsule, library and icon image at the exact size |
-| Achievement icons + locked variants | `achievement_icons_prepare` |
-| "Did I upload enough screenshots / right size?" | `screenshots_check`, `project_validate` |
-| Knowing what to enter where in Steamworks | `export_bundle` → `STEAMWORKS_CHECKLIST.md`, per-language JSON, achievement localization CSV |
-| Is Steam in sync with my file? | `steam_achievements_diff` (Web API) |
-| Builds, branches, leaderboards | `steam_app_builds`, `steam_leaderboards`, `steam_leaderboard_create` (Web API) |
-| **Store description + About in every language → Steamworks** | `steamworks_store_text_sync` |
-| **Achievements (create/update, all languages, icons) → Steamworks** | `steamworks_achievements_sync` |
-| **Steam Cloud quotas, Auto-Cloud paths, root overrides → Steamworks** | `steamworks_cloud_sync` |
-| **Install folder + launch options (localized) → Steamworks** | `steamworks_installation_sync` |
-| Anything else on a Steamworks page | `steamworks_open` / `inspect` / `fill` / `upload` / `click` (generic browser tools) |
+| Start tracking a game; read what the Unity project already says (name, platforms, input, saves, achievements and stats in code, SteamPipe settings) | `init_project`, `scan_project` |
+| See what is missing before each release gate (0 prerequisites, 1 store page, 2 build review, 3 release), with Valve's source for every rule | `gap_report` |
+| Answer short batches of questions (shown as a form when your client supports it) | `start_interview`, `set_field`, `approve_fields` |
+| Draft store text, achievements, Steam Cloud, depots, system requirements | `generate`, `save_draft`, `preview_store` |
+| Check everything against Valve's rules, a store-text rubric and an anti-copy check | `validate` |
+| Translate with your assistant (no paid translation API), keep translations in sync | `localization_status`, `localization_pending`, `localization_set` |
+| Cut every capsule, library image and icon from one key art and one logo | `prepare_images` |
+| Learn from successful games without copying them (derived measurements only) | `fetch_reference` |
+| Get every file plus a checklist that says which Steamworks page and field it goes to | `export_package` |
+| Apply approved values to Steam, look at what Steam has | `apply`, `steamworks_inspect`, `set_build_live`, `restore_snapshot` |
+| Confirm manual steps | `mark_applied` |
 
-### Translations are done by your assistant, not by a paid API
+Text is never invented by the server: `generate` returns a brief, your assistant writes, and the server validates and
+stores the result as a draft until you approve it. Every value in `steamworks.yaml` has a status in
+`.steam-mcp/state.json`: missing, draft, needs_review, approved, applied.
 
-The server doesn't call any translation service. `localization_pending` hands the model the texts that still need
-translating, with context, length hints and format rules. The model translates them and `localization_set` saves them.
-The server checks every translation: Steam BBCode tags must match the source, unknown keys are rejected, and changing
-the source text marks the old translations as **stale** so they get redone.
+Resources: `steam://capabilities`, `steam://gates/{n}`, `steam://style-guide/{genre}`, `steam://references/{appid}`,
+`steam://manifest/{project}` (and `get_spec_info` returns the same for clients that only use tools). Prompts:
+`release_assistant`, `write_store_page`, `design_achievements`, `review_gate`.
 
-```
-my-game/
-├── steamworks.yaml            ← source text + settings (you edit this)
-├── localization/
-│   ├── turkish.yaml           ← translations (the model writes these)
-│   ├── german.yaml
-│   └── .lock.json             ← which source text each translation was made from
-├── store/art/keyart.png, logo.png
-├── store/screenshots/*.png    ← shot1_japanese.png = Japanese variant of shot1.png
-├── achievements/*.png
-└── steamworks-out/            ← generated: assets/, achievements/, store/<lang>.json, checklist, CSV
-```
+## How things get done in Steamworks
 
-See [`examples/demo-game/steamworks.yaml`](examples/demo-game/steamworks.yaml) for a complete example.
+Valve's partner Web API covers builds, branches, leaderboards and reading the achievement schema. It cannot edit
+the store page, achievements, Steam Cloud or installation settings: those exist only in the Steamworks website.
+So every area has a mode:
 
-### Steamworks has no API for store text, achievements or cloud settings
+| Mode | Meaning |
+|---|---|
+| **API** | Official tooling: the partner Web API (publisher key) and steamcmd / SteamPipe. |
+| **BROWSER** | Opt-in. Drives the Steamworks site in a browser window you log into yourself, using the requests the site's own pages make. Undocumented; read [BROWSER mode](#browser-mode-read-this-first). |
+| **ARTIFACT** | The tool makes the file (images, localization JSON, VDF scripts, CSV) and tells you where to upload it. |
+| **MANUAL** | A checklist item with the exact page and field; you confirm it with `mark_applied`. |
 
-Valve's partner Web API can read the achievement schema and manage builds and leaderboards, but it **cannot** edit the
-store page, create achievements, or change Steam Cloud and installation settings. Those exist only in the Steamworks
-web UI. So this server drives that UI for you:
-
-- It opens a real, visible **Chrome or Edge** window with its own profile (not your everyday browser profile).
-  **You log in yourself** (password + Steam Guard); the server never sees your credentials and only checks that the
-  login cookie exists.
-- The `steamworks_*_sync` tools don't type into fields one by one. They use what the Steamworks page itself uses:
-  the store page's **Localization import/export**, and the page's own requests for achievements, Steam Cloud and
-  launch options. That makes them fast (seconds, not minutes) and resistant to UI redesigns.
-- Every sync tool works the same way: **`dryRun: true` (default) shows a diff** → you approve in chat → it applies
-  with `userConfirmed: true` → it **reads Steamworks back and verifies** the result.
-- Nothing is ever **published**. Changes land as unpublished drafts; you review and press Publish in Steamworks.
-  Achievements or cloud paths that exist only in Steam are reported, not deleted.
-
-Verified against the live Steamworks site in October 2026. If Valve changes something, `steamworks_inspect` and the
-generic `steamworks_fill` / `steamworks_click` tools still let the assistant work through the page manually.
+[`docs/CAPABILITIES.md`](docs/CAPABILITIES.md) lists every area with its mode and how well it is verified.
+[`docs/STEAMWORKS_INTERNALS.md`](docs/STEAMWORKS_INTERNALS.md) documents the recorded Steamworks behaviour the
+BROWSER mode relies on.
 
 ## Install
 
-Requires Node.js 20+.
+Requires Python 3.11 or newer and [uv](https://docs.astral.sh/uv/) (or pip).
 
 ```bash
 git clone https://github.com/wazzapsenk/steamworks-mcp.git
 cd steamworks-mcp
-npm install
-npm run build
+uv sync
 ```
 
-The browser tools use your installed Google Chrome or Microsoft Edge. If you have neither, run
-`npx playwright install chromium`.
+For the BROWSER mode, add the optional extra. It uses your installed Google Chrome or Microsoft Edge:
 
-### Environment
+```bash
+uv sync --extra browser
+```
+
+With pip instead: `pip install -e .` or `pip install -e ".[browser]"`.
+
+## Configure
+
+Copy [`.env.example`](.env.example) to `.env` in the steamworks-mcp folder and fill in what you need. Every value
+is optional; the real environment wins over `.env`. Never commit `.env`.
 
 | Variable | Purpose |
 |---|---|
-| `STEAMWORKS_MCP_ROOT` | Folder that contains your game projects. Tools refuse paths outside it. |
-| `STEAMWORKS_PUBLISHER_KEY` | Steamworks **publisher** Web API key (Users & Permissions → Manage Groups → Web API key). Optional; only `steam_*` tools need it. |
-| `STEAMWORKS_MCP_TOKEN` | Required token for HTTP mode. |
-| `STEAMWORKS_MCP_BROWSER_PROFILE` | Where the Steamworks login is stored (default `~/.steamworks-mcp/browser-profile`). |
-| `STEAMWORKS_MCP_BROWSER` | `auto` (default: Chrome → Edge → Playwright Chromium), `chrome`, `msedge` or `chromium`. |
+| `STEAMWORKS_MCP_ROOT` | Folder that holds your game projects. Tools refuse paths outside it. |
+| `STEAMWORKS_PUBLISHER_KEY` | Publisher Web API key (API mode: builds, branches, leaderboards). |
+| `STEAM_WEB_API_KEY` | A regular Steam Web API key; adds hidden-achievement data for reference games. |
+| `STEAMCMD_PATH`, `STEAMCMD_USERNAME` | steamcmd and the builder account for build uploads. |
+| `STEAM_MCP_BROWSER` | `1` turns the BROWSER mode on. |
+| `STEAMWORKS_MCP_TOKEN` | Bearer token (24+ characters) for the HTTP transport. |
+| `STEAMWORKS_MCP_ALLOWED_HOSTS`, `STEAMWORKS_MCP_ALLOWED_ORIGINS` | Extra Host / Origin values accepted over HTTP. |
+| `STEAM_MCP_BROWSER_REMOTE` | `1` also allows the BROWSER mode over HTTP (not recommended). |
+| `STEAMWORKS_MCP_CACHE`, `STEAMWORKS_MCP_HOME` | Reference cache and per-user data (default `~/.steamworks-mcp`). |
 
-The publisher key is a secret: keep it in your MCP client's `env` block or a local `.env` file, and never commit it.
+### App IDs
+
+Create the apps in Steamworks yourself (the Steam Direct fee is paid there). Put the app ids into
+`steamworks.yaml`, or pass `appid` to `init_project`. A demo and a playtest are separate apps with their own ids:
+
+```yaml
+apps:
+  main:     { appid: 1234560 }
+  demo:     { appid: 1234570 }
+  playtest: { appid: 1234580 }
+```
+
+### Publisher Web API key
+
+Steamworks → **Users & Permissions → Manage Groups** → your group → create a Web API key. The key acts with the
+group's permissions on the group's apps. Keep it in `.env` (or your MCP client's `env` block) and never commit it;
+the server never shows it in results, errors or logs.
+
+### steamcmd builder account
+
+Valve recommends uploading builds with a separate Steam account:
+
+1. Create a new Steam account for builds and invite it under **Users & Permissions → Manage Users**.
+2. Give it only what uploads need: **Edit App Metadata** and **Publish App Changes To Steam**, for the apps it uploads.
+3. [Install steamcmd](https://developer.valvesoftware.com/wiki/SteamCMD) and log in once yourself, in a terminal:
+   `steamcmd +login <builder account>`. You type the password and the Steam Guard code; steamcmd keeps the session.
+4. Set `STEAMCMD_PATH` (full path to steamcmd) and `STEAMCMD_USERNAME` (the account name only, never the password).
+
+`apply(section="build")` then uploads with `steamcmd +login <name> +run_app_build <script> +quit`. If steamcmd asks
+for a login again, the tool stops and asks you to log in once more.
+
+### A restricted Steamworks user for the BROWSER mode
+
+Don't let automation act as your administrator account. Create a separate Steam account, invite it, and give it only
+**Edit App Metadata** (Steam Cloud, installation, achievements) and **Edit App Marketing Data** (store text). It does
+not need publish, pricing or financial permissions, because this tool never publishes. `gap_report` reminds you
+of this in gate 0.
 
 ## Connect it
 
 ### Claude Code
 
 ```bash
-claude mcp add steamworks -e STEAMWORKS_MCP_ROOT=D:/Games -e STEAMWORKS_PUBLISHER_KEY=xxxx -- node /path/to/steamworks-mcp/dist/index.js
+claude mcp add steamworks -e STEAMWORKS_MCP_ROOT=/path/to/your/games -- uv --directory /path/to/steamworks-mcp run steamworks-mcp
 ```
 
 ### Claude Desktop
@@ -115,78 +144,137 @@ claude mcp add steamworks -e STEAMWORKS_MCP_ROOT=D:/Games -e STEAMWORKS_PUBLISHE
 {
   "mcpServers": {
     "steamworks": {
-      "command": "node",
-      "args": ["/path/to/steamworks-mcp/dist/index.js"],
-      "env": {
-        "STEAMWORKS_MCP_ROOT": "D:/Games",
-        "STEAMWORKS_PUBLISHER_KEY": "xxxx"
-      }
+      "command": "uv",
+      "args": ["--directory", "/path/to/steamworks-mcp", "run", "steamworks-mcp"],
+      "env": { "STEAMWORKS_MCP_ROOT": "/path/to/your/games" }
     }
   }
 }
 ```
 
-### ChatGPT (developer mode)
+`uv --directory` runs the server in the steamworks-mcp folder, so it reads the `.env` there; keys don't have to be
+in the client's configuration. `--env-file <path>` points to another file.
 
-ChatGPT connects to **remote** MCP servers over HTTPS, so run the HTTP transport and expose it through a tunnel:
+### ChatGPT and other remote clients
+
+Remote clients need the Streamable HTTP transport, reachable over HTTPS (for example through a tunnel):
 
 ```bash
-STEAMWORKS_MCP_TOKEN=$(openssl rand -hex 24) STEAMWORKS_MCP_ROOT=D:/Games node dist/index.js --http --port 8787
+STEAMWORKS_MCP_TOKEN=$(openssl rand -hex 24) uv run steamworks-mcp --http --port 8787
 cloudflared tunnel --url http://localhost:8787
 ```
 
-The tunnel's public hostname has to be allowed explicitly (DNS-rebinding protection), e.g.
-`STEAMWORKS_MCP_ALLOWED_HOSTS=your-tunnel.trycloudflare.com,localhost`.
+- The server binds to `127.0.0.1` and **always** requires `Authorization: Bearer <STEAMWORKS_MCP_TOKEN>`.
+  Tokens in the URL are not accepted (they end up in logs).
+- Host and Origin headers are checked against DNS rebinding: allow the tunnel's hostname with
+  `STEAMWORKS_MCP_ALLOWED_HOSTS=your-tunnel.example.com` (and `STEAMWORKS_MCP_ALLOWED_ORIGINS` for browser-based
+  clients).
+- In ChatGPT: **Settings → Apps & Connectors → Advanced → Developer mode**, then add a connector with the URL
+  `https://<your-tunnel>/mcp`. The client has to send the token as `Authorization: Bearer`; clients that only
+  support OAuth cannot connect yet.
 
-In ChatGPT: **Settings → Apps & Connectors → Advanced → Developer mode**, then create a connector with the URL
-`https://<your-tunnel>/mcp?token=<STEAMWORKS_MCP_TOKEN>`. Clients that can send headers should use
-`Authorization: Bearer <token>` instead of the query string.
-
-⚠️ Anyone who has that URL and token can read and write files under `STEAMWORKS_MCP_ROOT` and drive your logged-in
-Steamworks browser. Use a long random token, a narrow root folder, and stop the tunnel when you're done.
+Anyone with the URL and the token can read and write the game projects under `STEAMWORKS_MCP_ROOT`. Use a narrow
+root folder and stop the tunnel when you're done. The BROWSER mode stays off over HTTP unless you also set
+`STEAM_MCP_BROWSER_REMOTE=1`.
 
 ## A typical session
 
-> **You:** Set up the Steam page for my game in `D:/Games/SkyRaid`. Translate everything into Turkish, German, Japanese
-> and Simplified Chinese.
+> **You:** Help me get my game in `PillowFort/` onto Steam. Coming Soon page first.
 
-1. `project_init` → you fill in `steamworks.yaml` (or ask the assistant to draft it from your design doc).
-2. `project_validate` → fix what it reports.
-3. For each language: `localization_pending` → translate → `localization_set`, until `localization_status` is all green.
-4. `assets_generate`, `achievement_icons_prepare`, `screenshots_check`.
-5. `export_bundle` → open `steamworks-out/STEAMWORKS_CHECKLIST.md`.
-6. `steamworks_open` → log in in the window that opens. Then let the assistant run, one by one,
-   `steamworks_store_text_sync`, `steamworks_achievements_sync`, `steamworks_cloud_sync` and
-   `steamworks_installation_sync`: each shows you a diff first and applies only after your OK.
-7. Upload capsules/screenshots from `steamworks-out/assets/` (or let the assistant use `steamworks_upload`), review
-   everything in Steamworks, and **Publish** yourself.
+1. `init_project` creates `steamworks.yaml` and scans the Unity project. Found values are drafts with evidence.
+2. `gap_report` shows what gate 1 still needs; `start_interview` asks for the rest, three questions at a time.
+3. `generate("store_short")`: the assistant writes three variants, the server checks them, you pick one.
+   The same for the long description (outline first), achievements, Steam Cloud and depots.
+4. `validate`, then `localization_pending` / `localization_set` for every language, then `prepare_images`.
+5. `export_package(1)` writes `.steam-mcp/exports/gate_1/` with the files and a `CHECKLIST.md`.
+6. With the BROWSER mode: `steamworks_open`, then `apply(..., dry_run=true)` per section, and the write only after
+   you agreed. Without it, follow the checklist.
+7. You review the unpublished changes in Steamworks and press **Publish** yourself.
+
+See [`examples/example-game/steamworks.yaml`](examples/example-game/steamworks.yaml) for a complete manifest.
+
+## Writing to Steam: the protocol
+
+Every write, through the API or the BROWSER mode, goes the same way:
+
+1. **Read first.** Steam's current state is read and saved as a snapshot (`.steam-mcp/snapshots/`). If a Steamworks
+   page no longer looks like it did when this tool was verified, it stops before writing anything.
+2. **Dry run.** `dry_run=true` is the default and only shows the differences.
+3. **Your OK.** Writing needs `user_confirmed=true`, which the assistant may only send after you saw the changes.
+4. **Approved values only.** Drafts and values you haven't approved are refused. Rows that exist only in Steam are
+   kept unless you explicitly ask for `remove_extra`.
+5. **Read back.** After writing, Steam is read again; only what Steam really has becomes `applied`.
+6. **Audit.** Every write is logged in `.steam-mcp/audit.jsonl`.
+
+When you first try the BROWSER mode, use a **demo or playtest app**, not your main game. The first write on every app
+has to be `restore_snapshot` of the snapshot just taken: it writes every row back unchanged and reads it again,
+proving the tool reads and writes that app correctly. Until that worked, `apply` refuses to write. Then go from the
+least visible area to the most visible one: Steam Cloud, a hidden test achievement, installation, store text last.
+`restore_snapshot` also undoes an apply.
+
+## BROWSER mode: read this first
+
+The BROWSER mode (`STEAM_MCP_BROWSER=1`, `[browser]` extra) is optional. Without it, everything still works through
+export packages and checklists.
+
+- **It is undocumented.** It uses the requests the Steamworks pages themselves make (recorded and documented in
+  [`docs/STEAMWORKS_INTERNALS.md`](docs/STEAMWORKS_INTERNALS.md)). Valve can change them at any time; the tool then
+  stops instead of guessing. Valve does not document or endorse this kind of automation; using it is your decision.
+- **It acts as the account you log in with.** Use the restricted user described above, not an administrator.
+- **You log in yourself.** `steamworks_open` opens a visible Chrome or Edge window with its own profile
+  (`~/.steamworks-mcp/browser-profile`), separate from your everyday browser. You type the password and the Steam
+  Guard code. The tool only checks that a login cookie exists; it never reads cookie values.
+- **One-time consent.** The first `steamworks_open` shows these risks; you accept once, and the answer is stored with
+  its version in `~/.steamworks-mcp/consent.json`.
+- **Publishing is blocked in code.** Every request the tool makes is checked before it is sent, and the browser
+  window itself blocks the Publish page and every publish, prepare-for-publishing and revert request, even if someone
+  clicks them there. The tool's writes go only to the handful of endpoints it uses. Your changes stay unpublished
+  drafts that you review in the Publish tab of your everyday browser (where "Revert Changes" undoes them).
+
+## What this tool never does
+
+- Publish, prepare to publish, revert, submit for review or release anything. You do that in Steamworks.
+- Set a build live on the default branch. That stays a manual step in App Admin; `set_build_live` only handles beta
+  branches, after your OK.
+- Delete anything in Steam unless you explicitly ask for it (`remove_extra`).
+- Type, store or ask for passwords or Steam Guard codes; read cookie values.
+- Write into your game project. The scanner only reads; `init_project` suggests `.gitignore` lines instead of editing
+  the file.
+- Generate artwork. Images are cropped from your own art; missing art is reported.
+- Send your texts to a translation or AI service. Your own assistant translates; the server only checks the result.
+
+## Files
+
+```
+my-game/
+├── steamworks.yaml          ← every value (comments are kept when tools edit it)
+├── localization/<lang>.yaml ← translations, plus .lock.json (which source text each was made from)
+└── .steam-mcp/
+    ├── state.json           ← per-field status (commit it)
+    ├── drafts/              ← text drafts (commit them)
+    ├── exports/gate_<n>/    ← files to upload and CHECKLIST.md
+    ├── snapshots/           ← what Steam had before each write
+    └── audit.jsonl          ← every write
+```
+
+`.steam-mcp/.gitignore` keeps exports, snapshots, scan output and the audit log out of git.
 
 ## Development
 
 ```bash
-npm run dev          # stdio, from source
-npm run dev:http     # HTTP, from source
-npm test             # unit + in-memory MCP end-to-end tests
-node scripts/smoke-http.mjs   # after npm run build: HTTP transport + auth smoke test
+uv sync --extra browser
+uv run pytest                     # unit, replay and in-memory MCP tests; no network, no Steam account
+uv run ruff check src tests && uv run ruff format --check src tests
+uv run mypy
+uv run python scripts/gen_docs.py --check   # docs/CAPABILITIES.md and docs/schema/ are generated
 ```
 
-### Live checks
+The BROWSER-mode tests replay real, sanitized Steamworks traffic from
+[`tests/fixtures/steamworks/`](tests/fixtures/steamworks/), which also explains how to re-record it. A test checks
+that no fixture or tracked file contains secrets or private terms.
 
-`scripts/live/` contains helpers for testing against a real Steamworks account (use an unreleased app):
-
-```bash
-npx tsx scripts/live/login.ts                       # open the browser, wait for you to log in, list your apps
-npx tsx scripts/live/inspect.ts <appId>             # read-only: dump every form on the main Steamworks pages
-npx tsx scripts/live/mcp-call.ts <tool> '<json>'    # call any tool exactly as an MCP client would
-npx tsx scripts/live/webapi.ts <appId>              # check the publisher Web API key (reads .env)
-```
-
-## Roadmap
-
-- Graphical assets upload (capsules, library art, screenshots) through a dedicated sync tool.
-- Stats definitions, and achievements bound to progress stats.
-- Store page tags, supported languages table and system requirements sync.
-- Localized capsules and screenshots per language.
+Reference data: [`docs/SCHEMA.md`](docs/SCHEMA.md) (the manifest), `src/steamworks_mcp/data/` (gates, store rules,
+asset specs, events, style guides).
 
 ## License
 

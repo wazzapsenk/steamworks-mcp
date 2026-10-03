@@ -1,0 +1,391 @@
+"""Steamworks partner-site operations used by the BROWSER mode (the endpoints in docs/STEAMWORKS_INTERNALS.md).
+
+All values use Steamworks' own vocabulary; :mod:`steamworks_mcp.execute.sync` maps them to steamworks.yaml.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from typing import Any
+from urllib.parse import urlsplit
+
+from steamworks_mcp.execute.browser.html import parse
+from steamworks_mcp.execute.browser.transport import NotLoggedInError, Response, Transport
+
+
+class FormatError(RuntimeError):
+    """A page no longer looks like it did when this tool was verified; nothing is written then."""
+
+
+def _checked(res: Response, what: str) -> Response:
+    if "goto=" in res.url or "goto=" in res.redirect:
+        raise NotLoggedInError()
+    if res.status >= 400:
+        raise RuntimeError(f"{what}: HTTP {res.status}")
+    return res
+
+
+def _ok(res: Response, what: str) -> dict[str, Any]:
+    data = _checked(res, what).json()
+    if not isinstance(data, dict):
+        raise FormatError(f"{what}: unexpected answer")
+    if data.get("success") in (False, 0) or (
+        data.get("success") is None and "deleted" not in data and "saved" not in data
+    ):
+        raise RuntimeError(f"{what}: {data.get('message') or data.get('error') or 'refused'}")
+    return data
+
+
+# ---------------------------------------------------------------------------------------------------- store text
+
+
+async def store_item_id(t: Transport, appid: int) -> str:
+    res = _checked(await t.get(f"/admin/game/editbyappid/{appid}"), "store page")
+    m = re.search(r"/admin/game/edit/(\d+)", res.redirect or res.url)
+    if not m:
+        raise FormatError(f"App {appid} has no store page (playtests have none).")
+    return m.group(1)
+
+
+async def read_store_localization(t: Transport, item_id: str) -> dict[str, Any]:
+    res = _checked(await t.get(f"/admin/game/downloadloc/{item_id}?language=all&format=json"), "store localization")
+    data = res.json()
+    if not isinstance(data, dict) or "languages" not in data:
+        raise FormatError("The store localization export changed format.")
+    return dict(data)
+
+
+async def upload_store_localization(t: Transport, appid: int, data: dict[str, Any]) -> None:
+    raw = json.dumps(data, ensure_ascii=False).encode("utf-8")
+    _checked(await t.upload_store_localization(appid, "store_localization.json", raw), "store localization upload")
+
+
+# ---------------------------------------------------------------------------------------------------- achievements
+
+
+async def read_achievements(t: Transport, appid: int) -> dict[str, Any]:
+    page = _checked(await t.get(f"/apps/achievements/{appid}"), "achievements page")
+    ids = {k: re.search(rf'id="{k}"[^>]*>\s*(-?\d+)', page.text) for k in ("max_statid_used", "max_bitid_used")}
+    data = _checked(await t.get(f"/apps/fetchachievements/{appid}"), "achievements").json()
+    if not isinstance(data, dict) or "achievements" not in data:
+        raise FormatError("The achievements list changed format.")
+    return {
+        "achievements": data["achievements"],
+        "languages": data.get("languages", {}),
+        "max_statid": ids["max_statid_used"].group(1)
+        if ids["max_statid_used"]
+        else str(max([int(a["stat_id"]) for a in data["achievements"]] or [0])),
+        "max_bitid": ids["max_bitid_used"].group(1) if ids["max_bitid_used"] else "-1",
+    }
+
+
+async def new_achievement(t: Transport, appid: int, max_stat: str, max_bit: str) -> dict[str, Any]:
+    return _ok(
+        await t.post(f"/apps/newachievement/{appid}", {"maxstatid": max_stat, "maxbitid": max_bit}), "new achievement"
+    )
+
+
+def localized(value: dict[str, str]) -> str:
+    """As the page sends it: languages without text dropped; English only collapses to a plain string."""
+    clean = {k: v for k, v in value.items() if v}
+    return json.dumps(
+        clean["english"] if list(clean) == ["english"] else clean, ensure_ascii=False, separators=(",", ":")
+    )
+
+
+async def save_achievement(
+    t: Transport,
+    appid: int,
+    stat: str,
+    bit: str,
+    api_name: str,
+    names: dict[str, str],
+    descriptions: dict[str, str],
+    hidden: bool,
+) -> dict[str, Any]:
+    data = _ok(
+        await t.post(
+            f"/apps/saveachievement/{appid}",
+            {
+                "statid": stat,
+                "bitid": bit,
+                "apiname": api_name,
+                "displayname": localized(names),
+                "description": localized(descriptions),
+                "permission": "0",
+                "hidden": "true" if hidden else "false",
+                "progressStat": "-1",
+                "progressMin": "",
+                "progressMax": "",
+            },
+        ),
+        f"save achievement {api_name}",
+    )
+    if not data.get("saved"):
+        raise RuntimeError(f"Steamworks did not save {api_name}.")
+    return data
+
+
+async def upload_achievement_icon(
+    t: Transport, appid: int, stat: str, bit: str, jpg: bytes, locked: bool, name: str
+) -> None:
+    res = await t.post_multipart(
+        "/images/uploadachievement",
+        {
+            "MAX_FILE_SIZE": "3000000",
+            "appID": str(appid),
+            "statID": stat,
+            "bit": bit,
+            "requestType": "achievement_gray" if locked else "achievement",
+        },
+        {"image": (name, jpg, "image/jpeg")},
+    )
+    _ok(res, f"icon {name}")
+
+
+async def delete_achievement(t: Transport, appid: int, stat: str, bit: str) -> None:
+    data = _checked(await t.post(f"/apps/deleteachievement/{appid}/{stat}/{bit}", {}), "delete achievement").json()
+    if not data.get("deleted"):
+        raise RuntimeError("Steamworks did not delete the achievement.")
+
+
+# ---------------------------------------------------------------------------------------------------- Steam Cloud
+
+
+def _num(v: Any) -> int:
+    digits = re.sub(r"\D", "", str(v or "0"))
+    return int(digits or 0)
+
+
+async def read_cloud(t: Transport, appid: int) -> dict[str, Any]:
+    res = _checked(await t.get(f"/apps/cloud/{appid}"), "Steam Cloud page")
+    page = parse(res.text)
+    if "ufsQuota" not in page.by_id or not page.session_id:
+        raise FormatError("The Steam Cloud page changed (quota inputs not found).")
+    roots, overrides = [], []
+    for name, f in page.forms.items():
+        m = re.match(r"AutoCloud(Path|Override)Form(\d+)$", name)
+        if not m:
+            continue
+        if m.group(1) == "Path":
+            roots.append(
+                {
+                    "index": int(m.group(2)),
+                    "root": f.get("root", ""),
+                    "path": f.get("path", ""),
+                    "pattern": f.get("pattern", ""),
+                    "os": f.get("oslist", ""),
+                    "recursive": bool(f.get("recursive")),
+                }
+            )
+        else:
+            overrides.append(
+                {
+                    "index": int(m.group(2)),
+                    "root": f.get("root", ""),
+                    "os": f.get("os", ""),
+                    "use_instead": f.get("useinstead", ""),
+                    "add_path": f.get("addpath", ""),
+                    "replace_path": bool(f.get("replacepath")),
+                }
+            )
+    return {
+        "byte_quota": _num(page.by_id["ufsQuota"]["value"]),
+        "file_quota": _num(page.by_id.get("ufsFiles", {}).get("value")),
+        "shared_appid": _num(page.by_id.get("relatedAppID", {}).get("value")),
+        "developers_only": bool(page.by_id.get("ufsHideInClient", {}).get("checked")),
+        "sync_on_suspend": bool(page.by_id.get("ufsAllowSyncOnSuspend", {}).get("checked")),
+        "roots": sorted(roots, key=lambda r: r["index"]),
+        "overrides": sorted(overrides, key=lambda r: r["index"]),
+    }
+
+
+async def set_ufs(t: Transport, appid: int, s: dict[str, Any]) -> None:
+    _ok(
+        await t.post(
+            f"/apps/setufsparameters/{appid}",
+            {
+                "cb": str(s["byte_quota"]),
+                "cfiles": str(s["file_quota"]),
+                "appidRedirect": str(s["shared_appid"]),
+                "hideInClient": "1" if s["developers_only"] else "0",
+                "syncOnSuspend": "1" if s["sync_on_suspend"] else "0",
+            },
+        ),
+        "Steam Cloud quotas",
+    )
+
+
+async def set_root(t: Transport, appid: int, r: dict[str, Any]) -> None:
+    _ok(
+        await t.post(
+            f"/apps/setautocloudpath/{appid}",
+            {
+                "index": str(r["index"]),
+                "root": r["root"],
+                "path": r["path"],
+                "pattern": r["pattern"],
+                "oslist": r["os"],
+                "recursive": "true" if r["recursive"] else "false",
+            },
+        ),
+        f"Auto-Cloud path {r['index']}",
+    )
+
+
+async def delete_root(t: Transport, appid: int, index: int) -> None:
+    _ok(
+        await t.post(
+            f"/apps/setautocloudpath/{appid}",
+            {"index": str(index), "root": "", "path": "", "pattern": "", "oslist": ""},
+        ),
+        f"delete Auto-Cloud path {index}",
+    )
+
+
+async def set_override(t: Transport, appid: int, o: dict[str, Any]) -> None:
+    _ok(
+        await t.post(
+            f"/apps/setautocloudoverride/{appid}",
+            {
+                "index": str(o["index"]),
+                "root": o["root"],
+                "os": o["os"],
+                "useinstead": o["use_instead"],
+                "addpath": o["add_path"],
+                "replacepath": "true" if o["replace_path"] else "false",
+            },
+        ),
+        f"Auto-Cloud override {o['index']}",
+    )
+
+
+async def delete_override(t: Transport, appid: int, index: int) -> None:
+    _ok(
+        await t.post(
+            f"/apps/setautocloudoverride/{appid}",
+            {"index": str(index), "root": "", "os": "", "useinstead": "", "addpath": "", "replacepath": ""},
+        ),
+        f"delete override {index}",
+    )
+
+
+# ---------------------------------------------------------------------------------------------------- installation
+
+LAUNCH_FIELDS = (
+    "executable",
+    "arguments",
+    "working_dir",
+    "type",
+    "os",
+    "arch",
+    "oscpu",
+    "beta_key",
+    "owns_dlc",
+    "realm",
+    "steamdeck",
+)
+FORM_NAMES = {
+    "executable": "executable",
+    "arguments": "argumentsx",
+    "working_dir": "workingdir",
+    "type": "type",
+    "os": "osversion",
+    "arch": "osarch",
+    "oscpu": "oscpu",
+    "beta_key": "betakey",
+    "owns_dlc": "ownsdlc",
+    "realm": "realm",
+    "steamdeck": "steamdeck",
+}
+
+
+async def read_installation(t: Transport, appid: int) -> dict[str, Any]:
+    res = _checked(await t.get(f"/apps/config/{appid}"), "Installation page")
+    page = parse(res.text)
+    if "InstallFolderForm" not in page.forms:
+        raise FormatError("The Installation page changed (install folder form not found).")
+    options = []
+    for name, f in page.forms.items():
+        m = re.match(r"LaunchForm(\d+)$", name)
+        if not m:
+            continue
+        i = m.group(1)
+        descriptions = {}
+        for key, value in page.named.items():
+            lm = re.match(rf"Launch_{i}_description_loc\[([a-z]+)\]$", key)
+            if lm and value:
+                descriptions[lm.group(1)] = value
+        option = {k: str(f.get(v, "")).strip() for k, v in FORM_NAMES.items()}
+        options.append({"index": int(i), **option, "descriptions": descriptions})
+    return {
+        "install_folder": str(page.forms["InstallFolderForm"].get("installfolder", "")),
+        "launch_options": sorted(options, key=lambda o: o["index"]),
+    }
+
+
+async def set_install_folder(t: Transport, appid: int, folder: str) -> None:
+    _ok(await t.post(f"/apps/setappinstallfolder/{appid}", {"installfolder": folder}), "install folder")
+
+
+async def set_launch_option(t: Transport, appid: int, o: dict[str, Any]) -> None:
+    form = {
+        "index": str(o["index"]),
+        "executable": o["executable"],
+        "arguments": o["arguments"],
+        "workingdir": o["working_dir"],
+        "type": o["type"],
+        "description": o["descriptions"].get("english", ""),
+        "osversion": o["os"],
+        "osarch": o["arch"],
+        "oscpu": o.get("oscpu", ""),
+        "betakey": o["beta_key"],
+        "ownsdlc": o["owns_dlc"],
+        "realm": o.get("realm", ""),
+        "steamdeck": o.get("steamdeck", ""),
+    }
+    for lang, text in o["descriptions"].items():
+        if text:
+            form[f"description_{lang}"] = text
+    _ok(await t.post(f"/apps/setlaunchoption/{appid}", form), f"launch option {o['index']}")
+
+
+async def delete_launch_option(t: Transport, appid: int, index: int) -> None:
+    """What the page's own Delete button sends: every field empty except the index."""
+    empty = dict.fromkeys(
+        (
+            "executable",
+            "arguments",
+            "workingdir",
+            "type",
+            "description",
+            "osversion",
+            "osarch",
+            "oscpu",
+            "betakey",
+            "ownsdlc",
+            "realm",
+            "steamdeck",
+        ),
+        "",
+    )
+    res = await t.post(f"/apps/setlaunchoption/{appid}", {"index": str(index), **empty})
+    _checked(res, f"delete launch option {index}")
+
+
+# ---------------------------------------------------------------------------------------------------- pending changes
+
+
+async def pending_changes(t: Transport, appid: int) -> str:
+    """What is still unpublished (the Publish page's read-only "View Diffs"), as plain text."""
+    data = _checked(await t.post(f"/apps/diff/{appid}", {"section": "technical"}), "pending changes").json()
+    text = f"{data.get('opened', '')}{data.get('diff', '')}"
+    text = re.sub(r"<br\s*/?>", "\n", text)
+    text = re.sub(r"<[^>]+>", "", text)
+    return text.replace("&quot;", '"').replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+
+
+def item_from_url(url: str) -> str | None:
+    m = re.search(r"/admin/game/edit/(\d+)", urlsplit(url).path)
+    return m.group(1) if m else None

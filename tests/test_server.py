@@ -187,3 +187,19 @@ def test_http_requires_the_token_and_a_known_host(http_server: str) -> None:
         http_server, json=body, headers={**headers, "authorization": f"Bearer {TOKEN}", "host": "evil.example"}
     )
     assert evil.status_code == 421
+
+
+async def test_resources_and_prompts(workspace: Path) -> None:
+    config = Config(workspace_root=workspace)
+    await call(config, "init_project", path="game", scan=False)
+    async with Client(create_server(config)) as client:
+        templates = {t.uri_template for t in (await client.list_resource_templates()).resource_templates}
+        assert {"steam://gates/{n}", "steam://manifest/{project}", "steam://style-guide/{genre}"} <= templates
+        gate = await client.read_resource("steam://gates/1")
+        assert '"rules"' in gate.contents[0].text  # type: ignore[union-attr]
+        manifest = await client.read_resource("steam://manifest/game")
+        assert '"values"' in manifest.contents[0].text  # type: ignore[union-attr]
+        prompts = {p.name for p in (await client.list_prompts()).prompts}
+        assert {"release_assistant", "write_store_page", "design_achievements", "review_gate"} <= prompts
+        msg = await client.get_prompt("review_gate", {"path": "game", "gate": "2"})
+        assert "gap_report(gate=2)" in msg.messages[0].content.text  # type: ignore[union-attr]

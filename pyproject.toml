@@ -75,5 +75,9 @@ plugins = ["pydantic.mypy"]
 exclude = ["^legacy/", "^spikes/"]
 
 [[tool.mypy.overrides]]
+module = ["playwright.*"]  # the optional [browser] extra
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = ["ruamel.*"]
 ignore_missing_imports = true

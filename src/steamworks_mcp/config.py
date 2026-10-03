@@ -61,6 +61,18 @@ class Config:
     """Origin header values accepted over HTTP (browser-based clients)."""
     cache_dir: Path = field(default_factory=default_cache_dir)
     steamcmd_path: str | None = None
+    steamcmd_username: str | None = None
+    """The restricted builder account steamcmd logs in with (its password is never handled by this server)."""
+    home_dir: Path = field(default_factory=lambda: Path.home() / ".steamworks-mcp")
+    """Per-user data outside any repository: BROWSER consent and the browser profile."""
+
+    @property
+    def consent_path(self) -> Path:
+        return self.home_dir / "consent.json"
+
+    @property
+    def browser_profile_dir(self) -> Path:
+        return self.home_dir / "browser-profile"
 
 
 class WorkspaceError(ValueError):
@@ -90,6 +102,8 @@ def load_config(env: Mapping[str, str] | None = None, dotenv: Path | None = None
         allowed_origins=_csv(get("STEAMWORKS_MCP_ALLOWED_ORIGINS")),
         cache_dir=Path(c).expanduser() / "references" if (c := get("STEAMWORKS_MCP_CACHE")) else default_cache_dir(),
         steamcmd_path=get("STEAMCMD_PATH"),
+        steamcmd_username=get("STEAMCMD_USERNAME"),
+        home_dir=Path(h).expanduser() if (h := get("STEAMWORKS_MCP_HOME")) else Path.home() / ".steamworks-mcp",
     )
 
 

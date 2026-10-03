@@ -33,8 +33,9 @@ areas:
     browser: {status: never}
     default_mode: MANUAL
     notes: >-
-      Valve's docs say build scripts cannot set the default branch live; it is done by hand in App Admin. On a
-      released app the account also has to confirm on its phone / Steam Mobile app.
+      set_build_live sets beta branches live through the Web API after the user confirms. The default branch is
+      always set live by hand in App Admin (Valve: build scripts cannot target it); on a released app the account
+      also has to confirm on its phone / Steam Mobile app.
   - id: builds_list
     name: List builds and branches
     api: {status: unverified, how: "ISteamApps/GetAppBuilds, GetAppBetas"}

@@ -167,6 +167,18 @@ Not recorded yet: no publisher key was available during the recording session. T
 `GetLeaderboardsForGame`, `FindOrCreateLeaderboard` and `DeleteLeaderboard`. Without a key, `api.steampowered.com`
 answers `GetSchemaForGame` with `400 Required parameter 'key' is missing`. (`api/public_unkeyed`)
 
+What the code relies on, from Valve's documentation pages only (unverified until a key is available):
+
+- `FindOrCreateLeaderboard/v2` (POST): `appid`, `name`, `sortmethod` (default Ascending), `displaytype` (default
+  Numeric), `createifnotfound`, `onlytrustedwrites`, `onlyfriendsreads`. The allowed `displaytype` strings are not
+  listed; the tool sends `Numeric`, `TimeSeconds` and `TimeMilliSeconds` (the SDK's
+  `k_ELeaderboardDisplayType*` names). The TypeScript v0.1 used `Seconds` / `MilliSeconds`; one of the two is wrong.
+- Settings of an existing leaderboard cannot be changed through the Web API without deleting it (and its scores);
+  the tool only reports such differences.
+- `SetAppBuildLive/v2` (POST): `betakey` is required, `public` meaning the default branch; a released app then
+  also needs `steamid` and answers `201 Created` while the change waits for a Steam Mobile confirmation. The tool
+  only sets beta branches live; the default branch stays a manual step (gate rule `build_set_live_default_branch`).
+
 ## Environment notes
 
 - Playwright's bundled Chromium failed to start on Windows 11 ("side-by-side configuration"). Installed Chrome or

@@ -13,7 +13,7 @@ Last reviewed: 2026-10-03.
 | Area | Official API | BROWSER | Mode (browser off → on) | Notes |
 |---|---|---|---|---|
 | Build upload (depots, app_build VDF) | ❔ unverified: steamcmd / SteamPipe with the builder account | — | API | Without steamcmd configured, the tool writes the app_build / depot_build VDFs and the command to run. |
-| Set a build live on a branch | ❔ unverified: ISteamApps/SetAppBuildLive (beta branches) | — | MANUAL | Valve's docs say build scripts cannot set the default branch live; it is done by hand in App Admin. On a released app the account also has to confirm on its phone / Steam Mobile app. |
+| Set a build live on a branch | ❔ unverified: ISteamApps/SetAppBuildLive (beta branches) | — | MANUAL | set_build_live sets beta branches live through the Web API after the user confirms. The default branch is always set live by hand in App Admin (Valve: build scripts cannot target it); on a released app the account also has to confirm on its phone / Steam Mobile app. |
 | List builds and branches | ❔ unverified: ISteamApps/GetAppBuilds, GetAppBetas | — | API |  |
 | Leaderboards | ❔ unverified: ISteamLeaderboards/FindOrCreateLeaderboard, GetLeaderboardsForGame, DeleteLeaderboard | — | API |  |
 | Read the achievement and stat schema | ❔ unverified: ISteamUserStats/GetSchemaForGame (publisher key) | ✅ verified: apps/fetchachievements | API |  |

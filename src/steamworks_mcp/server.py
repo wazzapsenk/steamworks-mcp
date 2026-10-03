@@ -5,6 +5,8 @@ are evaluated when the tools are registered.
 """
 
 import functools
+import inspect
+import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, Any, Literal, TypeVar
@@ -17,6 +19,12 @@ from steamworks_mcp import __version__
 from steamworks_mcp import fields as fields_ops
 from steamworks_mcp import project as proj
 from steamworks_mcp.config import Config, WorkspaceError, resolve_in_workspace
+from steamworks_mcp.execute.api import SteamApiError
+from steamworks_mcp.execute.apply import ApplyRefused
+from steamworks_mcp.execute.browser.partner import FormatError
+from steamworks_mcp.execute.browser.transport import NotLoggedInError
+from steamworks_mcp.execute.guard import GuardError
+from steamworks_mcp.execute.service import APPS, INSPECT, SECTIONS, Executor
 from steamworks_mcp.export import package, preview, vdf
 from steamworks_mcp.gates.engine import evaluate_gates
 from steamworks_mcp.gates.report import gap_report as gap_report_fn
@@ -44,11 +52,26 @@ USER_ERRORS = (
     ValueError,
     FileNotFoundError,
     FetchError,
+    ApplyRefused,
+    SteamApiError,
+    NotLoggedInError,
+    FormatError,
+    GuardError,
 )
 
 
 def user_errors(fn: F) -> F:
     """Show the message of expected errors to the model (the SDK hides unexpected exceptions' details)."""
+    if inspect.iscoroutinefunction(fn):
+
+        @functools.wraps(fn)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            try:
+                return await fn(*args, **kwargs)
+            except USER_ERRORS as exc:
+                raise ToolError(str(exc)) from exc
+
+        return async_wrapper  # type: ignore[return-value]
 
     @functools.wraps(fn)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -68,12 +91,14 @@ generate / set_field -> validate -> export_package -> apply. Values live in stea
 (missing, draft, needs_review, approved, applied) lives in .steam-mcp/state.json.
 
 Never claim something was done in Steamworks unless a tool reported it as applied. Scanned and generated values are
-drafts until the user approves them. Nothing is ever published by this server.
+drafts until the user approves them. Writes to Steam always start as a dry run; write only after the user saw the
+changes and agreed (user_confirmed=true). Nothing is ever published by this server: the user publishes in Steamworks.
 """
 
 
-def create_server(config: Config) -> MCPServer:
+def create_server(config: Config, executor: Executor | None = None) -> MCPServer:
     server = MCPServer("steamworks-mcp", instructions=INSTRUCTIONS)
+    execu = executor or Executor(config)
 
     def project_dir(path: str | None) -> Path:
         return resolve_in_workspace(config.workspace_root, path)
@@ -486,6 +511,194 @@ def create_server(config: Config) -> MCPServer:
             project.values(), project.state, project.files, gate, browser=config.browser_enabled
         )
 
+    # ------------------------------------------------------------------ execution (API, BROWSER, steamcmd)
+
+    @server.tool()
+    @user_errors
+    async def apply(
+        path: str,
+        section: Literal["cloud", "installation", "achievements", "store_text", "leaderboards", "build"],
+        app: Literal["main", "demo", "playtest"] = "main",
+        dry_run: bool = True,
+        user_confirmed: bool = False,
+        remove_extra: bool = False,
+        upload_icons: bool = False,
+    ) -> dict[str, Any]:
+        """Make Steam match the approved values of one section. Always call with dry_run=true first and show the user
+        the changes; write (dry_run=false, user_confirmed=true) only after they agreed. Nothing is ever published:
+        BROWSER writes are drafts the user reviews and publishes in Steamworks.
+
+        Sections: "leaderboards" (Web API, publisher key), "build" (uploads the SteamPipe scripts with steamcmd),
+        and with the BROWSER mode: "cloud", "installation", "achievements" (main game), "store_text" (short and long
+        description in every approved language). Every call saves a snapshot of what Steam had first.
+
+        Args:
+            path: Folder that holds steamworks.yaml.
+            section: What to apply.
+            app: main, demo or playtest (each has its own app id).
+            dry_run: Only show the differences (default).
+            user_confirmed: The user saw the dry-run changes and agreed.
+            remove_extra: Also delete rows that exist only in Steam. Only when the user explicitly asks for it.
+            upload_icons: achievements: also upload the icons (prepared from achievements.*.icon).
+        """
+        return await execu.apply(
+            open_project(path),
+            section,
+            app,
+            dry_run=dry_run,
+            user_confirmed=user_confirmed,
+            remove_extra=remove_extra,
+            upload_icons=upload_icons,
+        )
+
+    @server.tool()
+    @user_errors
+    async def steamworks_inspect(
+        path: str,
+        what: Literal[
+            "builds",
+            "leaderboards",
+            "achievement_schema",
+            "snapshots",
+            "pending",
+            "cloud",
+            "installation",
+            "achievements",
+            "store_text",
+        ],
+        app: Literal["main", "demo", "playtest"] = "main",
+    ) -> dict[str, Any]:
+        """Read-only look at what Steam has now. With the publisher key: "builds" (recent builds and branches),
+        "leaderboards", "achievement_schema". With the BROWSER mode: "cloud", "installation", "achievements",
+        "store_text", and "pending" (the unpublished changes the Publish tab would show). "snapshots" lists the
+        snapshots saved before writes (local)."""
+        return await execu.inspect(open_project(path), what, app)
+
+    @server.tool()
+    @user_errors
+    def set_build_live(
+        path: str,
+        build_id: int,
+        branch: str,
+        app: Literal["main", "demo", "playtest"] = "main",
+        description: str = "",
+        dry_run: bool = True,
+        user_confirmed: bool = False,
+    ) -> dict[str, Any]:
+        """Set an uploaded build live on a beta branch (Web API, publisher key). Dry run first; set live only after
+        the user explicitly agreed. The default branch (what every player gets) is never set live by this tool: the
+        user does that in Steamworks Settings > SteamPipe > Builds."""
+        return execu.set_build_live(
+            open_project(path),
+            app,
+            build_id,
+            branch,
+            description=description,
+            dry_run=dry_run,
+            user_confirmed=user_confirmed,
+        )
+
+    if config.browser_enabled:
+
+        @server.tool()
+        @user_errors
+        async def steamworks_open(accept_risks: bool = False) -> dict[str, Any]:
+            """Open the Steamworks site in a browser window for the BROWSER mode. The first time this returns terms
+            the user has to read and accept (then call again with accept_risks=true). The user signs in themselves;
+            this tool never types passwords or Steam Guard codes and never reads cookie values."""
+            return await execu.open(accept_risks)
+
+        @server.tool()
+        @user_errors
+        async def restore_snapshot(
+            path: str, snapshot: str | None = None, dry_run: bool = True, user_confirmed: bool = False
+        ) -> dict[str, Any]:
+            """Write a saved snapshot back to Steamworks (BROWSER mode): undoes an apply. Without `snapshot`, lists
+            the snapshots. The first write on every app has to be a restore of the snapshot just taken: it writes
+            every row back unchanged and reads it again, proving this tool reads and writes that app correctly.
+            Dry run first; restore only after the user agreed."""
+            return await execu.restore(open_project(path), snapshot, dry_run, user_confirmed)
+
+    # ------------------------------------------------------------------ resources (get_spec_info is the tool twin)
+
+    def as_json(data: Any) -> str:
+        return json.dumps(data, indent=2, ensure_ascii=False, default=str)
+
+    @server.resource("steam://capabilities", mime_type="application/json")
+    def capabilities_resource() -> str:
+        """What the tool can do in Steamworks per area, and how (API, BROWSER, ARTIFACT, MANUAL)."""
+        return as_json(spec_info("capabilities"))
+
+    @server.resource("steam://gates/{n}", mime_type="application/json")
+    def gate_resource(n: str) -> str:
+        """All rules of a release gate (0 prerequisites, 1 store page, 2 build review, 3 release)."""
+        return as_json(spec_info(f"gate:{int(n)}"))
+
+    @server.resource("steam://style-guide/{genre}", mime_type="text/markdown")
+    def style_guide_resource(genre: str) -> str:
+        """A genre style guide for store text (e.g. coop_party)."""
+        return str(spec_info(f"style_guide:{genre}")["guide"])
+
+    @server.resource("steam://references/{appid}", mime_type="application/json")
+    def reference_resource(appid: str) -> str:
+        """Derived measurements of a bundled reference game (no raw texts)."""
+        return as_json(spec_info(f"reference:{int(appid)}"))
+
+    @server.resource("steam://manifest/{project}", mime_type="application/json")
+    def manifest_resource(project: str) -> str:
+        """Current values and per-field status of a project (a folder directly under the workspace root)."""
+        p = open_project(project)
+        return as_json({"values": p.values(), "state": {k: v.status for k, v in p.state.fields.items()}})
+
+    # ------------------------------------------------------------------ prompts
+
+    @server.prompt(title="Release assistant")
+    def release_assistant(path: str) -> str:
+        """Walk a game from nothing configured to released on Steam."""
+        return (
+            f"Help me release the game in `{path}` on Steam. Work in this order and keep me in the loop:\n"
+            "1. init_project (or scan_project if steamworks.yaml exists), then gap_report.\n"
+            "2. start_interview: ask me the questions in small batches and save my answers with set_field.\n"
+            "3. generate the drafts (store_short, store_long, achievements, cloud, builds, requirements, code); show "
+            "me each one and approve_fields only what I agree with.\n"
+            "4. validate, translate with localization_pending / localization_set, prepare_images.\n"
+            "5. export_package for the next gate; with the publisher key or the BROWSER mode, apply section by section "
+            "(always a dry run first, then only with my OK).\n"
+            "Never claim something is done in Steamworks unless a tool reported it applied, and never publish: I do "
+            "that myself."
+        )
+
+    @server.prompt(title="Write the store page")
+    def write_store_page(path: str) -> str:
+        """Short description and About This Game, from brief to approved text."""
+        return (
+            f"Write the Steam store text for the game in `{path}`. Call generate(section='store_short') and write the "
+            "three variants it asks for, each saved with save_draft. Then generate(section='store_long', "
+            "stage='outline'), let me pick an outline, and write the text with stage='text'. Run validate("
+            "section='store') after each draft, judge its questions, fix what fails, and show me preview_store "
+            "before I pick drafts with set_field(from_draft=...)."
+        )
+
+    @server.prompt(title="Design achievements")
+    def design_achievements(path: str) -> str:
+        """Achievement names, descriptions and icon briefs that fit the game."""
+        return (
+            f"Design the Steam achievements for the game in `{path}`. Start with generate(section='code') to see "
+            "which achievements and stats the code already uses, then generate(section='achievements') and write "
+            "names, descriptions and icon briefs for the ones missing. Keep a balance of progression, skill and "
+            "secret/funny ones, save them with set_field(source='generated'), run validate(section='achievements') "
+            "and show me the list for approval."
+        )
+
+    @server.prompt(title="Review a gate")
+    def review_gate(path: str, gate: str) -> str:
+        """Everything still open before one release gate."""
+        return (
+            f"Review release gate {gate} for the game in `{path}`: call gap_report(gate={gate}) and validate, then "
+            "explain what blocks the gate, what I have to approve, which steps are manual (with the Steamworks page "
+            "for each) and what can be applied. Suggest the next three actions."
+        )
+
     @server.tool()
     def server_info() -> dict[str, Any]:
         """Version, workspace root and which optional features are enabled (no secrets)."""
@@ -495,7 +708,11 @@ def create_server(config: Config) -> MCPServer:
             "browser_mode": config.browser_enabled,
             "publisher_key_configured": config.publisher_key is not None,
             "web_api_key_configured": config.web_api_key is not None,
-            "steamcmd_configured": config.steamcmd_path is not None,
+            "steamcmd_configured": config.steamcmd_path is not None and config.steamcmd_username is not None,
+            "browser_consent_given": execu.consent.accepted() if config.browser_enabled else None,
+            "apply_sections": list(SECTIONS),
+            "inspect": list(INSPECT),
+            "apps": list(APPS),
         }
 
     return server
