@@ -1,0 +1,444 @@
+# Gate 1: Store page review. Generated from a review of Valve's Steamworks documentation on 2026-10-03.
+# Schema: src/steamworks_mcp/gates/models.py. Every Valve rule cites its page and a verbatim quote.
+gate: 1
+title: Store page review
+summary: Everything needed to submit the store page for review and post it as Coming Soon.
+last_reviewed: '2026-10-03'
+rules:
+  - id: store_presence_checklist_complete
+    title: Store presence checklist complete
+    description: Complete every item of the "Store Presence" release checklist on the app landing page.
+    severity: required
+    check: &id001
+      kind: checklist
+    execution_mode: MANUAL
+    where: App landing page > release checklist (right-hand side)
+    source_doc: https://partner.steamgames.com/doc/store/releasing
+    quote: The Store Presence checklist consists of required items that need to be completed before you can list the store page as coming soon
+  - id: store_page_required_fields
+    title: Store page required fields
+    description: Fill every section marked (*) on each Edit Store Page tab.
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: App landing page > Edit Store Page
+    rule: All (*) fields on every tab.
+    source_doc: https://partner.steamgames.com/doc/store/page
+    quote: You will need to complete the sections marked with a (*) in each tab.
+  - id: short_description
+    title: Short description
+    description: Short description (plain text, no time-based text such as "Now Available").
+    severity: required
+    check:
+      kind: present
+      fields:
+        - store.short_description
+    execution_mode: BROWSER
+    fallback_mode: ARTIFACT
+    where: Edit Store Page > Description
+    rule: Plain text only; limited to "a few hundred characters" (exact limit not stated).
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: The short description is limited to a few hundred characters
+    notes: Required-ness inferred from the (*) required-field marker rule and the store review description check; the exact character limit is not documented.
+  - id: about_this_game_description
+    title: About this game description
+    description: Long "About This Game" description must be detailed and coherent.
+    severity: required
+    check:
+      kind: present
+      fields:
+        - store.about
+    execution_mode: BROWSER
+    fallback_mode: ARTIFACT
+    where: Edit Store Page > Description
+    rule: Embedded images < 5MB.
+    source_doc: https://partner.steamgames.com/doc/store/review_process
+    quote: The description will need to be detailed and coherent.
+  - id: description_no_external_links
+    title: Description no external links
+    description: No links (incl. QR codes or implied URLs) to other websites in descriptions or graphical assets; use the dedicated link fields.
+    severity: required
+    check:
+      kind: store_rules
+      rules:
+        - description_no_links
+        - description_no_implied_urls_or_qr
+        - description_urls_auto_hidden
+    execution_mode: BROWSER
+    fallback_mode: ARTIFACT
+    where: Edit Store Page > Description (links go in Basic Info link fields)
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: You cannot use your store page descriptions or graphical assets to promote or link to other websites.
+  - id: description_no_other_games_or_fake_ui
+    title: Description no other games or fake ui
+    description: No advertising of other Steam games and no imagery that mimics Steam UI (wishlist buttons, capsules, prices).
+    severity: required
+    check:
+      kind: store_rules
+      rules:
+        - description_no_other_games
+        - description_no_steam_ui_imitation
+        - description_no_fake_buttons_or_pricing
+    execution_mode: BROWSER
+    fallback_mode: ARTIFACT
+    where: Edit Store Page > Description
+    source_doc: https://partner.steamgames.com/doc/store/page
+    quote: No images, links, or widgets pointing to other games on Steam
+  - id: store_page_launch_content_only
+    title: Store page launch content only
+    description: Store page may only show features/content available at launch; planned features must be clearly marked as not yet released.
+    severity: required
+    check:
+      kind: store_rules
+      rules:
+        - store_page_launch_content_only
+        - description_planned_features_marked
+    execution_mode: BROWSER
+    fallback_mode: ARTIFACT
+    where: Edit Store Page (all tabs)
+    source_doc: https://partner.steamgames.com/doc/store/review_process
+    quote: Your store page should only contain features and content that will be available at launch
+  - id: header_capsule
+    title: Header capsule
+    description: Header Capsule image.
+    severity: required
+    check:
+      kind: asset
+      asset: header_capsule
+    execution_mode: ARTIFACT
+    where: Edit Store Page > Graphical Assets
+    rule: 920x430 px; only game logo + artwork; old (pre-Aug-2024) dimensions are rejected.
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    quote: "Size: Please provide '920px x 430px'"
+  - id: small_capsule
+    title: Small capsule
+    description: Small Capsule image with a logo readable at the smallest size.
+    severity: required
+    check:
+      kind: asset
+      asset: small_capsule
+    execution_mode: ARTIFACT
+    where: Edit Store Page > Graphical Assets
+    rule: 462x174 px (120x45 and 184x69 auto-generated).
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    quote: "Size: Please provide '462px x 174px' image."
+  - id: main_capsule
+    title: Main capsule
+    description: Main Capsule image (front-page carousel).
+    severity: required
+    check:
+      kind: asset
+      asset: main_capsule
+    execution_mode: ARTIFACT
+    where: Edit Store Page > Graphical Assets
+    rule: 1232x706 px
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    quote: 'Size: 1232px x 706px'
+  - id: vertical_capsule
+    title: Vertical capsule
+    description: Vertical Capsule image (seasonal sale pages).
+    severity: required
+    check:
+      kind: asset
+      asset: vertical_capsule
+    execution_mode: ARTIFACT
+    where: Edit Store Page > Graphical Assets
+    rule: 748x896 px
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    quote: 'Size: 748px x 896px'
+  - id: capsule_content_rules
+    title: Capsule content rules
+    description: Base capsules may only contain artwork, game name and official subtitle; readable logo; accurate dimensions; PG-13 artwork. Extra text only via time-limited Artwork Overrides.
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: Edit Store Page > Graphical Assets
+    rule: No review scores, awards, discount/CTA copy, other products; Artwork Overrides with text max one month and localized into all supported languages.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: Content on base graphical asset capsules on Steam is limited to game artwork, the game name, and any official subtitle.
+  - id: screenshots
+    title: Screenshots
+    description: Gameplay-only screenshots (no concept art, pre-rendered cinematics, awards or marketing copy).
+    severity: required
+    check:
+      kind: screenshots
+      min_count: 5
+      min_width: 1920
+      min_height: 1080
+      aspect: 16:9
+    execution_mode: ARTIFACT
+    where: Edit Store Page > Screenshots
+    rule: At least 5 screenshots; minimum 1920x1080; 16:9.
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    quote: You must provide at least 5 screenshots of your product.
+  - id: screenshots_all_ages_flag
+    title: Screenshots all ages flag
+    description: Mark suitable screenshots as "suitable for all ages" so the game can appear on the front page and hover previews.
+    severity: recommended
+    check: *id001
+    execution_mode: MANUAL
+    where: Edit Store Page > Screenshots
+    rule: Mark at least 4 screenshots (if suitable).
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    quote: if they are suitable for all ages, you should mark at least four screenshots
+  - id: page_background
+    title: Page background
+    description: Optional store page background; auto-generated from the last screenshot if absent.
+    severity: optional
+    check:
+      kind: asset
+      asset: page_background
+    execution_mode: ARTIFACT
+    where: Edit Store Page > Graphical Assets
+    rule: 1438x810 px
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    quote: If you don't upload your own, we'll automatically take the last screenshot and generate an appropriate background image from that.
+  - id: trailer
+    title: Trailer
+    description: Store page trailer; Valve strongly prefers a gameplay trailer first.
+    severity: recommended
+    check:
+      kind: min_items
+      field: assets.trailers
+      min: 1
+    execution_mode: MANUAL
+    where: Store Page Admin > Trailers tab
+    rule: Up to 1920x1080; 30/29.97 or 60/59.94 fps; 5,000+ Kbps; .mov/.wmv/.mp4; H.264 + AAC preferred; 16:9 preferred; audio 44/48 kHz.
+    source_doc: https://partner.steamgames.com/doc/store/coming_soon
+    quote: You'll need a set of branding images, written description, and ideally a gameplay trailer.
+    notes: Trailers page says a trailer is "required" for release; Coming Soon page says "ideally a gameplay trailer". Not listed in the Review Process checks. Treat as a warning, not a hard block.
+  - id: content_survey_complete
+    title: Content survey complete
+    description: Complete all three Content Survey sections (General Content -> regional ratings, Mature Content, Generative AI) before submitting store page or build for review.
+    severity: required
+    check:
+      kind: confirmed
+      fields:
+        - content.survey_completed
+    execution_mode: MANUAL
+    where: Content Survey (linked from the app's release checklist; exact menu path not documented)
+    rule: All 3 sections complete before review submission; some answers locked after approval (contact Steam Support).
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/contentsurvey
+    quote: The content survey contains three primary sections that all must be completed prior to submitting the game to the Review Process
+  - id: mature_content_disclosure
+    title: Mature content disclosure
+    description: Disclose all mature/adult content, including content shipped in builds but not reachable.
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: Content Survey > Mature Content
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/contentsurvey
+    quote: You must disclose all the adult content you've uploaded in your builds, even if it's not accessible or presented in your product.
+  - id: ai_generated_content_disclosure
+    title: AI generated content disclosure
+    description: Disclose pre-generated and live-generated AI content; live-generated requires describing guardrails against illegal content.
+    severity: required
+    check:
+      kind: answered
+      fields:
+        - content.ai.uses_ai
+    execution_mode: MANUAL
+    where: Content Survey > Generative Artificial Intelligence Content
+    rule: 'Pre-Generated: describe usage. Live-Generated: also describe guardrails. Live-generated Adult Only Sexual Content is not accepted.'
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/contentsurvey
+    quote: The third part of the survey deals with generative artificial intelligence in your development or product.
+  - id: adult_only_requires_build_before_store_review
+    title: Adult only requires build before store review
+    description: If "Adult Only Sexual Content" is marked, both store page and build must be submitted before the store page is reviewed; reviews may take longer.
+    severity: required
+    check: &id002
+      kind: info
+    when:
+      - field: content.mature_descriptors
+        op: contains
+        value: adult_only_sexual_content
+    execution_mode: MANUAL
+    where: App landing page > Mark as ready for review
+    rule: Store page + build both submitted; longer than 3-5 business days.
+    source_doc: https://partner.steamgames.com/doc/store/review_process
+    quote: both the Store Page and Product Build must be completed and submitted for review before the Store Page will be reviewed
+  - id: steam_tags
+    title: Steam tags
+    description: Apply tags with the Tag Wizard.
+    severity: required
+    check:
+      kind: min_items
+      field: store.tags
+      min: 5
+    execution_mode: MANUAL
+    where: Edit Store Page > Basic Info > Tags (Tag Wizard)
+    rule: At least 5 tags before launch (required); up to 20 recommended (only top 20 shown). Tag Wizard needs Edit App Metadata + Publish App Changes To Steam.
+    source_doc: https://partner.steamgames.com/doc/store/tags
+    quote: We began requiring at least 5 tags be applied to a title before its launch on Steam, but we recommend you add up to 20.
+  - id: supported_languages_declared
+    title: Supported languages declared
+    description: Declare in-game language support (Interface / Full Audio / Subtitles) per language.
+    severity: required
+    check:
+      kind: min_items
+      field: store.supported_languages
+      min: 1
+    execution_mode: MANUAL
+    where: Edit Store Page > Basic Info (languages); base languages also on Manage Depots page
+    source_doc: https://partner.steamgames.com/doc/store/localization
+    quote: There are options for Subtitles, Interface, or Full Audio for each language.
+    notes: No doc explicitly states that at least one supported language is mandatory for review. Searched store/localization, store/page, store/review_process, store/releasing.
+    unverified: true
+  - id: store_page_localization
+    title: Store page localization
+    description: Localize store page text/images/trailers; both store and in-game localization are ideal.
+    severity: recommended
+    check:
+      kind: crosscheck
+      name: store_translations_complete
+    when:
+      - field: target_languages
+        op: not_empty
+    execution_mode: BROWSER
+    fallback_mode: ARTIFACT
+    where: Edit Store Page > language drop-down in each text editor
+    source_doc: https://partner.steamgames.com/doc/store/localization
+    quote: Steam supports two separate types of localization - store page and in-game. You can use either independently of each other, but supporting both is ideal.
+  - id: supported_os_store_page
+    title: Supported OS store page
+    description: Tick supported operating systems on the store page.
+    severity: required
+    check:
+      kind: min_items
+      field: store.platforms
+      min: 1
+    execution_mode: MANUAL
+    where: Edit Store Page > Basic Info
+    rule: Must match OSes the build actually launches on (see build review).
+    source_doc: https://partner.steamgames.com/doc/store/application/platforms
+    quote: Edit your store page and check the appropriate operating system boxes on the Basic Info tab.
+  - id: system_requirements
+    title: System requirements
+    description: Enter system requirements for each supported OS.
+    severity: required
+    check:
+      kind: crosscheck
+      name: sysreqs_per_platform
+    execution_mode: MANUAL
+    where: Edit Store Page > Basic Info (below OS checkboxes)
+    rule: One requirements block per ticked OS.
+    source_doc: https://partner.steamgames.com/doc/store/application/platforms
+    quote: Then scroll down and enter the corresponding system requirements.
+    notes: Documented as a release step for each platform; whether the checklist hard-blocks without it is not stated.
+  - id: release_date_set
+    title: Release date set
+    description: Set an exact intended release date (hidden) plus a public display format.
+    severity: required
+    check:
+      kind: present
+      fields:
+        - release.planned_date
+        - release.display_date
+    execution_mode: MANUAL
+    where: App landing page > Specified release date (edit icon)
+    rule: 'Display options: exact date, month+year, quarter, year, or "Coming Soon". Lists sort by the last day of the shown range.'
+    source_doc: https://partner.steamgames.com/doc/store/release_dates
+    quote: You'll need to set an exact intended release date, which is not directly visible to players.
+  - id: early_access_questionnaire
+    title: Early access questionnaire
+    description: Early Access titles must tick the Early Access box and answer every Early Access question.
+    severity: required
+    check:
+      kind: present
+      fields:
+        - release.early_access_answers.why
+        - release.early_access_answers.duration
+        - release.early_access_answers.full_version_plans
+        - release.early_access_answers.current_state
+        - release.early_access_answers.pricing_plans
+        - release.early_access_answers.community_involvement
+    when:
+      - field: release.early_access
+        op: is_true
+    execution_mode: MANUAL
+    where: Edit Store Page > Early Access tab
+    rule: All Early Access questions answered.
+    source_doc: https://partner.steamgames.com/doc/store/review_process
+    quote: For titles that are releasing in Early Access, you will need to answer all the questions in the Early Access section.
+  - id: proposed_pricing_submitted
+    title: Proposed pricing submitted
+    description: Proposed pricing is reviewed together with the store page when marking ready for review.
+    severity: required
+    check:
+      kind: confirmed
+      fields:
+        - pricing.submitted
+    when:
+      - field: pricing.free_to_play
+        op: is_not_true
+    execution_mode: MANUAL
+    where: App landing page > Store packages, pricing, & release dates > package > Propose Pricing
+    source_doc: https://partner.steamgames.com/doc/store/releasing
+    quote: ready for your store page and proposed pricing to be reviewed
+  - id: mark_store_ready_for_review
+    title: Mark store ready for review
+    description: Click "Mark As Ready For Review" for the store presence; Valve reviews and sets "Ready for release".
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: App landing page > top section > Mark As Ready For Review
+    rule: Review typically 3-5 business days; submit >= 7 business days before the page should go live.
+    source_doc: https://partner.steamgames.com/doc/store/review_process
+    quote: you'll want to submit your page for review at least 7 business days before you want it live
+    notes: Release Process says "at least 7 days"; Review Process and Coming Soon say "7 business days"; Onboarding says review "takes between 1-5 days". Use 7 business days.
+  - id: post_as_coming_soon
+    title: Post as coming soon
+    description: After approval, click the green "Post as Coming Soon" button to make the page, Community Hub and wishlisting public.
+    severity: required
+    check:
+      kind: present
+      fields:
+        - release.coming_soon_since
+    execution_mode: MANUAL
+    where: App landing page > Post as Coming Soon
+    rule: Requires Publish App Changes To Steam + Manage Pricing & Discounts.
+    source_doc: https://partner.steamgames.com/doc/store/coming_soon
+    quote: you will need to click the green "Post as Coming Soon" button for it to show up publicly as coming soon.
+  - id: coming_soon_publish_early
+    title: Coming soon publish early
+    description: Publish the Coming Soon page as soon as you are ready to talk publicly about the game.
+    severity: recommended
+    check: *id002
+    execution_mode: MANUAL
+    where: App landing page
+    source_doc: https://partner.steamgames.com/doc/store/coming_soon
+    quote: It is recommended that you publish your Coming Soon page as soon as you are ready to start talking publicly about your game.
+  - id: game_name_final_before_review
+    title: Game name final before review
+    description: Finalize the game name; it cannot be changed after pre-release review.
+    severity: recommended
+    check:
+      kind: present
+      fields:
+        - game.name
+    execution_mode: MANUAL
+    where: Edit Store Page / app name
+    rule: Name locked after pre-release review.
+    source_doc: https://partner.steamgames.com/doc/store/page
+    quote: Your game's name cannot be changed once a game has been through pre-release review process.
+  - id: store_publish_makes_assets_public
+    title: Store publish makes assets public
+    description: Publishing store page data pushes all assets to public servers even for unreleased/hidden apps; preview with Store Beta Mode instead.
+    severity: recommended
+    check: *id002
+    execution_mode: MANUAL
+    where: Edit Store Page > Publish tab > Prepare for Publishing
+    rule: Use "Preview changes in store" (beta mode) before publishing.
+    source_doc: https://partner.steamgames.com/doc/store/page
+    quote: publishing a store page will move ALL store page data and assets (including screenshots, trailers and library assets) to Steam's public servers.
+  - id: store_text_rules
+    title: Store text follows Valve's store rules
+    description: Short description and About This Game pass every rule in data/store_rules.yaml (length, plain text, no links, no other games, no Steam UI imitation, English fallback).
+    severity: required
+    check:
+      kind: store_rules
+      rules: []
+    execution_mode: BROWSER
+    fallback_mode: ARTIFACT
+    where: Edit Store Page > Description
+    origin: tool

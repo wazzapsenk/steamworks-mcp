@@ -1,0 +1,1204 @@
+# Valve's store rules (layer 1 of the store text checks): error = Valve rule, warning = Valve recommendation.
+# From a review of Valve's Steamworks documentation on 2026-10-03. Schema: src/steamworks_mcp/validate/rules_data.py
+last_reviewed: '2026-10-03'
+rules:
+  - id: short_description_plain_text
+    area: text
+    applies_to:
+      - short_description
+    check: deterministic
+    kind: plain_text
+    severity: error
+    rule: Short description must be plain text. No BBCode, extra line breaks, or bullet points.
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: No Formatting - This section only allows plain text.
+  - id: short_description_max_length
+    area: text
+    applies_to:
+      - short_description
+    check: deterministic
+    kind: max_length
+    params:
+      max: 300
+    severity: error
+    rule: Short description has a hard character limit. The Valve doc only says "a few hundred characters". The commonly cited 300 is not stated on any Valve page found.
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: The short description is limited to a few hundred characters
+    notes: "The docs only say 'a few hundred characters'. The store page editor enforces 300: it labels the field 'Length: 200-300 characters' and its script uses nMaxLength = 300 (observed 2026-10-03, tests/fixtures/steamworks/store/read.har)."
+  - id: short_description_no_time_based_text
+    area: text
+    applies_to:
+      - short_description
+    check: deterministic
+    kind: regex_forbidden
+    params:
+      patterns:
+        - \bnow available\b
+        - \bavailable (?:now|on|in|from)\b
+        - \bout now\b
+        - \bpre-?purchase\b
+        - \bpre-?order\b
+        - \bcoming (?:soon|on|in)\b
+        - \brelease[sd]? (?:on|in)\b
+        - \blaunch(?:es|ing)? (?:on|in)\b
+    severity: warning
+    rule: Avoid time-based text such as "Now Available", "Available on March 4th" or "Prepurchase now".
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: Don't add "time-related" text to the short description as these will soon become old and out of date.
+  - id: about_game_media_allowed
+    area: text
+    applies_to:
+      - about_this_game
+    check: info
+    severity: warning
+    rule: About This Game supports formatted text plus embedded images, including screenshots and looping GIFs.
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: This section has more formatting options and can include both written copy and imbedded images, such as screenshots or looping GIFs
+  - id: description_image_max_file_size
+    area: text
+    applies_to:
+      - about_this_game
+      - special_announcement
+    check: deterministic
+    kind: media_max_bytes
+    params:
+      max_bytes: 5000000
+    severity: error
+    rule: Each embedded description image must be smaller than 5MB.
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: Please ensure that any images are smaller than 5MB
+  - id: description_media_total_size
+    area: text
+    applies_to:
+      - about_this_game
+    check: deterministic
+    kind: media_total_max_bytes
+    params:
+      max_bytes: 15000000
+    severity: warning
+    rule: Keep the combined file size of all description screenshots and GIFs under 15MB.
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: please keep the total file size of all your screenshots and GIFs below 15MB.
+  - id: description_media_formats
+    area: text
+    applies_to:
+      - about_this_game
+      - special_announcement
+    check: deterministic
+    kind: media_formats
+    params:
+      formats:
+        - png
+        - jpg
+        - jpeg
+        - gif
+        - webp
+        - mp4
+        - webm
+    severity: error
+    rule: 'Allowed upload formats for description images and videos: PNG, JPG, GIF, WEBP, MP4, WEBM. Steam transcodes all uploads.'
+    source_doc: https://partner.steamgames.com/doc/store/page/assets
+    quote: You can upload images and videos as PNG, JPG, GIF, WEBP, MP4, and WEBM
+  - id: description_animation_sections_only
+    area: reviews
+    applies_to:
+      - about_this_game
+      - special_announcement
+      - awards
+    check: info
+    severity: error
+    rule: Animations (GIF, MP4, WEBM) only play in the About This Game and Special Announcement sections, not elsewhere (for example Awards).
+    source_doc: https://partner.steamgames.com/doc/store/page/assets
+    quote: animations will only display in the About This and Special Announcement sections of the store page.
+  - id: description_animation_max_duration
+    area: text
+    applies_to:
+      - about_this_game
+      - special_announcement
+    check: deterministic
+    kind: media_max_duration
+    params:
+      seconds: 12
+    severity: error
+    rule: Animated description assets can be at most 12 seconds long.
+    source_doc: https://partner.steamgames.com/doc/store/page/assets
+    quote: Animated assets can be a maximum of 12 seconds in duration.
+  - id: description_image_recommended_width
+    area: text
+    applies_to:
+      - about_this_game
+      - special_announcement
+    check: info
+    severity: warning
+    rule: Recommended width for description images and videos is 1170px (780 logical px column at 150% DPI).
+    source_doc: https://partner.steamgames.com/doc/store/page/assets
+    quote: We recommend generating images and videos that are 1170px wide in order to maximize quality on high DPI displays
+  - id: description_image_max_width
+    area: text
+    applies_to:
+      - about_this_game
+      - special_announcement
+    check: deterministic
+    kind: media_max_width
+    params:
+      max_width: 4096
+    severity: warning
+    rule: Images up to 4096px wide get a full-screen viewer. Treat 4096px as the documented upper width. Valve does not say whether wider images are rejected.
+    source_doc: https://partner.steamgames.com/doc/store/page/assets
+    quote: If you upload larger images (up to 4096px wide), viewers will see an option to see the image in full screen
+  - id: description_image_text_needs_localization
+    area: text
+    applies_to:
+      - about_this_game
+    check: manual
+    severity: warning
+    rule: Text inside description images must be translated and re-uploaded per language. Valve recommends textless images.
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: any text included in images will also need to be translated and re-uploaded when you localize your store page
+  - id: description_image_alt_text
+    area: text
+    applies_to:
+      - about_this_game
+    check: manual
+    severity: warning
+    rule: Each description image can have alt text for screen readers. Alt text exports and imports with store page localization.
+    source_doc: https://partner.steamgames.com/doc/store/page/assets
+    quote: For every image that you place in your written description of your store page, you can add alt text
+  - id: description_avoid_walls_of_text
+    area: text
+    applies_to:
+      - about_this_game
+    check: llm_judged
+    severity: warning
+    rule: Avoid long paragraphs. Bold key features and section headers so the text is easy to skim.
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: Avoid long paragraphs or 'walls of text.'
+  - id: description_detailed_and_coherent
+    area: text
+    applies_to:
+      - about_this_game
+    check: llm_judged
+    severity: error
+    rule: The description must be detailed and coherent. Valve checks this during store review.
+    source_doc: https://partner.steamgames.com/doc/store/review_process
+    quote: The description will need to be detailed and coherent.
+  - id: store_page_launch_content_only
+    area: screenshots
+    applies_to:
+      - about_this_game
+      - screenshots
+      - trailers
+      - features
+    check: manual
+    severity: error
+    rule: The store page should only list features and content available at launch.
+    source_doc: https://partner.steamgames.com/doc/store/review_process
+    quote: Your store page should only contain features and content that will be available at launch
+  - id: description_planned_features_marked
+    area: text
+    applies_to:
+      - about_this_game
+    check: llm_judged
+    severity: error
+    rule: Planned or future content mentioned in the description must be clearly marked as not yet released.
+    source_doc: https://partner.steamgames.com/doc/store/review_process
+    quote: it will need to be clear that the feature is currently not released.
+  - id: link_rules_scope
+    area: reviews
+    applies_to:
+      - about_this_game
+      - short_description
+      - special_announcement
+      - awards
+    check: info
+    severity: error
+    rule: 'The no-links, no-Steam-UI-imitation and no-other-games rules cover four sections: About The Game, Short Description, Special Announcement and Awards.'
+    source_doc: https://steamcommunity.com/groups/steamworks/announcements/detail/4201376568915048836
+    quote: 'These rules apply to the following four sections:'
+  - id: description_no_links
+    area: reviews
+    applies_to:
+      - about_this_game
+      - short_description
+      - special_announcement
+      - awards
+      - graphical_assets
+    check: deterministic
+    kind: no_urls
+    severity: error
+    rule: No links or URLs to other websites, social media included. Use the dedicated link fields under Basic Info instead.
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: No links - You cannot use your store page descriptions or graphical assets to promote or link to other websites.
+  - id: description_no_implied_urls_or_qr
+    area: reviews
+    applies_to:
+      - about_this_game
+      - short_description
+      - special_announcement
+      - awards
+      - graphical_assets
+    check: deterministic
+    kind: regex_forbidden
+    params:
+      patterns:
+        - \b[a-z0-9-]+\s*(?:\(dot\)|\[dot\]|\bdot\b)\s*(?:com|net|org|io|gg|co|tv)\b
+    severity: error
+    rule: The link ban also covers URLs inside embedded images, QR codes, and spelled-out URLs such as "DOTA2 DOT COM".
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: This includes via embedded images, QR codes and even implied URLs via text such as "DOTA2 DOT COM".
+  - id: description_urls_auto_hidden
+    area: reviews
+    applies_to:
+      - about_this_game
+      - short_description
+      - special_announcement
+      - awards
+    check: info
+    severity: error
+    rule: Steam hides any URL in written description sections, including everything wrapped in [url] tags (linked text or images vanish too).
+    source_doc: https://steamcommunity.com/groups/steamworks/announcements/detail/4201376568915048836
+    quote: we'll roll out an update that automatically hides any instances where a URL is included in a game's written description or other text section.
+  - id: description_link_rules_effective_date
+    area: reviews
+    applies_to:
+      - about_this_game
+      - short_description
+      - special_announcement
+      - awards
+    check: info
+    severity: error
+    rule: The link and other-games rules took effect on 2024-10-15. They were originally planned for early September 2024.
+    source_doc: https://steamcommunity.com/groups/steamworks/announcements/detail/4592070813172257798
+    quote: We've pushed back the effective date of the new store page rules to October 15th.
+  - id: social_links_use_dedicated_fields
+    area: text
+    applies_to:
+      - basic_info
+    check: info
+    severity: warning
+    rule: Links to social media or your own website go in the dedicated link fields on the Basic Info tab.
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: Instead, you should use the specific link fields provided if you want to link to common social media platforms or your own website.
+  - id: press_review_links_allowed_max_three
+    area: reviews
+    applies_to:
+      - reviews_section
+    check: info
+    severity: error
+    rule: The dedicated Reviews section takes up to 3 press reviews (quote plus link to the full review). URLs are allowed there.
+    source_doc: https://steamcommunity.com/groups/steamworks/announcements/detail/4201376568915048836
+    quote: there is a specific section of the store page editor where you can insert up to three press reviews
+  - id: review_link_in_description_disallowed
+    area: text
+    applies_to:
+      - about_this_game
+    check: info
+    severity: error
+    rule: Store review lists no links to other websites in the description as a check item.
+    source_doc: https://partner.steamgames.com/doc/store/review_process
+    quote: You should not include links to other websites from this section.
+  - id: description_no_other_games
+    area: reviews
+    applies_to:
+      - about_this_game
+      - short_description
+      - special_announcement
+      - awards
+    check: llm_judged
+    severity: error
+    rule: No text, images, links or widgets that point to or advertise other products on Steam.
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: This includes text, images, links, or widgets that point to or reference other products on Steam.
+  - id: related_products_use_store_features
+    area: text
+    applies_to:
+      - store_page
+    check: info
+    severity: warning
+    rule: Show related products through the DLC or "More From" sections, bundles, franchise pages or developer homepages, not in the description.
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: it's fine to feature them in the DLC or "More From" sections of your Store Page
+  - id: description_no_steam_ui_imitation
+    area: reviews
+    applies_to:
+      - about_this_game
+      - special_announcement
+      - awards
+    check: manual
+    severity: error
+    rule: No images or animations made to look like Steam UI.
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: No graphical assets that mimic the Steam user interface - You cannot host images or animations that are meant to look like Steam UI.
+  - id: description_no_fake_buttons_or_pricing
+    area: reviews
+    applies_to:
+      - about_this_game
+      - special_announcement
+      - awards
+    check: manual
+    severity: error
+    rule: No fake wishlist or buy buttons, no mock game capsules, and no faux price or discount overlays.
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: no fake 'wishlist' or 'buy now' buttons, no mock ups of other game capsules, no faux pricing informational overlays, etc.
+  - id: description_pricing_text_mentions
+    area: text
+    applies_to:
+      - about_this_game
+      - short_description
+    check: llm_judged
+    severity: warning
+    rule: No Valve page bans plain-text price or discount mentions in About This Game. Faux pricing overlays are banned (see above). Discount copy is banned on capsules (see asset_specs.capsule_no_discount_copy). In the short description, avoid time-based calls to action such as "Prepurchase now".
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: Don't add" Now Available" or "Available on March 4th" or “Prepurchase now”.
+    unverified: true
+  - id: accolades_use_dedicated_sections
+    area: text
+    applies_to:
+      - about_this_game
+      - graphical_assets
+    check: llm_judged
+    severity: warning
+    rule: Press review quotes, review scores and awards each have their own section. Present them there, not in capsules or screenshots.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: Press review quotes, press review scores, and special awards each have dedicated spaces on Steam store pages
+  - id: review_quote_length
+    area: reviews
+    applies_to:
+      - reviews_section
+    check: info
+    severity: warning
+    rule: Press review quotes should be short, ideally 1 or 2 sentences, and localized where possible.
+    source_doc: https://partner.steamgames.com/doc/store/page/accolades
+    quote: Quotes should be relatively short (Ideally 1 or 2 short sentences)
+  - id: review_accuracy_permission
+    area: reviews
+    applies_to:
+      - reviews_section
+    check: info
+    severity: warning
+    rule: Reviews must be accurate and you need permission to post them.
+    source_doc: https://partner.steamgames.com/doc/store/page/accolades
+    quote: Reviews should be accurate and you should have permission to post them
+  - id: awards_count
+    area: reviews
+    applies_to:
+      - awards
+    check: info
+    severity: warning
+    rule: List only the most important awards. 1-5 is usually enough.
+    source_doc: https://partner.steamgames.com/doc/store/page/accolades
+    quote: Usually 1-5 awards is enough.
+  - id: english_fallback_required
+    area: text
+    applies_to:
+      - short_description
+      - about_this_game
+      - graphical_assets
+    check: deterministic
+    kind: english_present
+    severity: error
+    rule: English is the fallback language and must have content, even if that content is in another language.
+    source_doc: https://partner.steamgames.com/doc/store/localization/languages
+    quote: English is Steam's fallback language and needs to have content, even if that content is actually another language.
+  - id: store_page_localizable_content
+    area: screenshots
+    applies_to:
+      - short_description
+      - about_this_game
+      - screenshots
+      - trailers
+      - graphical_assets
+    check: info
+    severity: warning
+    rule: Description text, images and trailers can each be localized per language.
+    source_doc: https://partner.steamgames.com/doc/store/localization
+    quote: Steam allows you to localize your store page content, including written description, images, and trailers.
+  - id: screenshot_localization_suffix
+    area: screenshots
+    applies_to:
+      - screenshots
+    check: info
+    severity: warning
+    rule: Localized screenshots are added onto an existing screenshot. A language-name filename suffix (for example foo_japanese.jpg) tells Steam which language it is for.
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    quote: Language name can be used as a suffix to hint to the UI which language this screenshot should be in (For example, foo_japanese.jpg)
+  - id: trailer_base_language_english
+    area: trailers
+    applies_to:
+      - trailers
+    check: info
+    severity: warning
+    rule: With multiple trailer languages, set the Base video to the English trailer.
+    source_doc: https://partner.steamgames.com/doc/store/trailer
+    quote: The Base video should be set to the English trailer if you have trailers in multiple languages.
+  - id: capsule_text_must_be_localized
+    area: assets
+    applies_to:
+      - header_capsule
+      - small_capsule
+      - main_capsule
+      - vertical_capsule
+      - artwork_override
+    check: manual
+    severity: error
+    rule: Any text on a graphical asset (allowed only via Artwork Overrides) must be localized into at least every language the game supports.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: Any text included on a graphical asset MUST be localized into at least the same set of languages supported by the game.
+  - id: event_english_fallback
+    area: events
+    applies_to:
+      - events_announcements
+    check: info
+    severity: warning
+    rule: Events and announcements fall back to English when a language is missing.
+    source_doc: https://partner.steamgames.com/doc/marketing/event_tools
+    quote: If a particular language is not provided, Steam will fall back to showing the English version to that player.
+  - id: supported_language_columns
+    area: languages
+    applies_to:
+      - supported_languages
+    check: info
+    severity: error
+    rule: 'Each supported language has three flags: Interface, Full Audio and Subtitles.'
+    source_doc: https://partner.steamgames.com/doc/store/localization
+    quote: There are options for Subtitles, Interface, or Full Audio for each language.
+  - id: language_support_from_ingame
+    area: languages
+    applies_to:
+      - supported_languages
+    check: info
+    severity: warning
+    rule: Language support means in-game support, not whether the store page is translated.
+    source_doc: https://partner.steamgames.com/doc/store/localization
+    quote: Language support is determined by the in-game language settings, not the store page
+  - id: full_platform_languages
+    area: languages
+    applies_to:
+      - supported_languages
+    check: info
+    severity: error
+    rule: 'Full Platform languages are the only ones usable with Steamworks APIs. The table lists 31 rows (Arabic is partial: game support only, no Steam UI). The overview page still says 29.'
+    source_doc: https://partner.steamgames.com/doc/store/localization/languages
+    quote: This is the only set of languages supported by Steamworks APIs.
+  - id: game_support_only_languages
+    area: languages
+    applies_to:
+      - supported_languages
+    check: info
+    severity: error
+    rule: Another 72 "Game Support Only" languages can be declared on the store page but are not supported by Steamworks APIs.
+    source_doc: https://partner.steamgames.com/doc/store/localization/languages
+    quote: These languages are only available for developers to select from when indicating which languages a game supports.
+  - id: tags_minimum_before_launch
+    area: tags
+    applies_to:
+      - tags
+    check: deterministic
+    kind: min_items
+    params:
+      min: 5
+    severity: error
+    rule: At least 5 tags are required before launch. Valve recommends up to 20.
+    source_doc: https://partner.steamgames.com/doc/store/tags
+    quote: We began requiring at least 5 tags be applied to a title before its launch on Steam, but we recommend you add up to 20.
+  - id: tags_top20_visible
+    area: tags
+    applies_to:
+      - tags
+    check: deterministic
+    kind: max_items
+    params:
+      max: 20
+    severity: warning
+    rule: Only the top 20 tags are visible and affect visibility, tag pages, recommendations and More Like This.
+    source_doc: https://partner.steamgames.com/doc/store/tags
+    quote: only the top 20 are visible to users and used by Steam to influence visibility of your title in the store.
+  - id: tags_first15_order
+    area: tags
+    applies_to:
+      - tags
+    check: info
+    severity: warning
+    rule: Some store filters prioritize the first 15 tags, so sort those by relevance.
+    source_doc: https://partner.steamgames.com/doc/store/tags
+    quote: Some store filters prioritize the first 15 tags, so be sure that these are sorted in order of relevance to your title.
+  - id: tags_top5_descriptive
+    area: tags
+    applies_to:
+      - tags
+    check: info
+    severity: warning
+    rule: The top 5 tags are also used to describe the game and should clearly characterize it.
+    source_doc: https://partner.steamgames.com/doc/store/tags
+    quote: Your title's top 5 tags should paint a fairly clear picture of your game
+  - id: tags_who_sets
+    area: tags
+    applies_to:
+      - tags
+    check: info
+    severity: warning
+    rule: Tags come from the developer (Tag Wizard), players with non-limited accounts, and Steam moderators. Developers can remove inaccurate tags.
+    source_doc: https://partner.steamgames.com/doc/store/tags
+    quote: Tags can be applied individually to a game by the developer, by players with non-limited accounts, and by Steam moderators.
+  - id: tags_wizard_permissions
+    area: tags
+    applies_to:
+      - tags
+    check: info
+    severity: error
+    rule: The Tag Wizard requires the Edit App Metadata and Publish App Changes to Steam permissions. Tag publishing is separate from store page publishing.
+    source_doc: https://partner.steamgames.com/doc/store/tags
+    quote: requires that a developer have Edit App Metadata and Publish App Changes to Steam permissions
+  - id: tags_demo_inherits
+    area: tags
+    applies_to:
+      - tags
+    check: info
+    severity: warning
+    rule: A demo inherits its base game's tags.
+    source_doc: https://partner.steamgames.com/doc/store/tags
+    quote: A Demo inherits the tags associated with its base game.
+  - id: store_description_is_bbcode
+    area: bbcode
+    applies_to:
+      - about_this_game
+      - special_announcement
+      - awards
+    check: info
+    severity: warning
+    rule: Store description sections are stored as BBCode. The visual editor writes BBCode, and a raw BBCode editor is still available.
+    source_doc: https://steamcommunity.com/groups/steamworks/announcements/detail/7126472323852954169
+    quote: The new editor does continue to write bbcode, but is not optimized for human-readable presentation.
+  - id: awards_use_bbcode
+    area: bbcode
+    applies_to:
+      - awards
+    check: info
+    severity: warning
+    rule: The Awards section uses the same BBCode as the game description and may include text or images.
+    source_doc: https://partner.steamgames.com/doc/store/page/accolades
+    quote: You can configure the information using BBCode similar to your game description
+  - id: allowed_bbcode_tags
+    area: bbcode
+    applies_to:
+      - about_this_game
+      - special_announcement
+      - awards
+    check: deterministic
+    kind: allowed_bbcode
+    params:
+      tags:
+        - h1
+        - h2
+        - h3
+        - b
+        - u
+        - i
+        - strike
+        - spoiler
+        - noparse
+        - hr
+        - list
+        - olist
+        - '*'
+        - quote
+        - code
+        - table
+        - tr
+        - th
+        - td
+        - img
+        - p
+        - url
+    severity: warning
+    rule: Tag list from Valve's Steam formatting help (which covers community text). No Valve page lists the tags allowed in store descriptions. The visual editor announcement confirms headlines, bulleted lists and italics. [img] does not appear in the formatting help, but Valve uses it in announcement bodies, and the description editor inserts uploaded custom images.
+    source_doc: https://steamcommunity.com/comment/Guide/formattinghelp
+    quote: These markup tags allow you to add formatting to the text of your comments and posts, similar to HTML.
+    unverified: true
+    notes: Valve does not publish a store-specific tag list; this is the Steam formatting help list plus [img] and the [p] paragraphs the store editor writes. [url] is listed so it parses, and url_tag_effectively_disallowed reports it.
+  - id: url_tag_effectively_disallowed
+    area: bbcode
+    applies_to:
+      - about_this_game
+      - short_description
+      - special_announcement
+      - awards
+    check: deterministic
+    kind: forbidden_bbcode
+    params:
+      tags:
+        - url
+    severity: error
+    rule: '[url] is valid BBCode, but Steam hides its contents in written descriptions. Treat it as an error. Exception: links in the dedicated press Reviews fields.'
+    source_doc: https://steamcommunity.com/groups/steamworks/announcements/detail/4201376568915048836
+    quote: This includes any contents within [url] tags on your page, as well as any other urls.
+  - id: url_wrapped_content_hidden
+    area: bbcode
+    applies_to:
+      - about_this_game
+      - special_announcement
+      - awards
+    check: info
+    severity: error
+    rule: Text or images wrapped in a [url] block are hidden along with the link.
+    source_doc: https://steamcommunity.com/groups/steamworks/announcements/detail/4201376568915048836
+    quote: If those links are wrapped around text or an image, then Steam will also hide the contents within the [url] block.
+  - id: auto_widget_urls_conflict
+    area: bbcode
+    applies_to:
+      - about_this_game
+      - special_announcement
+    check: info
+    severity: error
+    rule: In community text, bare YouTube, Steam store and Workshop URLs turn into widgets automatically. In store descriptions these count as links and widgets to other products, which are banned.
+    source_doc: https://steamcommunity.com/comment/Guide/formattinghelp
+    quote: Paste a Steam store page URL to automatically generate a widget.
+    unverified: true
+  - id: short_description_no_bbcode
+    area: bbcode
+    applies_to:
+      - short_description
+    check: info
+    severity: error
+    rule: No BBCode in the short description (plain text only).
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: Extra line-breaks, bullet points, or other stylistic choices will not render properly in the short description.
+    notes: Enforced by short_description_plain_text.
+  - id: events_bbcode
+    area: bbcode
+    applies_to:
+      - events_announcements
+    check: info
+    severity: warning
+    rule: Event and announcement bodies use BBCode. The HTML importer converts HTML to BBCode.
+    source_doc: https://partner.steamgames.com/doc/marketing/event_tools
+    quote: This will convert your existing document to use bbcode, which is supported by our announcement system.
+  - id: small_capsule_logo_legible
+    area: assets
+    applies_to:
+      - small_capsule
+    check: manual
+    severity: error
+    rule: Small capsule logo must be readable at the smallest size. It should nearly fill the capsule.
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    quote: 'Requirements: Small Capsule should contain readable logo, even at smallest size.'
+  - id: capsule_no_extra_text
+    area: assets
+    applies_to:
+      - header_capsule
+      - main_capsule
+      - vertical_capsule
+      - library_capsule
+      - library_header
+    check: manual
+    severity: error
+    rule: No quotes or text other than the game title on base capsules.
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    quote: Do not include quotes or other strings of text beyond the title of your game.
+  - id: capsule_logo_legible
+    area: assets
+    applies_to:
+      - header_capsule
+      - main_capsule
+      - vertical_capsule
+      - library_capsule
+      - library_header
+    check: manual
+    severity: warning
+    rule: The logotype should be easy to read against the background.
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    quote: The game's logotype should be easily legible against the background.
+  - id: capsule_content_limited
+    area: assets
+    applies_to:
+      - header_capsule
+      - small_capsule
+      - main_capsule
+      - vertical_capsule
+    check: manual
+    severity: error
+    rule: Base capsules may contain only game artwork, the game name and any official subtitle.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: Content on base graphical asset capsules on Steam is limited to game artwork, the game name, and any official subtitle.
+  - id: capsule_no_review_scores
+    area: assets
+    applies_to:
+      - header_capsule
+      - small_capsule
+      - main_capsule
+      - vertical_capsule
+    check: manual
+    severity: error
+    rule: No review scores of any kind on capsules.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: No review scores of any kind, including Steam reviews or external news sources
+  - id: capsule_no_awards
+    area: assets
+    applies_to:
+      - header_capsule
+      - small_capsule
+      - main_capsule
+      - vertical_capsule
+    check: manual
+    severity: error
+    rule: No award names, symbols or logos on capsules.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: No award names, symbols, or logos
+  - id: capsule_no_discount_copy
+    area: assets
+    applies_to:
+      - header_capsule
+      - small_capsule
+      - main_capsule
+      - vertical_capsule
+      - artwork_override
+    check: manual
+    severity: error
+    rule: No discount marketing copy on capsules, including Artwork Overrides.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: No discount marketing copy (eg. no "On Sale Now" or "Up to 90% off" text)
+  - id: capsule_no_call_to_action
+    area: assets
+    applies_to:
+      - header_capsule
+      - small_capsule
+      - main_capsule
+      - vertical_capsule
+      - artwork_override
+    check: manual
+    severity: error
+    rule: No call-to-action copy such as "Prepurchase Now" or "Wishlisting now available".
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: No marketing copy asking a user to take an action (eg. no "Prepurchase Now" or "Wishlisting now available" text)
+  - id: capsule_no_other_products
+    area: assets
+    applies_to:
+      - header_capsule
+      - small_capsule
+      - main_capsule
+      - vertical_capsule
+    check: manual
+    severity: error
+    rule: No text or imagery promoting a different product, including sequels or franchise titles.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: No text or imagery promoting a different product. This includes no marketing of sequels or other titles in the same franchise.
+  - id: capsule_no_misc_text
+    area: assets
+    applies_to:
+      - header_capsule
+      - small_capsule
+      - main_capsule
+      - vertical_capsule
+    check: manual
+    severity: error
+    rule: No other miscellaneous text on capsules.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: No other miscellaneous text.
+  - id: capsule_readable_logo_accurate_dimensions
+    area: assets
+    applies_to:
+      - all_capsules
+    check: manual
+    severity: error
+    rule: Every capsule (store and library) needs a readable logo or name and exact dimensions.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: Capsule images must contain a readable product logo/name and have accurate dimensions.
+  - id: capsule_pg13
+    area: assets
+    applies_to:
+      - all_capsules
+    check: manual
+    severity: error
+    rule: All capsule artwork must be PG-13 appropriate.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: All capsule images (store and library) must have PG-13 appropriate artwork.
+  - id: capsule_rules_enforcement
+    area: assets
+    applies_to:
+      - all_capsules
+    check: info
+    severity: error
+    rule: Breaking the capsule rules can limit store visibility and makes the game ineligible for sale and event featuring.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: may have limits to visibility within the Steam store and will be ineligible for featuring in official Steam sales and events.
+  - id: override_max_one_month
+    area: assets
+    applies_to:
+      - artwork_override
+    check: manual
+    severity: error
+    rule: Capsule text about updates or events is allowed only in an Artwork Override lasting at most one month.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: When including text on a graphical asset, this MUST be uploaded as an Artwork Override with a length limit of one month.
+  - id: override_new_content_only
+    area: assets
+    applies_to:
+      - artwork_override
+    check: manual
+    severity: error
+    rule: 'Override text may only describe new content: a major update, seasonal event, battle pass, DLC or similar.'
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: The only acceptable additional text on a game capsule is words describing a major update to the game content, a new seasonal event
+  - id: override_no_copying_other_products
+    area: assets
+    applies_to:
+      - artwork_override
+    check: manual
+    severity: error
+    rule: An override must not copy another product's graphical assets, DLC included.
+    source_doc: https://partner.steamgames.com/doc/store/assets/overrides
+    quote: You should not use Artwork Overrides to copy the graphical assets from another product on Steam, including DLC.
+  - id: screenshots_gameplay_only
+    area: screenshots
+    applies_to:
+      - screenshots
+    check: manual
+    severity: error
+    rule: 'Screenshots must show gameplay only: no concept art, pre-rendered cinematic stills, awards, marketing copy or written descriptions.'
+    source_doc: https://partner.steamgames.com/doc/store/review_process
+    quote: Your screenshots must only contain gameplay. This means avoid using concept art, pre-rendered cinematic stills, or images that contain awards
+  - id: screenshots_all_ages_flag
+    area: screenshots
+    applies_to:
+      - screenshots
+    check: manual
+    severity: warning
+    rule: Mark at least 4 screenshots "suitable for all ages", or the game may not appear in some store areas (for example front-page hover).
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    quote: if they are suitable for all ages, you should mark at least four screenshots as indicated in the picture below.
+  - id: trailer_required
+    area: trailers
+    applies_to:
+      - trailers
+    check: info
+    severity: error
+    rule: A trailer is required as part of the release process.
+    source_doc: https://partner.steamgames.com/doc/store/trailer
+    quote: As part of the release process on Steam, you will be required to upload a trailer for your product.
+    notes: store/coming_soon says "ideally a gameplay trailer" for Coming Soon pages, so it is required for release but not for Coming Soon.
+  - id: trailer_codec_aspect
+    area: trailers
+    applies_to:
+      - trailers
+    check: manual
+    severity: warning
+    rule: H.264 video with AAC audio preferred. 16:9 preferred, 4:3 accepted. Audio is downmixed to stereo. Use a 44 or 48 kHz sample rate.
+    source_doc: https://partner.steamgames.com/doc/store/trailer
+    quote: 16:9 aspect ratio is preferred since the Steam client is optimized for widescreen, but 4:3 aspect ratio is accepted.
+  - id: trailer_release_blocked_while_encoding
+    area: trailers
+    applies_to:
+      - trailers
+    check: info
+    severity: error
+    rule: You cannot release while a trailer is still converting.
+    source_doc: https://partner.steamgames.com/doc/store/trailer
+    quote: No, you cannot release your game while a trailer is in the process of converting.
+  - id: trailer_order_and_microtrailer
+    area: trailers
+    applies_to:
+      - trailers
+    check: info
+    severity: warning
+    rule: The first two valid trailers show before screenshots. The microtrailer (6 s, not customizable) is built from the first visible video.
+    source_doc: https://partner.steamgames.com/doc/store/trailer
+    quote: The first two valid trailers will be shown to players before any screenshots
+  - id: library_assets_visibility
+    area: assets
+    applies_to:
+      - library_capsule
+      - library_header
+      - library_hero
+      - library_logo
+    check: info
+    severity: warning
+    rule: Library assets show in the client only once the store page is published.
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+    quote: Library Assets are only visible for applications that have a published store page on Steam.
+  - id: library_capsule_content
+    area: assets
+    applies_to:
+      - library_capsule
+    check: manual
+    severity: error
+    rule: Library capsule must include the game logo and may include the subtitle. No other text.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: this image must include your game logo. It can also include your game's subtitle if appropriate.
+  - id: library_hero_no_text
+    area: assets
+    applies_to:
+      - library_hero
+    check: manual
+    severity: error
+    rule: Library hero must contain artwork only. No words or logo.
+    source_doc: https://partner.steamgames.com/doc/store/assets/rules
+    quote: Library Hero - this image should only contain artwork. There should be no words at all in this asset.
+  - id: library_logo_transparent
+    area: assets
+    applies_to:
+      - library_logo
+    check: manual
+    severity: error
+    rule: Library logo PNG should have a transparent background.
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+    quote: The PNG image should have a transparent background.
+  - id: library_logo_only_logotype
+    area: assets
+    applies_to:
+      - library_logo
+    check: manual
+    severity: error
+    rule: Library logo contains only the logotype, plus an optional logomark. No other words.
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+    quote: Aside from your game's logotype, there should be no other words in this asset.
+  - id: mac_icon_icns
+    area: assets
+    applies_to:
+      - shortcut_icon
+    check: info
+    severity: warning
+    rule: Without an ICNS "Mac Icon", macOS desktop shortcuts use the default Steam icon.
+    source_doc: https://partner.steamgames.com/doc/store/assets/community
+    quote: you must also submit an icon file in ICNS format in the "Mac Icon" asset field.
+  - id: app_icon_alpha_black
+    area: assets
+    applies_to:
+      - app_icon
+    check: info
+    severity: warning
+    rule: If the App Icon is generated from the Shortcut Icon, transparency is replaced with solid black.
+    source_doc: https://partner.steamgames.com/doc/store/assets/community
+    quote: The Shortcut Icon can also be used to generate the App Icon on upload, however any alpha will be replaced with solid black.
+  - id: broadcast_assets
+    area: assets
+    applies_to:
+      - broadcast
+    check: info
+    severity: warning
+    rule: No Valve page documents a graphical asset for broadcasts. Store page broadcasts use the stream itself.
+    source_doc: https://partner.steamgames.com/doc/store/broadcast
+    quote: Set up a livestream to appear on your game's store page, developer homepage or special sale landing page.
+    unverified: true
+  - id: cloud_quota_settings_required
+    area: cloud
+    applies_to:
+      - steam_cloud
+    check: info
+    severity: error
+    rule: Steam Cloud setup requires "Byte quota per user" and "Number of files allowed per user", enforced per user per game.
+    source_doc: https://partner.steamgames.com/doc/features/cloud
+    quote: To set up Steam Cloud you must set the Byte quota per user and Number of files allowed per user options
+  - id: cloud_quota_scope
+    area: cloud
+    applies_to:
+      - steam_cloud
+    check: info
+    severity: error
+    rule: The quota applies to each user on each cloud-enabled game.
+    source_doc: https://partner.steamgames.com/doc/features/cloud
+    quote: This quota is enforced on each Cloud-enabled game, on a per-user-per-game basis.
+  - id: cloud_byte_quota_max
+    area: cloud
+    applies_to:
+      - steam_cloud
+    check: info
+    severity: warning
+    rule: No Valve page documents a maximum "Byte quota per user". Valve only says to use "reasonable amounts".
+    source_doc: https://partner.steamgames.com/doc/features/cloud
+    quote: It's recommended to set the values to reasonable amounts for your game title.
+    unverified: true
+  - id: cloud_file_count_max
+    area: cloud
+    applies_to:
+      - steam_cloud
+    check: info
+    severity: warning
+    rule: No Valve page documents a maximum "Number of files allowed per user".
+    source_doc: https://partner.steamgames.com/doc/features/cloud
+    quote: It's recommended to set the values to reasonable amounts for your game title.
+    unverified: true
+  - id: cloud_max_file_write
+    area: cloud
+    applies_to:
+      - steam_cloud
+    check: info
+    severity: error
+    rule: A single FileWrite or FileWriteStreamWriteChunk call is limited to 100 MiB (k_unMaxCloudFileChunkSize). The API reference also caps a file at 200 MiB total.
+    source_doc: https://partner.steamgames.com/doc/api/ISteamRemoteStorage
+    quote: Cloud files cannot be written in a single chunk over 100MiB and cannot be over 200MiB total.
+  - id: cloud_large_file_threshold
+    area: cloud
+    applies_to:
+      - steam_cloud
+    check: info
+    severity: warning
+    rule: Files over 256MB may get a poor storage endpoint (features/cloud). This conflicts with the 200MiB total in the API reference. Valve says these limits may change.
+    source_doc: https://partner.steamgames.com/doc/features/cloud
+    quote: May result in a non-optimal storage endpoint choice for the user's location, negatively impacting upload/download performance
+  - id: cloud_filename_max
+    area: cloud
+    applies_to:
+      - steam_cloud
+    check: info
+    severity: error
+    rule: A Steam Cloud file path can be at most 260 characters (k_cchFilenameMax).
+    source_doc: https://partner.steamgames.com/doc/api/ISteamRemoteStorage
+    quote: The maximum length that a Steam Cloud file path can be.
+  - id: autocloud_roots
+    area: cloud
+    applies_to:
+      - steam_autocloud
+    check: info
+    severity: error
+    rule: Auto-Cloud root paths must use one of Valve's predefined roots. These are the UI display names; the internal VDF keys are not documented here.
+    source_doc: https://partner.steamgames.com/doc/features/cloud
+    quote: This is a pre-determined list of paths where game saves are commonly located.
+  - id: autocloud_root_path_parts
+    area: cloud
+    applies_to:
+      - steam_autocloud
+    check: info
+    severity: error
+    rule: 'A root path has five parts: Root, Subdirectory ("." for none), Pattern ("*" wildcard), OS and Recursive. Subdirectory may use {64BitSteamID} or {Steam3AccountID}.'
+    source_doc: https://partner.steamgames.com/doc/features/cloud
+    quote: Subdirectory path to the clouded files relative to the Root. Use `.` if there is no subdirectory.
+  - id: autocloud_root_override_all_os
+    area: cloud
+    applies_to:
+      - steam_autocloud
+    check: info
+    severity: error
+    rule: "With Root Overrides, the original root's OS must be [All OSes]. An override has five parts: Original Root, OS, New Root, Add/Replace Path, Replace Path."
+    source_doc: https://partner.steamgames.com/doc/features/cloud
+    quote: If you use Root Overrides, you must specify [All OSes] in the Root OS drop-down above.
+  - id: autocloud_cross_platform_default
+    area: cloud
+    applies_to:
+      - steam_autocloud
+    check: info
+    severity: warning
+    rule: By default, Auto-Cloud files sync only to the root's OS. For cross-platform saves, use one root plus Root Overrides.
+    source_doc: https://partner.steamgames.com/doc/features/cloud
+    quote: the default for new files is to sync to only the OS setting on the associated Auto Cloud Root path.
+  - id: cloud_shared_app_id
+    area: cloud
+    applies_to:
+      - steam_cloud
+    check: info
+    severity: warning
+    rule: Shared cloud App ID 0 disables sharing (typically used for demo and full game). Sharing with an unreleased base app does not sync.
+    source_doc: https://partner.steamgames.com/doc/features/cloud
+    quote: A value of 0 disables this feature.
+  - id: autocloud_vdf_marker
+    area: cloud
+    applies_to:
+      - steam_autocloud
+    check: info
+    severity: warning
+    rule: Steam creates steam_autocloud.vdf in each Auto-Cloud location. Games can ignore it.
+    source_doc: https://partner.steamgames.com/doc/features/cloud
+    quote: 'Note: The file steam_autocloud.vdf will be created in each location specified by your Steamworks cloud paths.'
+  - id: achievement_two_icons
+    area: achievements
+    applies_to:
+      - achievement_icons
+    check: info
+    severity: error
+    rule: Each achievement has an Achieved icon and an Unachieved icon.
+    source_doc: https://partner.steamgames.com/doc/features/achievements
+    quote: Unachieved Icon - The icon to display when it is not yet achieved.
+  - id: achievement_all_ages
+    area: achievements
+    applies_to:
+      - achievement_names
+      - achievement_icons
+    check: info
+    severity: warning
+    rule: Achievement names and icons should be all-ages appropriate.
+    source_doc: https://partner.steamgames.com/doc/features/achievements
+    quote: Achievement names and icons should be all-ages appropriate.
+  - id: achievement_count_default_limit
+    area: achievements
+    applies_to:
+      - achievements
+    check: deterministic
+    kind: max_items
+    params:
+      max: 100
+    severity: error
+    rule: Games start with a 100-achievement limit. More are allowed once the app qualifies for Profile Features. No absolute maximum is documented.
+    source_doc: https://partner.steamgames.com/doc/features/achievements
+    quote: By default, games are limited to 100 achievements at first.
+  - id: achievement_api_name_length
+    area: achievements
+    applies_to:
+      - achievement_api_name
+    check: info
+    severity: error
+    rule: API names (and stat names) can be at most 128 bytes of UTF-8 (k_cchStatNameMax).
+    source_doc: https://partner.steamgames.com/doc/api/ISteamUserStats
+    quote: Maximum number of bytes for stat and achievement names (UTF-8 encoded).
+  - id: achievement_api_name_charset
+    area: achievements
+    applies_to:
+      - achievement_api_name
+    check: info
+    severity: warning
+    rule: No Valve page documents an allowed character set for API names. Valve's examples use UPPER_SNAKE_CASE (e.g. ACH_WIN_ONE_GAME). Restricting to [A-Za-z0-9_] is a safe convention, not a documented rule.
+    source_doc: https://partner.steamgames.com/doc/features/achievements
+    quote: API Name - The string used to access this achievement using the API.
+    unverified: true
+  - id: achievement_api_name_published
+    area: achievements
+    applies_to:
+      - achievement_api_name
+    check: info
+    severity: error
+    rule: The API name must exist in App Admin and be published before the API can use it.
+    source_doc: https://partner.steamgames.com/doc/api/ISteamUserStats
+    quote: The specified achievement "API Name" exists in App Admin on the Steamworks website, and the changes are published.
+  - id: achievement_hidden
+    area: achievements
+    applies_to:
+      - achievements
+    check: info
+    severity: warning
+    rule: Hidden achievements do not appear on a user's Community page until unlocked. GetAchievementDisplayAttribute("hidden") returns "0" or "1".
+    source_doc: https://partner.steamgames.com/doc/features/achievements
+    quote: If true, a "hidden" achievement does not show up on a user's Community page (at all) until they have achieved it.
+  - id: achievement_display_name_localizable
+    area: achievements
+    applies_to:
+      - achievement_names
+    check: info
+    severity: warning
+    rule: Display name and description can be localized and show in the user's language in pop-ups and the Community.
+    source_doc: https://partner.steamgames.com/doc/features/achievements
+    quote: Display Name - The name this achievement will have in client notification pop-ups, and in the Community. May be localized.
+  - id: achievement_localization_admin
+    area: achievements
+    applies_to:
+      - achievement_names
+    check: info
+    severity: warning
+    rule: Localized names and descriptions are entered in the Achievement Localization section of App Admin.
+    source_doc: https://partner.steamgames.com/doc/store/localization
+    quote: You can set up your achievement localization data in the Achievement Localization section of the App Admin panel.
+  - id: achievement_localization_fallback
+    area: achievements
+    applies_to:
+      - achievement_names
+    check: info
+    severity: warning
+    rule: 'Localized strings resolve in this order: game language, then Steam UI language, then English.'
+    source_doc: https://partner.steamgames.com/doc/api/ISteamUserStats
+    quote: If that fails too, then it falls back to english.
+  - id: achievement_progress_stat
+    area: achievements
+    applies_to:
+      - achievements
+    check: info
+    severity: warning
+    rule: With a Progress Stat set, the achievement unlocks automatically when the stat reaches the unlock value.
+    source_doc: https://partner.steamgames.com/doc/features/achievements
+    quote: The achievement will also automatically unlock when the stat reaches the unlock value.

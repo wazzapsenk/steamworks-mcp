@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Draft",
+  "$defs": {
+    "RubricResult": {
+      "additionalProperties": false,
+      "properties": {
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "check": {
+          "enum": [
+            "deterministic",
+            "llm_judged"
+          ],
+          "title": "Check",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "pass",
+            "fail",
+            "warn",
+            "not_applicable"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "message": {
+          "default": "",
+          "title": "Message",
+          "type": "string"
+        },
+        "fix": {
+          "default": "",
+          "title": "Fix",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule_id",
+        "check",
+        "outcome"
+      ],
+      "title": "RubricResult",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "field": {
+      "title": "Field",
+      "type": "string"
+    },
+    "value": {
+      "title": "Value"
+    },
+    "strategy": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Strategy"
+    },
+    "source": {
+      "default": "generated",
+      "enum": [
+        "scan",
+        "user",
+        "generated",
+        "reference_default"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "rubric_score": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rubric Score"
+    },
+    "rubric": {
+      "items": {
+        "$ref": "#/$defs/RubricResult"
+      },
+      "title": "Rubric",
+      "type": "array"
+    },
+    "based_on": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Based On"
+    },
+    "status": {
+      "default": "candidate",
+      "enum": [
+        "candidate",
+        "chosen",
+        "rejected"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "notes": {
+      "default": "",
+      "title": "Notes",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "field",
+    "value"
+  ],
+  "type": "object"
+}

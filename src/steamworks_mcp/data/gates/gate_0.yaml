@@ -1,0 +1,325 @@
+# Gate 0: Prerequisites. Generated from a review of Valve's Steamworks documentation on 2026-10-03.
+# Schema: src/steamworks_mcp/gates/models.py. Every Valve rule cites its page and a verbatim quote.
+gate: 0
+title: Prerequisites
+summary: Partner account, paperwork, Steam Direct fee, the app and its AppID, and who may do what in Steamworks.
+last_reviewed: '2026-10-03'
+rules:
+  - id: steamworks_partner_account
+    title: Steamworks partner account
+    description: Sign up as a Steamworks partner (Steam Direct) using a Steam account.
+    severity: required
+    check:
+      kind: confirmed
+      fields:
+        - prerequisites.partner_account
+    execution_mode: MANUAL
+    where: Steamworks sign-up / digital paperwork (partner.steamgames.com)
+    source_doc: https://partner.steamgames.com/doc/gettingstarted
+    quote: The first step in getting started is to sign up to become a Steamworks partner.
+  - id: sign_nda_and_steam_distribution_agreement
+    title: Sign NDA and Steam distribution agreement
+    description: Electronically sign the Non Disclosure Agreement and the Steam Distribution Agreement during onboarding.
+    severity: required
+    check: &id001
+      kind: checklist
+    execution_mode: MANUAL
+    where: Onboarding digital paperwork
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/onboarding
+    quote: You will also need to electronically sign the Non Disclosure Agreement and the Steam Distribution Agreement.
+  - id: company_identification_legal_name
+    title: Company identification legal name
+    description: Provide the legal entity name and company form (or legal first/last name as Sole Proprietorship). No DBA/alias.
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: Onboarding paperwork > Company Identification (later View and edit company information)
+    rule: Legal name must match bank and tax documents; individuals use "Sole Proprietorship" and their legal name.
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/onboarding
+    quote: The Company Legal Name must be the legal entity that owns or has right to publish the product on Steam
+  - id: bank_information
+    title: Bank information
+    description: Enter bank details (routing number, account number, bank address); account holder must match the onboarding legal name.
+    severity: required
+    check:
+      kind: confirmed
+      fields:
+        - prerequisites.bank_info_done
+    execution_mode: MANUAL
+    where: Onboarding paperwork > Payment information (editable later only by a user with Actual Authority)
+    rule: Bank account holder name == Legal Company Name provided at onboarding.
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/onboarding
+    quote: The account holder name on your bank account must match the name you provide when onboarding.
+  - id: tax_interview
+    title: Tax interview
+    description: Complete the tax interview (W-9 for US, W-8BEN-style for others) in the same name as Company Information; cannot be saved part way.
+    severity: required
+    check:
+      kind: confirmed
+      fields:
+        - prerequisites.tax_interview_done
+    execution_mode: MANUAL
+    where: Onboarding paperwork > Tax interview (third-party TaxIdentity service); later via View and edit company information
+    rule: Takes 5-10 minutes; must be completed in one session; name must equal Company Information name.
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/faq
+    quote: The tax interview takes 5-10 minutes and will ask you a series of questions to guide you through the completion of either tax forms
+  - id: tax_verification_wait
+    title: Tax verification wait
+    description: Tax information is verified by a third party; additional documents may be requested; tax info is locked until verification completes.
+    severity: required
+    check: &id002
+      kind: info
+    execution_mode: MANUAL
+    where: Email requests from Valve / Company details
+    rule: 10-15 business days per Onboarding page; 2-7 business days per FAQ page. Recently issued US TINs can take up to 30 days.
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/onboarding
+    quote: This process may take 10 to 15 business days, and you may be asked to provide additional documentation.
+    notes: Onboarding says 10-15 business days; FAQ says 2-7 business days. Plan for the longer value.
+  - id: identity_verification
+    title: Identity verification
+    description: Complete identity verification as part of onboarding paperwork.
+    severity: required
+    check:
+      kind: confirmed
+      fields:
+        - prerequisites.identity_verified
+    execution_mode: MANUAL
+    where: Onboarding paperwork
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/onboarding
+    quote: Complete the paperwork with your bank and tax information as well as identity verification so that we know who we’ll be doing business with.
+    notes: The requirement is official, but no public doc describes the mechanics (which documents, how long). Searched onboarding, gettingstarted/faq, managing_users and a web search restricted to partner.steamgames.com.
+  - id: bank_and_tax_valid_before_release
+    title: Bank and tax valid before release
+    description: Valid banking and tax information is a hard prerequisite for releasing any game.
+    severity: required
+    check:
+      kind: confirmed
+      fields:
+        - prerequisites.bank_info_done
+        - prerequisites.tax_interview_done
+    execution_mode: MANUAL
+    where: Company details (Actual Authority user)
+    rule: No release until bank + tax info are valid (verified).
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/faq
+    quote: You will not be able to release games on Steam prior to providing us with valid banking and tax information.
+  - id: steam_direct_fee
+    title: Steam direct fee
+    description: Pay the Steam Direct fee (app credit) for each product to be distributed.
+    severity: required
+    check:
+      kind: confirmed
+      fields:
+        - prerequisites.steam_direct_fee_paid
+    execution_mode: MANUAL
+    where: Steamworks home page (green purchase button) -> Steam store checkout
+    rule: $100 USD (or equivalent) per app; not refundable; recouped after the product reaches $1,000 Adjusted Gross Revenue; VAT/GST may be added.
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/appfee
+    quote: you can now simply pay a $100 USD (or equivalent) fee for each new app you wish to distribute on Steam.
+  - id: steam_direct_fee_payment_constraints
+    title: Steam direct fee payment constraints
+    description: Who/how the fee can be paid; the resulting app credit is bound to the payer's Steam account.
+    severity: required
+    check: *id002
+    execution_mode: MANUAL
+    where: Steamworks home page
+    rule: Admin permission required to pay; Steam Wallet funds not accepted; only the payer can activate the credit.
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/appfee
+    quote: The Steam Direct Fee may be paid with any payment method that Steam supports in your country, excluding Steam wallet funds.
+  - id: app_created_appid_known
+    title: App created AppID known
+    description: Redeem the app credit to create the application; record its AppID.
+    severity: required
+    check:
+      kind: present
+      fields:
+        - apps.main.appid
+    execution_mode: MANUAL
+    where: Steamworks landing page > Create A New Application > Create new app...
+    rule: Created by an Administrator via "Create new app..."; AppID shown when selecting the app on the Steamworks home page.
+    source_doc: https://partner.steamgames.com/doc/store/application
+    quote: it can be redeemed by clicking "Create new app..." under "Create A New Application" on the Steamworks landing page.
+  - id: release_waiting_period_after_fee
+    title: Release waiting period after fee
+    description: Waiting period between paying the app fee and being allowed to release that game (applies to a partner's first few titles).
+    severity: required
+    check:
+      kind: present
+      fields:
+        - prerequisites.steam_direct_fee_paid_on
+    execution_mode: MANUAL
+    where: n/a (enforced by Valve)
+    rule: '>= 21 days from app-fee payment to release.'
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/onboarding
+    quote: A 21-day waiting period between when you paid the app fee and when you can release that game.
+  - id: content_rules_compliance
+    title: Content rules compliance
+    description: Product must comply with Steam content rules and agreements (e.g. no ad-based business models, no crypto/NFT exchange, rights to all content).
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: n/a (policy)
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/onboarding
+    quote: content you publish on Steam must comply with the Steam Distribution Agreement, the Steam Subscriber Agreement, Steam Online Conduct guidelines and the Steam Privacy Policy.
+  - id: first_user_is_admin
+    title: First user is admin
+    description: The first user of a Steamworks account is an administrator with access to the default app; add other users from there.
+    severity: recommended
+    check: *id002
+    execution_mode: MANUAL
+    where: Users & Permissions
+    source_doc: https://partner.steamgames.com/doc/store/testing
+    quote: By default, the first user created in a Steamworks account is granted administrative permissions and access to the default application being worked on.
+  - id: user_invites
+    title: User invites
+    description: Invite team members by email; an administrator must confirm the accepted invitation in time.
+    severity: recommended
+    check: *id002
+    execution_mode: MANUAL
+    where: Users & Permissions > Add/Manage Users
+    rule: Admin must approve/reject an accepted invite within 7 days.
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/managing_users
+    quote: You or another administrator in your Steamworks partner account will need to approve or reject the confirmation within 7 days.
+  - id: permission_groups
+    title: Permission groups
+    description: Use groups (default "Everyone" group, or custom groups) to scope user permissions to specific apps.
+    severity: recommended
+    check: *id002
+    execution_mode: MANUAL
+    where: Users & Permissions > Add/Manage Groups
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/managing_users
+    quote: The permissions that you specify for that user will only apply to the applications in that group.
+  - id: admins_grant_only_own_permissions
+    title: Admins grant only own permissions
+    description: An administrator can only grant permissions they hold themselves.
+    severity: required
+    check: *id002
+    execution_mode: MANUAL
+    where: Users & Permissions
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/managing_users
+    quote: Administrators can only grant permissions that they have themselves.
+  - id: actual_authority
+    title: Actual authority
+    description: Bank/tax info, payment thresholds, legal agreements and app transfers require the Actual Authority right (granted only by Valve).
+    severity: required
+    check: *id002
+    execution_mode: MANUAL
+    where: Users & Permissions (Partner permissions)
+    rule: Only Valve can assign Actual Authority (contact Steam Publishing).
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/managing_users
+    quote: The user with Actual Authority is able to enter and modify bank and tax information as well as accepting legal agreements
+  - id: permission_edit_app_metadata
+    title: Permission edit app metadata
+    description: Group permission needed to upload depots/builds and configure Steamworks settings, packages, achievements, etc.
+    severity: required
+    check: *id002
+    execution_mode: MANUAL
+    where: Users & Permissions > group permissions
+    rule: Needed for SteamPipe uploads and app configuration.
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/managing_users
+    quote: Grants permission to upload depots, test Steamworks features, define packages, achievements, leaderboards, post trading cards, etc.
+  - id: permission_edit_app_marketing_data
+    title: Permission edit app marketing data
+    description: Group permission needed to edit and publish store page data (description, branding images, videos).
+    severity: required
+    check: *id002
+    execution_mode: MANUAL
+    where: Users & Permissions > group permissions
+    rule: '"Edit Store Localization Data" is a subset that can edit localizable fields but cannot publish.'
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/managing_users
+    quote: Grants permission to edit and publish store page data such as game description, branding images, and videos.
+  - id: permission_publish_app_changes
+    title: Permission publish app changes
+    description: Group permission needed to publish Steamworks settings changes (depots, launch options, etc.).
+    severity: required
+    check: *id002
+    execution_mode: MANUAL
+    where: Users & Permissions > group permissions
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/managing_users
+    quote: Grants permission to publish changes made in the Technical Tools > Edit Steamworks Settings section of the Steamworks Developer site for your title.
+  - id: release_permissions
+    title: Release permissions
+    description: The user who posts Coming Soon or releases needs both "Publish App Changes To Steam" and "Manage Pricing & Discounts" on that AppID; pricing can only be set by members of the partner that gets paid.
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: Users & Permissions > group permissions
+    rule: 'Permissions: Publish App Changes To Steam + Manage Pricing & Discounts (on the app being released).'
+    source_doc: https://partner.steamgames.com/doc/store/releasing
+    quote: Publishing a coming soon page or releasing a game requires two specific Steamworks permissions
+  - id: build_account_permissions
+    title: Build account permissions
+    description: The Steam account used by steamcmd/SteamPipe must be a member of the Steamworks account with Edit App Metadata + Publish App Changes To Steam.
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: Users & Permissions
+    rule: 'Permissions: Edit App Metadata + Publish App Changes To Steam.'
+    source_doc: https://partner.steamgames.com/doc/sdk/uploading
+    quote: you must have a Steam account in your Steamworks account with the "Edit App Metadata" and "Publish App Changes To Steam" permissions granted.
+  - id: dedicated_builder_account
+    title: Dedicated builder account
+    description: Valve recommends a dedicated Steam account for builds holding only the two build permissions.
+    severity: recommended
+    check:
+      kind: confirmed
+      fields:
+        - prerequisites.restricted_account
+    execution_mode: MANUAL
+    where: Create account at store.steampowered.com/join, then Users & Permissions
+    rule: Dedicated account; only Edit App Metadata + Publish App Changes To Steam.
+    source_doc: https://partner.steamgames.com/doc/sdk/uploading
+    quote: For security reasons it's recommended that you have a dedicated build account with just those permissions
+  - id: builder_account_phone_or_authenticator
+    title: Builder account phone or authenticator
+    description: An account that sets builds live on a released app needs a phone number or the Steam Mobile App; any security change blocks set-live for 3 days.
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: Steam account security settings
+    rule: Phone number or Steam Mobile Authenticator; 3-day lock after email/phone/security changes.
+    source_doc: https://partner.steamgames.com/doc/sdk/uploading
+    quote: it will need either a phone number attached to their account or have the Steam Mobile App attached to their account.
+  - id: steamcmd_ci_login_token
+    title: Steamcmd CI login token
+    description: For CI, log in to steamcmd once interactively (password + Steam Guard) and preserve config.vdf so later runs need no password.
+    severity: recommended
+    check: *id002
+    execution_mode: MANUAL
+    where: Build machine (steamcmd)
+    rule: Re-entering the password issues a new Steam Guard token requirement.
+    source_doc: https://partner.steamgames.com/doc/sdk/uploading
+    quote: Be sure that the config file stored in <Steam>\config\config.vdf is saved and preserved between runs
+  - id: limited_steamworks_partner_account
+    title: Limited Steamworks partner account
+    description: A developer whose game is published by another company can join as a "limited" Steamworks account (NDA + contact info, no app fee); not for receiving payments.
+    severity: recommended
+    check: *id002
+    execution_mode: MANUAL
+    where: Limited Steamworks sign-up link (Managing Applications page)
+    rule: Limited sign-up has no bank/tax; use full onboarding if you need payments.
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/managing_apps
+    quote: This sign-up process includes just the NDA and a collection of company or individual contact information.
+  - id: limited_steam_user_accounts
+    title: Limited Steam user accounts
+    description: New Steam user accounts are "limited"; activating a Dev Comp key for your game de-limits them. Whether a limited builder account can upload builds is not documented.
+    severity: optional
+    check: *id002
+    execution_mode: MANUAL
+    where: Steam client / key activation
+    source_doc: https://partner.steamgames.com/doc/store/testing
+    quote: which will grant the game to that account and will de-limit that account and allow you to send friend requests from it.
+    notes: No official statement that a builder/Steamworks account must be non-limited. Searched sdk/uploading, gettingstarted/managing_users, store/testing.
+    unverified: true
+  - id: restricted_account_for_automation
+    title: Restricted Steamworks user for automation
+    description: BROWSER mode and steamcmd should run as a separate Steamworks user that has only the permissions they need, not as an administrator.
+    severity: recommended
+    check:
+      kind: confirmed
+      fields:
+        - prerequisites.restricted_account
+    execution_mode: MANUAL
+    where: Users & Permissions > Manage Users / Manage Groups
+    rule: 'Separate user; for builds: Edit App Metadata + Publish App Changes To Steam; for store text and Steamworks settings: Edit App Metadata (+ Edit App Marketing Data); never Manage Pricing or financial permissions.'
+    origin: tool
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/managing_users

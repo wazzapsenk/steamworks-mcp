@@ -1,0 +1,2313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Manifest",
+  "$defs": {
+    "Achievement": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "API name used in game code, e.g. ``ACH_FIRST_WIN``.",
+          "maxLength": 128,
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Display name in the source language.",
+          "title": "Name"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "hidden": {
+          "default": false,
+          "title": "Hidden",
+          "type": "boolean"
+        },
+        "icon": {
+          "anyOf": [
+            {
+              "description": "Path relative to the folder that holds steamworks.yaml.",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Unlocked icon (any size/format; converted to 256x256 JPG).",
+          "title": "Icon"
+        },
+        "icon_locked": {
+          "anyOf": [
+            {
+              "description": "Path relative to the folder that holds steamworks.yaml.",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Locked icon. Defaults to a greyscale version of ``icon``.",
+          "title": "Icon Locked"
+        },
+        "progress": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AchievementProgress"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "category": {
+          "anyOf": [
+            {
+              "enum": [
+                "progression",
+                "skill",
+                "secret_funny",
+                "collection",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Kind of achievement, used to balance a set.",
+          "title": "Category"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "Achievement",
+      "type": "object"
+    },
+    "AchievementProgress": {
+      "additionalProperties": false,
+      "description": "A stat that drives the achievement's progress bar.",
+      "properties": {
+        "stat": {
+          "maxLength": 128,
+          "title": "Stat",
+          "type": "string"
+        },
+        "min": {
+          "default": 0,
+          "title": "Min",
+          "type": "number"
+        },
+        "max": {
+          "title": "Max",
+          "type": "number"
+        }
+      },
+      "required": [
+        "stat",
+        "max"
+      ],
+      "title": "AchievementProgress",
+      "type": "object",
+      "x-unit": true
+    },
+    "AiDisclosure": {
+      "additionalProperties": false,
+      "description": "Steam's AI-generated content disclosure. Always asked, never assumed or scanned.",
+      "properties": {
+        "uses_ai": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uses Ai"
+        },
+        "pre_generated": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How content made with AI tools during development is used.",
+          "title": "Pre Generated"
+        },
+        "live_generated": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is generated while the game runs, if anything.",
+          "title": "Live Generated"
+        },
+        "guardrails": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "For live-generated content: what prevents illegal or infringing output.",
+          "title": "Guardrails"
+        }
+      },
+      "title": "AiDisclosure",
+      "type": "object"
+    },
+    "AppProfile": {
+      "additionalProperties": false,
+      "description": "One Steam app: the main game, its demo or its playtest. Each has its own app id and technical settings.",
+      "properties": {
+        "appid": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Appid"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Defaults to the game name (+ \" Demo\" / \" Playtest\").",
+          "title": "Name"
+        },
+        "installation": {
+          "$ref": "#/$defs/Installation"
+        },
+        "cloud": {
+          "$ref": "#/$defs/Cloud"
+        },
+        "builds": {
+          "$ref": "#/$defs/Builds"
+        }
+      },
+      "title": "AppProfile",
+      "type": "object"
+    },
+    "Apps": {
+      "additionalProperties": false,
+      "properties": {
+        "main": {
+          "$ref": "#/$defs/AppProfile"
+        },
+        "demo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AppProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "playtest": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AppProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "Apps",
+      "type": "object"
+    },
+    "Assets": {
+      "additionalProperties": false,
+      "description": "Source art. Store images are derived from these (cropped, never stretched); artwork is never generated.",
+      "properties": {
+        "key_art": {
+          "anyOf": [
+            {
+              "description": "Path relative to the folder that holds steamworks.yaml.",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Large art without text, used for capsules, library hero and page background.",
+          "title": "Key Art"
+        },
+        "logo": {
+          "anyOf": [
+            {
+              "description": "Path relative to the folder that holds steamworks.yaml.",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Transparent logo PNG, placed on capsules and used as the library logo.",
+          "title": "Logo"
+        },
+        "screenshots_dir": {
+          "default": "store/screenshots",
+          "description": "Path relative to the folder that holds steamworks.yaml.",
+          "title": "Screenshots Dir",
+          "type": "string"
+        },
+        "overrides": {
+          "additionalProperties": {
+            "description": "Path relative to the folder that holds steamworks.yaml.",
+            "type": "string"
+          },
+          "description": "Hand-made images that replace derived ones, keyed by asset id (e.g. \"header_capsule\", \"library_hero\").",
+          "title": "Overrides",
+          "type": "object"
+        },
+        "trailers": {
+          "items": {
+            "$ref": "#/$defs/Trailer"
+          },
+          "title": "Trailers",
+          "type": "array"
+        }
+      },
+      "title": "Assets",
+      "type": "object"
+    },
+    "AutoCloudOverride": {
+      "additionalProperties": false,
+      "properties": {
+        "root": {
+          "description": "Root used in the base path that this override changes.",
+          "enum": [
+            "gameinstall",
+            "SteamCloudDocuments",
+            "WinMyDocuments",
+            "WinAppDataLocal",
+            "WinAppDataLocalLow",
+            "WinAppDataRoaming",
+            "WinSavedGames",
+            "WindowsHome",
+            "MacHome",
+            "MacAppSupport",
+            "MacDocuments",
+            "LinuxHome",
+            "LinuxXdgDataHome",
+            "LinuxXdgConfigHome",
+            "AndroidExternalData",
+            "AndroidInternalData"
+          ],
+          "title": "Root",
+          "type": "string"
+        },
+        "os": {
+          "enum": [
+            "windows",
+            "macos",
+            "linux",
+            "android"
+          ],
+          "title": "Os",
+          "type": "string"
+        },
+        "use_instead": {
+          "enum": [
+            "gameinstall",
+            "SteamCloudDocuments",
+            "WinMyDocuments",
+            "WinAppDataLocal",
+            "WinAppDataLocalLow",
+            "WinAppDataRoaming",
+            "WinSavedGames",
+            "WindowsHome",
+            "MacHome",
+            "MacAppSupport",
+            "MacDocuments",
+            "LinuxHome",
+            "LinuxXdgDataHome",
+            "LinuxXdgConfigHome",
+            "AndroidExternalData",
+            "AndroidInternalData"
+          ],
+          "title": "Use Instead",
+          "type": "string"
+        },
+        "add_path": {
+          "default": "",
+          "title": "Add Path",
+          "type": "string"
+        },
+        "replace_path": {
+          "default": false,
+          "title": "Replace Path",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "root",
+        "os",
+        "use_instead"
+      ],
+      "title": "AutoCloudOverride",
+      "type": "object"
+    },
+    "AutoCloudPath": {
+      "additionalProperties": false,
+      "properties": {
+        "root": {
+          "enum": [
+            "gameinstall",
+            "SteamCloudDocuments",
+            "WinMyDocuments",
+            "WinAppDataLocal",
+            "WinAppDataLocalLow",
+            "WinAppDataRoaming",
+            "WinSavedGames",
+            "WindowsHome",
+            "MacHome",
+            "MacAppSupport",
+            "MacDocuments",
+            "LinuxHome",
+            "LinuxXdgDataHome",
+            "LinuxXdgConfigHome",
+            "AndroidExternalData",
+            "AndroidInternalData"
+          ],
+          "title": "Root",
+          "type": "string"
+        },
+        "subdirectory": {
+          "default": "",
+          "title": "Subdirectory",
+          "type": "string"
+        },
+        "pattern": {
+          "description": "File pattern, e.g. ``*.sav`` or ``*`` (Steamworks accepts an empty pattern; this tool does not).",
+          "minLength": 1,
+          "title": "Pattern",
+          "type": "string"
+        },
+        "os": {
+          "default": "all",
+          "enum": [
+            "all",
+            "windows",
+            "macos",
+            "linux",
+            "android"
+          ],
+          "title": "Os",
+          "type": "string"
+        },
+        "recursive": {
+          "default": false,
+          "title": "Recursive",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "root",
+        "pattern"
+      ],
+      "title": "AutoCloudPath",
+      "type": "object"
+    },
+    "Branch": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "password_protected": {
+          "default": false,
+          "title": "Password Protected",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Branch",
+      "type": "object"
+    },
+    "Builds": {
+      "additionalProperties": false,
+      "properties": {
+        "depots": {
+          "description": "Depots of this app, addressed by name.",
+          "items": {
+            "$ref": "#/$defs/Depot"
+          },
+          "title": "Depots",
+          "type": "array",
+          "x-key": "name"
+        },
+        "branches": {
+          "description": "Beta branches besides 'default', addressed by name.",
+          "items": {
+            "$ref": "#/$defs/Branch"
+          },
+          "title": "Branches",
+          "type": "array",
+          "x-key": "name"
+        },
+        "set_live_on": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Branch an uploaded build is set live on (never ``default`` on a released game without the user).",
+          "title": "Set Live On"
+        }
+      },
+      "title": "Builds",
+      "type": "object"
+    },
+    "Cloud": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "byte_quota": {
+          "anyOf": [
+            {
+              "maximum": 10000000000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Bytes per user (Steamworks maximum 10,000,000,000).",
+          "title": "Byte Quota"
+        },
+        "file_quota": {
+          "anyOf": [
+            {
+              "maximum": 10000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Files per user (Steamworks maximum 10,000).",
+          "title": "File Quota"
+        },
+        "shared_appid": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Share saves with another app (e.g. demo -> full game).",
+          "title": "Shared Appid"
+        },
+        "developers_only": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Developers Only"
+        },
+        "sync_on_suspend": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sync On Suspend"
+        },
+        "auto_cloud": {
+          "items": {
+            "$ref": "#/$defs/AutoCloudPath"
+          },
+          "title": "Auto Cloud",
+          "type": "array"
+        },
+        "overrides": {
+          "items": {
+            "$ref": "#/$defs/AutoCloudOverride"
+          },
+          "title": "Overrides",
+          "type": "array"
+        }
+      },
+      "title": "Cloud",
+      "type": "object"
+    },
+    "Content": {
+      "additionalProperties": false,
+      "description": "Content survey and disclosures.",
+      "properties": {
+        "survey_completed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Survey Completed"
+        },
+        "mature_descriptors": {
+          "items": {
+            "enum": [
+              "some_nudity_or_sexual_content",
+              "frequent_violence_or_gore",
+              "adult_only_sexual_content",
+              "gratuitous_sexual_content",
+              "general_mature_content"
+            ],
+            "type": "string"
+          },
+          "title": "Mature Descriptors",
+          "type": "array"
+        },
+        "mature_description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mature Description"
+        },
+        "ai": {
+          "$ref": "#/$defs/AiDisclosure"
+        },
+        "ratings": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Optional age ratings, e.g. {\"pegi\": \"7\", \"esrb\": \"E10+\"}.",
+          "title": "Ratings",
+          "type": "object"
+        }
+      },
+      "title": "Content",
+      "type": "object"
+    },
+    "Depot": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Your label for the depot, e.g. ``windows``; used as its key in field paths.",
+          "title": "Name",
+          "type": "string"
+        },
+        "depot_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Depot Id"
+        },
+        "os": {
+          "default": "windows",
+          "enum": [
+            "all",
+            "windows",
+            "macos",
+            "linux"
+          ],
+          "title": "Os",
+          "type": "string"
+        },
+        "arch": {
+          "default": "64",
+          "enum": [
+            "all",
+            "32",
+            "64"
+          ],
+          "title": "Arch",
+          "type": "string"
+        },
+        "content_root": {
+          "anyOf": [
+            {
+              "description": "Path relative to the folder that holds steamworks.yaml.",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Build output folder for this depot.",
+          "title": "Content Root"
+        },
+        "exclude": {
+          "description": "File patterns left out of the depot, e.g. ``*.pdb``.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Exclude",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Depot",
+      "type": "object"
+    },
+    "EarlyAccessAnswers": {
+      "additionalProperties": false,
+      "description": "The Early Access questions on the store page (all required for an Early Access release).",
+      "properties": {
+        "why": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why Early Access?",
+          "title": "Why"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Approximately how long will this game be in Early Access?",
+          "title": "Duration"
+        },
+        "full_version_plans": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How is the full version planned to differ from the Early Access version?",
+          "title": "Full Version Plans"
+        },
+        "current_state": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is the current state of the Early Access version?",
+          "title": "Current State"
+        },
+        "pricing_plans": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Will the game be priced differently during and after Early Access?",
+          "title": "Pricing Plans"
+        },
+        "community_involvement": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How are you planning on involving the Community in your development process?",
+          "title": "Community Involvement"
+        }
+      },
+      "title": "EarlyAccessAnswers",
+      "type": "object"
+    },
+    "Engine": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "e.g. ``unity``, ``godot``, ``unreal``.",
+          "title": "Name"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "title": "Engine",
+      "type": "object"
+    },
+    "Game": {
+      "additionalProperties": false,
+      "description": "What the game is. Inputs for the interview and for every text generator; not uploaded anywhere.",
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Product name as shown on Steam.",
+          "title": "Name"
+        },
+        "pitch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One sentence: what the player does and why it is fun.",
+          "title": "Pitch"
+        },
+        "genres": {
+          "description": "Free-text genre tags in your own words, e.g. [\"co-op party\", \"physics comedy\"]. Used to pick references.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Genres",
+          "type": "array"
+        },
+        "players": {
+          "$ref": "#/$defs/Players"
+        },
+        "session_length": {
+          "$ref": "#/$defs/SessionLength"
+        },
+        "core_loop": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Core Loop"
+        },
+        "usps": {
+          "description": "Unique selling points, most important first.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Usps",
+          "type": "array"
+        },
+        "target_audience": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Audience"
+        },
+        "tone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "e.g. \"chaotic and funny\", \"cozy\", \"tense\".",
+          "title": "Tone"
+        },
+        "platform_features": {
+          "$ref": "#/$defs/PlatformFeatures"
+        },
+        "engine": {
+          "$ref": "#/$defs/Engine"
+        },
+        "reference_appids": {
+          "description": "Steam app ids of comparable games to learn patterns from (never copied).",
+          "items": {
+            "type": "integer"
+          },
+          "title": "Reference Appids",
+          "type": "array"
+        }
+      },
+      "title": "Game",
+      "type": "object"
+    },
+    "Installation": {
+      "additionalProperties": false,
+      "properties": {
+        "install_folder": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Install Folder"
+        },
+        "launch_options": {
+          "items": {
+            "$ref": "#/$defs/LaunchOption"
+          },
+          "title": "Launch Options",
+          "type": "array"
+        }
+      },
+      "title": "Installation",
+      "type": "object"
+    },
+    "LanguageSupport": {
+      "additionalProperties": false,
+      "description": "One row of the store page's language table.",
+      "properties": {
+        "interface": {
+          "default": true,
+          "title": "Interface",
+          "type": "boolean"
+        },
+        "full_audio": {
+          "default": false,
+          "title": "Full Audio",
+          "type": "boolean"
+        },
+        "subtitles": {
+          "default": false,
+          "title": "Subtitles",
+          "type": "boolean"
+        }
+      },
+      "title": "LanguageSupport",
+      "type": "object",
+      "x-unit": true
+    },
+    "LaunchOption": {
+      "additionalProperties": false,
+      "properties": {
+        "executable": {
+          "description": "Path inside the depot, e.g. ``MyGame.exe`` (Steamworks accepts an empty value; this tool does not).",
+          "minLength": 1,
+          "title": "Executable",
+          "type": "string"
+        },
+        "arguments": {
+          "default": "",
+          "title": "Arguments",
+          "type": "string"
+        },
+        "working_dir": {
+          "default": "",
+          "title": "Working Dir",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Shown to players when there is more than one option; localized like other texts.",
+          "title": "Description"
+        },
+        "type": {
+          "default": "default",
+          "enum": [
+            "default",
+            "config",
+            "vr",
+            "openvroverlay",
+            "openxr",
+            "othervr",
+            "server",
+            "editor",
+            "manual",
+            "benchmark",
+            "safemode",
+            "option1",
+            "option2",
+            "option3"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "os": {
+          "default": "windows",
+          "enum": [
+            "all",
+            "windows",
+            "macos",
+            "linux",
+            "android"
+          ],
+          "title": "Os",
+          "type": "string"
+        },
+        "arch": {
+          "default": "64",
+          "enum": [
+            "all",
+            "32",
+            "64"
+          ],
+          "title": "Arch",
+          "type": "string"
+        },
+        "beta_key": {
+          "default": "",
+          "title": "Beta Key",
+          "type": "string"
+        },
+        "owns_dlc": {
+          "default": "",
+          "title": "Owns Dlc",
+          "type": "string"
+        }
+      },
+      "required": [
+        "executable"
+      ],
+      "title": "LaunchOption",
+      "type": "object"
+    },
+    "Leaderboard": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 128,
+          "title": "Name",
+          "type": "string"
+        },
+        "display_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Name"
+        },
+        "sort_method": {
+          "default": "descending",
+          "enum": [
+            "ascending",
+            "descending"
+          ],
+          "title": "Sort Method",
+          "type": "string"
+        },
+        "display_type": {
+          "default": "numeric",
+          "enum": [
+            "numeric",
+            "seconds",
+            "milliseconds"
+          ],
+          "title": "Display Type",
+          "type": "string"
+        },
+        "only_trusted_writes": {
+          "default": false,
+          "title": "Only Trusted Writes",
+          "type": "boolean"
+        },
+        "only_friends_reads": {
+          "default": false,
+          "title": "Only Friends Reads",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Leaderboard",
+      "type": "object"
+    },
+    "Legal": {
+      "additionalProperties": false,
+      "properties": {
+        "legal_line": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Copyright/legal line shown at the bottom of the store page, e.g. \"© 2026 Example Studio\".",
+          "title": "Legal Line"
+        },
+        "eula": {
+          "anyOf": [
+            {
+              "description": "Path relative to the folder that holds steamworks.yaml.",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Custom EULA file, if any.",
+          "title": "Eula"
+        },
+        "third_party_notices": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Third Party Notices"
+        }
+      },
+      "title": "Legal",
+      "type": "object"
+    },
+    "PlatformFeatures": {
+      "additionalProperties": false,
+      "properties": {
+        "remote_play_together": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remote Play Together"
+        },
+        "steam_deck": {
+          "anyOf": [
+            {
+              "enum": [
+                "verified",
+                "playable",
+                "unsupported",
+                "unknown"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Steam Deck"
+        },
+        "controller": {
+          "anyOf": [
+            {
+              "enum": [
+                "full",
+                "partial",
+                "none"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Steam's \"Full controller support\" / \"Partial controller support\" categories.",
+          "title": "Controller"
+        },
+        "steam_input": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Steam Input"
+        }
+      },
+      "title": "PlatformFeatures",
+      "type": "object"
+    },
+    "PlatformRequirements": {
+      "additionalProperties": false,
+      "properties": {
+        "minimum": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Requirements"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "recommended": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Requirements"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "PlatformRequirements",
+      "type": "object"
+    },
+    "Players": {
+      "additionalProperties": false,
+      "description": "How many people play together and how.",
+      "properties": {
+        "min": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min"
+        },
+        "max": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max"
+        },
+        "online_coop": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Online Coop"
+        },
+        "local_coop": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Local Coop"
+        },
+        "online_pvp": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Online Pvp"
+        },
+        "local_pvp": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Local Pvp"
+        },
+        "shared_split_screen": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shared Split Screen"
+        }
+      },
+      "title": "Players",
+      "type": "object",
+      "x-unit": true
+    },
+    "Prerequisites": {
+      "additionalProperties": false,
+      "description": "Gate 0: what has to exist before anything can be configured. Confirmed by the user, never scanned.",
+      "properties": {
+        "partner_account": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A Steamworks partner account exists and the user can sign in.",
+          "title": "Partner Account"
+        },
+        "steam_direct_fee_paid": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Steam Direct Fee Paid"
+        },
+        "steam_direct_fee_paid_on": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Steam Direct Fee Paid On"
+        },
+        "tax_interview_done": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tax Interview Done"
+        },
+        "bank_info_done": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bank Info Done"
+        },
+        "identity_verified": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Identity Verified"
+        },
+        "restricted_account": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Automation (BROWSER mode, steamcmd) uses a separate Steamworks user with only the permissions it needs.",
+          "title": "Restricted Account"
+        },
+        "restricted_account_permissions": {
+          "description": "Permissions granted to that user, as named in Steamworks (Users & Permissions).",
+          "items": {
+            "type": "string"
+          },
+          "title": "Restricted Account Permissions",
+          "type": "array"
+        }
+      },
+      "title": "Prerequisites",
+      "type": "object"
+    },
+    "Pricing": {
+      "additionalProperties": false,
+      "properties": {
+        "free_to_play": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Free To Play"
+        },
+        "base_price_usd": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Base price in USD; Steam suggests regional prices from it.",
+          "title": "Base Price Usd"
+        },
+        "regional_pricing": {
+          "anyOf": [
+            {
+              "enum": [
+                "steam_recommended",
+                "custom"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Regional Pricing"
+        },
+        "launch_discount_percent": {
+          "anyOf": [
+            {
+              "maximum": 90,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Launch Discount Percent"
+        },
+        "submitted": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Price submitted in Steamworks (it needs Valve approval before release).",
+          "title": "Submitted"
+        }
+      },
+      "title": "Pricing",
+      "type": "object"
+    },
+    "Release": {
+      "additionalProperties": false,
+      "properties": {
+        "coming_soon_since": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Date the store page went public as Coming Soon.",
+          "title": "Coming Soon Since"
+        },
+        "planned_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Planned Date"
+        },
+        "display_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What the store shows before an exact date is set, e.g. \"Q2 2027\" or \"Coming soon\".",
+          "title": "Display Date"
+        },
+        "early_access": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Early Access"
+        },
+        "early_access_answers": {
+          "$ref": "#/$defs/EarlyAccessAnswers"
+        },
+        "store_review_passed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Store Review Passed"
+        },
+        "build_review_passed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Build Review Passed"
+        },
+        "events": {
+          "description": "Steam events this release takes part in (ids from data/events.yaml), e.g. a Next Fest edition.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Events",
+          "type": "array"
+        }
+      },
+      "title": "Release",
+      "type": "object"
+    },
+    "Requirements": {
+      "additionalProperties": false,
+      "description": "Minimum or recommended system requirements for one OS (free text, as on the store page).",
+      "properties": {
+        "os": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Os"
+        },
+        "processor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Processor"
+        },
+        "memory": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Memory"
+        },
+        "graphics": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Graphics"
+        },
+        "directx": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Directx"
+        },
+        "network": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Network"
+        },
+        "storage": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Storage"
+        },
+        "sound_card": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sound Card"
+        },
+        "vr_support": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Vr Support"
+        },
+        "additional_notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Additional Notes"
+        }
+      },
+      "title": "Requirements",
+      "type": "object",
+      "x-unit": true
+    },
+    "SessionLength": {
+      "additionalProperties": false,
+      "description": "Typical length of one play session, in minutes.",
+      "properties": {
+        "min_minutes": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Minutes"
+        },
+        "max_minutes": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Minutes"
+        }
+      },
+      "title": "SessionLength",
+      "type": "object",
+      "x-unit": true
+    },
+    "Stat": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 128,
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "default": "int",
+          "enum": [
+            "int",
+            "float",
+            "avgrate"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "display_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Name"
+        },
+        "default": {
+          "type": "number",
+          "default": 0,
+          "title": "Default"
+        },
+        "min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min"
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max"
+        },
+        "max_change": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Change"
+        },
+        "increment_only": {
+          "default": false,
+          "title": "Increment Only",
+          "type": "boolean"
+        },
+        "aggregated": {
+          "default": false,
+          "description": "Keep a global total across all players.",
+          "title": "Aggregated",
+          "type": "boolean"
+        },
+        "set_by": {
+          "default": "client",
+          "enum": [
+            "client",
+            "game_server",
+            "official_game_server"
+          ],
+          "title": "Set By",
+          "type": "string"
+        },
+        "window": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Averaging window for ``avgrate`` stats.",
+          "title": "Window"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Stat",
+      "type": "object"
+    },
+    "Store": {
+      "additionalProperties": false,
+      "description": "The main game's store page.",
+      "properties": {
+        "short_description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Plain text, about 300 characters max, shown next to the header capsule.",
+          "title": "Short Description"
+        },
+        "about": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "\"About This Game\", Steam BBCode.",
+          "title": "About"
+        },
+        "developers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Developers",
+          "type": "array"
+        },
+        "publishers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Publishers",
+          "type": "array"
+        },
+        "franchise": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Franchise"
+        },
+        "platforms": {
+          "description": "Operating systems ticked on the store page; each needs system requirements and a depot that launches.",
+          "items": {
+            "enum": [
+              "windows",
+              "macos",
+              "linux"
+            ],
+            "type": "string"
+          },
+          "title": "Platforms",
+          "type": "array"
+        },
+        "genres": {
+          "description": "Steam store genres, e.g. [\"Action\", \"Indie\", \"Casual\"].",
+          "items": {
+            "type": "string"
+          },
+          "title": "Genres",
+          "type": "array"
+        },
+        "tags": {
+          "description": "User tags you apply to the page, most important first.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "categories": {
+          "description": "Steam categories, e.g. \"Online Co-op\", \"Steam Achievements\", \"Steam Cloud\", \"Full controller support\".",
+          "items": {
+            "type": "string"
+          },
+          "title": "Categories",
+          "type": "array"
+        },
+        "supported_languages": {
+          "additionalProperties": {
+            "$ref": "#/$defs/LanguageSupport"
+          },
+          "title": "Supported Languages",
+          "type": "object"
+        },
+        "system_requirements": {
+          "$ref": "#/$defs/SystemRequirements"
+        },
+        "links": {
+          "$ref": "#/$defs/StoreLinks"
+        },
+        "legal": {
+          "$ref": "#/$defs/Legal"
+        }
+      },
+      "title": "Store",
+      "type": "object"
+    },
+    "StoreLinks": {
+      "additionalProperties": false,
+      "properties": {
+        "website": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Website"
+        },
+        "privacy_policy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Privacy Policy"
+        },
+        "online_manual": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Online Manual"
+        },
+        "support": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Support"
+        },
+        "social": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "e.g. {\"discord\": \"https://…\", \"x\": \"https://…\", \"youtube\": \"https://…\"}.",
+          "title": "Social",
+          "type": "object"
+        }
+      },
+      "title": "StoreLinks",
+      "type": "object"
+    },
+    "SystemRequirements": {
+      "additionalProperties": false,
+      "properties": {
+        "windows": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PlatformRequirements"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "macos": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PlatformRequirements"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "linux": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PlatformRequirements"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "SystemRequirements",
+      "type": "object"
+    },
+    "Trailer": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "anyOf": [
+            {
+              "description": "Path relative to the folder that holds steamworks.yaml.",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "title": "Trailer",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Root of ``steamworks.yaml``.",
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "game": {
+      "$ref": "#/$defs/Game"
+    },
+    "source_language": {
+      "default": "english",
+      "description": "Language the texts in this file are written in.",
+      "title": "Source Language",
+      "type": "string"
+    },
+    "target_languages": {
+      "description": "Languages to translate into; translations live in ``localization/<language>.yaml``.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Target Languages",
+      "type": "array"
+    },
+    "apps": {
+      "$ref": "#/$defs/Apps"
+    },
+    "prerequisites": {
+      "$ref": "#/$defs/Prerequisites"
+    },
+    "store": {
+      "$ref": "#/$defs/Store"
+    },
+    "assets": {
+      "$ref": "#/$defs/Assets"
+    },
+    "content": {
+      "$ref": "#/$defs/Content"
+    },
+    "achievements": {
+      "description": "Achievements of the main game, addressed by API name.",
+      "items": {
+        "$ref": "#/$defs/Achievement"
+      },
+      "title": "Achievements",
+      "type": "array",
+      "x-key": "id"
+    },
+    "stats": {
+      "description": "Stats of the main game, addressed by API name.",
+      "items": {
+        "$ref": "#/$defs/Stat"
+      },
+      "title": "Stats",
+      "type": "array",
+      "x-key": "name"
+    },
+    "leaderboards": {
+      "description": "Leaderboards of the main game, addressed by API name.",
+      "items": {
+        "$ref": "#/$defs/Leaderboard"
+      },
+      "title": "Leaderboards",
+      "type": "array",
+      "x-key": "name"
+    },
+    "pricing": {
+      "$ref": "#/$defs/Pricing"
+    },
+    "release": {
+      "$ref": "#/$defs/Release"
+    }
+  },
+  "type": "object"
+}

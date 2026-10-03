@@ -1,0 +1,223 @@
+# Gate 3: Release. Generated from a review of Valve's Steamworks documentation on 2026-10-03.
+# Schema: src/steamworks_mcp/gates/models.py. Every Valve rule cites its page and a verbatim quote.
+gate: 3
+title: Release
+summary: Coming Soon long enough, approved pricing, release date checks and the manual release itself.
+last_reviewed: '2026-10-03'
+rules:
+  - id: coming_soon_min_two_weeks
+    title: Coming soon min two weeks
+    description: The Coming Soon page must be public for at least two weeks before release (also for Early Access).
+    severity: required
+    check:
+      kind: date_gap
+      from: release.coming_soon_since
+      to: release.planned_date
+      min_days: 14
+    execution_mode: MANUAL
+    where: App landing page (Post as Coming Soon timestamp)
+    rule: '>= 14 days public Coming Soon before release.'
+    source_doc: https://partner.steamgames.com/doc/store/coming_soon
+    quote: For new products, you must have a Coming Soon page up for at least two weeks before releasing.
+  - id: fee_waiting_period_elapsed
+    title: Fee waiting period elapsed
+    description: At least 21 days must have passed since the app fee was paid (see gate_0.release_waiting_period_after_fee).
+    severity: required
+    check:
+      kind: date_gap
+      from: prerequisites.steam_direct_fee_paid_on
+      to: release.planned_date
+      min_days: 21
+    execution_mode: MANUAL
+    where: n/a
+    rule: release_date >= fee_paid_date + 21 days
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/onboarding
+    quote: A 21-day waiting period between when you paid the app fee and when you can release that game.
+  - id: store_and_build_approved
+    title: Store and build approved
+    description: Both checklists (store presence + game build) completed, reviewed and approved.
+    severity: required
+    check:
+      kind: confirmed
+      fields:
+        - release.store_review_passed
+        - release.build_review_passed
+    execution_mode: MANUAL
+    where: App landing page ("Approved For Release")
+    source_doc: https://partner.steamgames.com/doc/store/releasing
+    quote: Both checklists will need to be completed, reviewed, and approved prior to release.
+  - id: release_date_change_lock
+    title: Release date change lock
+    description: Release date can only be changed until ~2 weeks before the specified date; after that, contact Valve.
+    severity: required
+    check:
+      kind: crosscheck
+      name: release_date_lock
+    execution_mode: MANUAL
+    where: App landing page > Specified release date
+    rule: No self-service date change within 14 days of the specified date (once Coming Soon is live).
+    source_doc: https://partner.steamgames.com/doc/store/release_dates
+    quote: You can change the release date of your game up to two weeks prior to your specified date.
+  - id: pricing_approved
+    title: Pricing approved
+    description: Initial pricing must be reviewed/approved by Valve; check every currency carefully.
+    severity: required
+    check: &id001
+      kind: checklist
+    when: &id002
+      - field: pricing.free_to_play
+        op: is_not_true
+    execution_mode: MANUAL
+    where: Package landing page > Propose Pricing
+    rule: 'Lead time: usually 1-2 business days.'
+    source_doc: https://partner.steamgames.com/doc/store/pricing
+    quote: Initial pricing as well as proposed pricing adjustments will be reviewed by Valve and are usually processed within one or two business days.
+  - id: price_all_currencies
+    title: Price all currencies
+    description: Enter a price in every supported currency, otherwise users of a missing currency cannot buy.
+    severity: recommended
+    check: *id001
+    when: *id002
+    execution_mode: MANUAL
+    where: Package landing page > Propose Pricing
+    rule: 37 currencies / 4 region groups; conversion helpers available.
+    source_doc: https://partner.steamgames.com/doc/store/pricing
+    quote: Any currency that is missing a price will make your game unavailable to users relying on that currency.
+  - id: minimum_price
+    title: Minimum price
+    description: Base price must be at least the $0.99 USD tier equivalent (multi-variable conversion) in each currency.
+    severity: required
+    check:
+      kind: range
+      field: pricing.base_price_usd
+      min: 0.99
+    when: *id002
+    execution_mode: MANUAL
+    where: Package landing page > Propose Pricing
+    rule: '>= $0.99 USD tier; minimum transaction price ~ $0.49.'
+    source_doc: https://partner.steamgames.com/doc/store/pricing
+    quote: must be at least equivalent to Steam's Multi-Variable Conversion method for the $0.99 USD tier
+  - id: store_package_ready
+    title: Store package ready
+    description: Standard store package exists, has pricing, and carries the intended public name (create standard packages if missing).
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: App landing page > Store packages, pricing, & release dates; All Associated Packages, DLC, Demos And Tools > Create Standard Packages
+    source_doc: https://partner.steamgames.com/doc/store/page
+    quote: ensure that pricing has been entered, and that the name of the package is what you intend to appear to the public
+  - id: launch_discount
+    title: Launch discount
+    description: Optional launch discount; must be configured before the release date.
+    severity: optional
+    check:
+      kind: range
+      field: pricing.launch_discount_percent
+      min: 10
+      max: 40
+    when:
+      - field: pricing.launch_discount_percent
+        op: not_empty
+    execution_mode: MANUAL
+    where: App landing page > below intended release date
+    rule: 7-14 days; 10%-40% (Valve suggests 10-15%); ends 10am Pacific; cannot be added after release.
+    source_doc: https://partner.steamgames.com/doc/marketing/discounts
+    quote: Launch discounts start once your title is released on Steam and can be staged to run for between 7 and 14 days
+  - id: post_release_discount_cooldown
+    title: Post release discount cooldown
+    description: No discounts (other than the launch discount) for 30 days after release; price increases also trigger a 30-day discount cooldown.
+    severity: required
+    check: &id003
+      kind: info
+    execution_mode: MANUAL
+    where: Discounts dashboard
+    rule: 30-day release cooldown; 30-day price-increase cooldown.
+    source_doc: https://partner.steamgames.com/doc/marketing/discounts
+    quote: A product cannot be discounted for 30 days following its release
+  - id: post_release_price_change_wait
+    title: Post release price change wait
+    description: Valve asks that base price changes wait 30 days after release (launch pricing errors can be fixed via support).
+    severity: recommended
+    check: *id003
+    execution_mode: MANUAL
+    where: Package landing page > Propose Pricing
+    rule: 30 days after release.
+    source_doc: https://partner.steamgames.com/doc/store/pricing
+    quote: we ask that price changes wait until after 30 days from release
+  - id: release_app_button
+    title: Release app button
+    description: Release manually with the green "Release App" button -> review summary -> "Publish Now" -> confirm "Release Now". Approved titles never auto-release.
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: App landing page > Release App
+    rule: 'Release actions: publish store package, start launch discount, set playable/released, release timestamp NOW. Needs release_permissions.'
+    source_doc: https://partner.steamgames.com/doc/store/releasing
+    quote: Approved titles will not release themselves -- you need to use these controls yourself at the moment you wish your product to be released.
+  - id: early_access_release
+    title: Early access release
+    description: Early Access titles release via "Release as Early Access"; the two-week Coming Soon rule still applies.
+    severity: required
+    check: *id003
+    when:
+      - field: release.early_access
+        op: is_true
+    execution_mode: MANUAL
+    where: App landing page > Release as Early Access
+    rule: '>= 14 days Coming Soon.'
+    source_doc: https://partner.steamgames.com/doc/store/types
+    quote: you will still need to have a Coming Soon page up for at least two weeks before your product will be playable on Steam
+  - id: avoid_weekend_release
+    title: Avoid weekend release
+    description: Weekend releases are possible but discouraged (Steam team unavailable); the date picker hides weekends.
+    severity: recommended
+    check:
+      kind: crosscheck
+      name: weekday_release
+    execution_mode: MANUAL
+    where: App landing page > Specified release date
+    rule: Release on a weekday.
+    source_doc: https://partner.steamgames.com/doc/store/release_dates
+    quote: Yes, you can release on a weekend but we generally don't recommend it.
+  - id: prepurchase_not_self_serve
+    title: Prepurchase not self serve
+    description: Pre-purchase must be set up by Valve and is generally not recommended / not offered to new partners.
+    severity: optional
+    check: *id003
+    execution_mode: MANUAL
+    where: Contact Valve
+    source_doc: https://partner.steamgames.com/doc/store/types
+    quote: Pre-Purchases are not a self-served feature and will need to be set up by Valve.
+  - id: default_branch_update_authorization
+    title: Default branch update authorization
+    description: After release, setting a build live on the default branch requires an extra authorization (Steam Mobile Authenticator or SMS).
+    severity: required
+    check: *id003
+    execution_mode: MANUAL
+    where: Edit Steamworks Settings > SteamPipe > Builds
+    rule: Authorization prompt to the requesting account (authenticator, else SMS).
+    source_doc: https://partner.steamgames.com/doc/store/application/builds
+    quote: If your game is released, then any builds set live on your default branch will require an additional authorization step.
+  - id: wishlist_release_email
+    title: Wishlist release email
+    description: On release Steam automatically emails users who wishlisted the game (no action needed).
+    severity: optional
+    check: *id003
+    execution_mode: MANUAL
+    where: n/a (automatic)
+    source_doc: https://partner.steamgames.com/doc/store/coming_soon
+    quote: Steam will automatically send an e-mail to those people with your game on their Steam Wishlist.
+  - id: next_fest_timing
+    title: Next Fest edition fits the release plan
+    description: A game in Next Fest must not release before the fest ends (Early Access counts), its store page must be public and a playable demo must be live when the fest starts.
+    severity: required
+    check:
+      kind: crosscheck
+      name: next_fest_timing
+    when:
+      - field: release.events
+        op: not_empty
+    execution_mode: MANUAL
+    where: Steamworks > Marketing & Visibility > Upcoming Events
+    origin: valve
+    source_doc: https://partner.steamgames.com/doc/marketing/steamnextfest

@@ -1,0 +1,119 @@
+"""Bundled data files are valid, consistent with each other and with the schema, and generated docs are current."""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+from steamworks_mcp.capabilities import capabilities
+from steamworks_mcp.data import data_files, load_yaml
+from steamworks_mcp.gates.models import AssetCheck, GateFile, StoreRules
+from steamworks_mcp.languages import all_languages, find_language
+from steamworks_mcp.manifest import paths as fp
+from steamworks_mcp.manifest.io import ManifestFile
+from steamworks_mcp.manifest.models import Manifest
+from steamworks_mcp.validate.rules_data import AssetSpecsFile, EventsFile, StoreRulesFile
+
+ROOT = Path(__file__).resolve().parents[1]
+GATE_FILES = data_files("gates")
+
+
+def gates() -> list[GateFile]:
+    return [GateFile.model_validate(load_yaml(f)) for f in GATE_FILES]
+
+
+def test_four_gates() -> None:
+    assert [g.gate for g in gates()] == [0, 1, 2, 3]
+    assert [f"gates/gate_{n}.yaml" for n in range(4)] == GATE_FILES
+
+
+def test_rule_ids_are_unique_across_gates() -> None:
+    ids = [r.id for g in gates() for r in g.rules]
+    assert len(ids) == len(set(ids))
+
+
+@pytest.mark.parametrize("gate", range(4))
+def test_gate_rules_reference_real_fields(gate: int) -> None:
+    g = gates()[gate]
+    bad = [p for p in g.field_refs() if not fp.is_valid(p)]
+    assert not bad
+
+
+def test_gate_rules_reference_known_assets_and_store_rules() -> None:
+    assets = {a.id for a in AssetSpecsFile.model_validate(load_yaml("asset_specs.yaml")).assets}
+    rules = {r.id for r in StoreRulesFile.model_validate(load_yaml("store_rules.yaml")).rules}
+    for g in gates():
+        for r in g.rules:
+            if isinstance(r.check, AssetCheck):
+                assert r.check.asset in assets, r.id
+            if isinstance(r.check, StoreRules):
+                assert set(r.check.rules) <= rules, r.id
+
+
+def test_every_valve_rule_cites_a_page_and_quote() -> None:
+    for g in gates():
+        for r in g.rules:
+            if r.origin == "valve" and r.check.kind != "info":
+                assert r.source_doc, r.id
+
+
+def test_required_assets_belong_to_a_gate() -> None:
+    specs = AssetSpecsFile.model_validate(load_yaml("asset_specs.yaml"))
+    assert len({a.id for a in specs.assets}) == len(specs.assets)
+    for a in specs.assets:
+        if a.required:
+            assert a.gate in (1, 2), a.id
+
+
+def test_store_rules() -> None:
+    rules = StoreRulesFile.model_validate(load_yaml("store_rules.yaml")).rules
+    ids = [r.id for r in rules]
+    assert len(ids) == len(set(ids))
+    short = next(r for r in rules if r.id == "short_description_max_length")
+    assert short.check == "deterministic" and short.params == {"max": 300} and short.severity == "error"
+
+
+def test_events() -> None:
+    data = EventsFile.model_validate(load_yaml("events.yaml"))
+    ids = [e.id for e in data.events]
+    assert len(ids) == len(set(ids))
+    for e in data.events:
+        if e.starts and e.ends:
+            assert str(e.starts)[:10] <= str(e.ends)[:10], e.id
+    assert any(e.kind == "next_fest" for e in data.events)
+
+
+def test_capabilities() -> None:
+    caps = capabilities()
+    ids = [a.id for a in caps.areas]
+    assert len(ids) == len(set(ids))
+    publishing = next(a for a in caps.areas if a.id == "publishing")
+    assert publishing.default_mode == "MANUAL" and publishing.browser.status == "never"
+
+
+def test_languages() -> None:
+    langs = all_languages()
+    assert len({lang.api for lang in langs}) == len(langs) == 31
+    assert find_language("Korean") is not None and find_language("korean").api == "koreana"  # type: ignore[union-attr]
+
+
+def test_example_manifest_is_valid() -> None:
+    m = ManifestFile.load(ROOT / "examples" / "example-game" / "steamworks.yaml").manifest
+    assert m.apps.demo is not None
+
+
+def test_schema_doc_covers_every_section() -> None:
+    text = (ROOT / "docs" / "SCHEMA.md").read_text(encoding="utf-8")
+    for name in Manifest.model_fields:
+        if name != "schema_version":
+            assert f"`{name}`" in text or f"`{name}`," in text, name
+
+
+def test_generated_docs_are_current() -> None:
+    res = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "gen_docs.py"), "--check"], capture_output=True, text=True
+    )
+    assert res.returncode == 0, res.stdout + res.stderr

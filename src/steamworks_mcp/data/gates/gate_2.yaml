@@ -1,0 +1,324 @@
+# Gate 2: Build review. Generated from a review of Valve's Steamworks documentation on 2026-10-03.
+# Schema: src/steamworks_mcp/gates/models.py. Every Valve rule cites its page and a verbatim quote.
+gate: 2
+title: Build review
+summary: 'Everything needed to submit the build for review: depots, launch options, a live build and library art.'
+last_reviewed: '2026-10-03'
+rules:
+  - id: steamworks_sdk_downloaded
+    title: Steamworks SDK downloaded
+    description: Download the Steamworks SDK (ContentBuilder + steamcmd) for building and uploading.
+    severity: required
+    check: &id001
+      kind: checklist
+    execution_mode: MANUAL
+    where: Steamworks SDK download page
+    source_doc: https://partner.steamgames.com/doc/gettingstarted
+    quote: you'll need to download the Steamworks SDK, which contains all the scripts and templates for building and uploading your product to Steam.
+  - id: launch_option_defined
+    title: Launch option defined
+    description: Define at least one launch option (executable path relative to install folder, optional arguments, OS).
+    severity: required
+    check:
+      kind: min_items
+      field: apps.main.installation.launch_options
+      min: 1
+    execution_mode: BROWSER
+    fallback_mode: MANUAL
+    where: Edit Steamworks Settings > Installation > General Installation
+    rule: '>= 1 launch option; executable path without leading slashes or dots.'
+    source_doc: https://partner.steamgames.com/doc/sdk/uploading
+    quote: Define at least one launch option (the path and optionally, any arguments required to launch the game).
+  - id: install_folder_set
+    title: Install folder set
+    description: Set the SteamPipe install directory for the app.
+    severity: required
+    check:
+      kind: present
+      fields:
+        - apps.main.installation.install_folder
+    execution_mode: BROWSER
+    fallback_mode: MANUAL
+    where: Edit Steamworks Settings > Installation > General Installation
+    source_doc: https://partner.steamgames.com/doc/sdk/uploading
+    quote: New apps should have a Steam Pipe install directory as well as a depot
+  - id: depots_configured
+    title: Depots configured
+    description: Configure depots (rename default depot; language "All languages" and OS "All OSes" unless specific).
+    severity: required
+    check:
+      kind: min_items
+      field: apps.main.builds.depots
+      min: 1
+    execution_mode: MANUAL
+    where: Edit Steamworks Settings > SteamPipe > Depots
+    rule: '>= 1 depot.'
+    source_doc: https://partner.steamgames.com/doc/sdk/uploading
+    quote: Go to the Depots page and add depots as needed for this app. By default, a depot may already be configured for your application.
+  - id: supported_os_steamworks_settings
+    title: Supported OS Steamworks settings
+    description: Tick supported operating systems in the Steamworks settings (separate from the store page checkboxes).
+    severity: required
+    check:
+      kind: crosscheck
+      name: depot_per_platform
+    execution_mode: MANUAL
+    where: Edit Steamworks Settings > Supported Operating Systems
+    source_doc: https://partner.steamgames.com/doc/store/application/platforms
+    quote: In the Steamworks Settings for your app, check the appropriate operating system boxes under Supported Operating Systems.
+  - id: publish_steamworks_settings
+    title: Publish Steamworks settings
+    description: Publish Steamworks settings changes (depots, installation, launch options) - unpublished config breaks builds.
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: Edit Steamworks Settings > Publish
+    source_doc: https://partner.steamgames.com/doc/sdk/uploading
+    quote: Once you are done defining your depots, publish the changes that you have made from the Publish page.
+  - id: depots_in_packages
+    title: Depots in packages
+    description: Add depots to the Developer Comp package (for testing) and to every public/store package (for customers).
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: All Associated Packages, DLC, Demos And Tools
+    source_doc: https://partner.steamgames.com/doc/sdk/uploading
+    quote: Your newly defined depots will need to be included in a package to grant you ownership of them.
+  - id: os_depot_package_warning_resolved
+    title: OS depot package warning resolved
+    description: Resolve the landing-page warning "Operating System Depot missing from a package".
+    severity: recommended
+    check: *id001
+    execution_mode: MANUAL
+    where: App landing page warnings
+    source_doc: https://partner.steamgames.com/doc/store/application/depots
+    quote: When this warning appears on your app landing page, you should probably correct it
+  - id: build_uploaded
+    title: Build uploaded
+    description: Upload a mostly final build via steamcmd/SteamPipe using the builder account; it must include all features described on the store page.
+    severity: required
+    check: *id001
+    execution_mode: API
+    where: steamcmd +run_app_build (ContentBuilder) -> SteamPipe > Builds
+    rule: Near-final; contains everything on the store page; can still be updated during/after review.
+    source_doc: https://partner.steamgames.com/doc/store/releasing
+    quote: The build should include all the featured described on your store page, but doesn't have to be absolutely final.
+  - id: build_set_live_default_branch
+    title: Build set live default branch
+    description: Set the build live on the default branch manually in App Admin (SetLive in build scripts cannot target default).
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: Edit Steamworks Settings > SteamPipe > Builds
+    rule: Manual set-live on "default" only.
+    source_doc: https://partner.steamgames.com/doc/store/application/branches
+    quote: When uploading your content you can not set the build live on the default branch automatically. You must do that manually in App Admin.
+  - id: game_build_checklist_complete
+    title: Game build checklist complete
+    description: Complete the "Game Build" release checklist on the app landing page.
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: App landing page > release checklist
+    source_doc: https://partner.steamgames.com/doc/store/releasing
+    quote: The Game Build checklist consist of required items to prepare your application for release on Steam.
+  - id: store_review_submitted_before_build_review
+    title: Store review submitted before build review
+    description: The store page must be submitted for review before the build can be submitted.
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: App landing page
+    rule: Gate 1 submission precedes Gate 2 submission.
+    source_doc: https://partner.steamgames.com/doc/store/releasing
+    quote: Please note that you'll need to submit your store page for review before you can submit your build for review.
+  - id: build_launches_on_all_listed_os
+    title: Build launches on all listed OS
+    description: The product must start correctly on every OS listed on the store page.
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: n/a (Valve build review)
+    source_doc: https://partner.steamgames.com/doc/store/review_process
+    quote: your product must successfully launch in all supported operating systems listed on the store page.
+  - id: listed_features_implemented
+    title: Listed features implemented
+    description: Every Steam feature ticked on the store page (Basic Info) must be implemented in the build; untick planned ones.
+    severity: required
+    check:
+      kind: crosscheck
+      name: store_categories_match_config
+    execution_mode: MANUAL
+    where: Edit Store Page > Basic Info (features) vs build
+    source_doc: https://partner.steamgames.com/doc/store/review_process
+    quote: All supported features listed on the store page will need to be implemented in the current build.
+  - id: steam_wallet_for_in_game_purchases
+    title: Steam wallet for in game purchases
+    description: In-game transactions must use Steam Wallet; no links to stores that do not offer Steam Wallet.
+    severity: required
+    check: &id002
+      kind: info
+    execution_mode: MANUAL
+    where: Game code (ISteamMicroTxn / Steam Inventory)
+    source_doc: https://partner.steamgames.com/doc/store/review_process
+    quote: Your product must use Steam Wallet for any in-game transactions.
+  - id: build_matches_content_survey
+    title: Build matches content survey
+    description: Valve compares Content Survey answers with build and store page content.
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: n/a (Valve review)
+    source_doc: https://partner.steamgames.com/doc/gettingstarted/contentsurvey
+    quote: our team will compare the answers relative to the content in your build and on your store page.
+  - id: mark_build_ready_for_review
+    title: Mark build ready for review
+    description: Mark the build as ready for review; Valve sets "Ready for release". Review happens once; later updates need no re-review.
+    severity: required
+    check: *id001
+    execution_mode: MANUAL
+    where: App landing page > Mark as ready for review (Game Build)
+    rule: Review typically 3-5 business days; plan >= 7 business days before release.
+    source_doc: https://partner.steamgames.com/doc/store/review_process
+    quote: typically takes 3-5 business days to complete, but we ask that you plan for at least 7 business days
+  - id: library_capsule
+    title: Library capsule
+    description: Library Capsule (must include game logo; subtitle allowed; no other text).
+    severity: required
+    check:
+      kind: asset
+      asset: library_capsule
+    execution_mode: ARTIFACT
+    where: Store Page Admin > Graphical Assets > Library Assets (checklist section not documented)
+    rule: 600x900 px (300x450 auto-generated)
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+    quote: 'Size: 600px x 900px'
+    notes: Docs do not say whether library assets sit in the Store Presence or Game Build checklist; placed in gate 2 because they are client-facing.
+  - id: library_header
+    title: Library header
+    description: Library Header capsule; falls back to the store Header Capsule if not set.
+    severity: required
+    check:
+      kind: asset
+      asset: library_header
+    execution_mode: ARTIFACT
+    where: Store Page Admin > Graphical Assets > Library Assets
+    rule: 920x430 px
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+    quote: 'Size: 920px x 430px'
+    notes: Marked "Required" in the docs, yet a fallback exists; may not hard-block.
+  - id: library_hero
+    title: Library hero
+    description: Library Hero (artwork only, no words).
+    severity: required
+    check:
+      kind: asset
+      asset: library_hero
+    execution_mode: ARTIFACT
+    where: Store Page Admin > Graphical Assets > Library Assets
+    rule: 3840x1240 px PNG (1920x620 auto-generated)
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+    quote: 'Size: 3840px x 1240px'
+  - id: library_logo
+    title: Library logo
+    description: Library Logo (logotype only, transparent background), drawn over the hero.
+    severity: required
+    check:
+      kind: asset
+      asset: library_logo
+    execution_mode: ARTIFACT
+    where: Store Page Admin > Graphical Assets > Library Assets
+    rule: 1280 px wide and/or 720 px tall PNG
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+    quote: 'Size: Either 1280px wide and/or 720px tall'
+  - id: shortcut_icon
+    title: Shortcut icon
+    description: Desktop shortcut icon (.ico generated from PNG); macOS needs an extra ICNS "Mac Icon".
+    severity: required
+    check:
+      kind: asset
+      asset: shortcut_icon
+    execution_mode: ARTIFACT
+    where: Community and Client Icons asset fields (exact menu path not documented)
+    rule: 256x256 or 512x512 px, ICO or PNG
+    source_doc: https://partner.steamgames.com/doc/store/assets/community
+    quote: 'Size: 256px x 256px or 512px x 512px, ICO or PNG'
+  - id: app_icon
+    title: App icon
+    description: Small app icon used in library list view, chat, notifications.
+    severity: required
+    check:
+      kind: asset
+      asset: app_icon
+    execution_mode: ARTIFACT
+    where: Community and Client Icons asset fields (exact menu path not documented)
+    rule: 184x184 px JPG
+    source_doc: https://partner.steamgames.com/doc/store/assets/community
+    quote: 'Size: 184px by 184px JPG'
+  - id: test_via_steam_before_release
+    title: Test via Steam before release
+    description: Test the Steam-delivered build yourself (Dev Comp package, team accounts, keys, Playtest) before release.
+    severity: recommended
+    check: *id001
+    execution_mode: MANUAL
+    where: Steam client; Users & Permissions; Request Steam Product Keys
+    source_doc: https://partner.steamgames.com/doc/store/testing
+    quote: You will obviously need to test your application yourself before release
+  - id: beta_branch_password_before_set_live
+    title: Beta branch password before set live
+    description: Password-protect private branches before setting a build live on them.
+    severity: recommended
+    check:
+      kind: crosscheck
+      name: branches_password_protected
+    when:
+      - field: apps.main.builds.branches
+        op: not_empty
+    execution_mode: MANUAL
+    where: Edit Steamworks Settings > SteamPipe > Builds (branches)
+    source_doc: https://partner.steamgames.com/doc/store/application/builds
+    quote: if you wish for branch contents to remain private, you should set your branch password before setting a build live on the branch.
+  - id: optional_steamworks_features
+    title: Optional Steamworks features
+    description: Achievements/Stats, Steam Cloud, Leaderboards, Workshop, Rich Presence, Steam Input, DRM, Inventory, etc. are NOT required for release (only implement what the store page claims).
+    severity: optional
+    check: *id002
+    execution_mode: MANUAL
+    where: Edit Steamworks Settings (per feature)
+    rule: Not required; if ticked on the store page they must work (see listed_features_implemented).
+    source_doc: https://partner.steamgames.com/doc/gettingstarted
+    quote: You are free to use as few or as many of Steamworks features as you like.
+  - id: trading_cards
+    title: Trading cards
+    description: Trading cards are not a release requirement; they become available only after player-engagement thresholds are met (and have their own 3-5 business day review).
+    severity: optional
+    check: *id002
+    execution_mode: MANUAL
+    where: Community > Trading Cards
+    rule: Eligibility gated by Valve engagement thresholds.
+    source_doc: https://partner.steamgames.com/doc/marketing/tradingcards
+    quote: Trading cards are a profile feature that is offered to games that have met our player engagement thresholds.
+  - id: steam_deck_compatibility_review
+    title: Steam deck compatibility review
+    description: Steam Deck / Steam Machine compatibility review is separate from release review and does not affect availability.
+    severity: optional
+    check: *id002
+    execution_mode: MANUAL
+    where: App landing page > Technical Tools > Steam Hardware Compatibility Review (not available to all partners)
+    source_doc: https://partner.steamgames.com/doc/steamhardware/compat
+    quote: The results of a compatibility review will not affect whether your game is available to customers on Deck or Machine
+  - id: autocloud_override_root_all_os
+    title: Auto-Cloud roots with overrides are set for all OSes
+    description: Steamworks only applies root overrides to a root whose OS is [All OSes].
+    severity: required
+    check:
+      kind: crosscheck
+      name: autocloud_override_root_all_os
+    when:
+      - field: apps.main.cloud.overrides
+        op: not_empty
+    execution_mode: BROWSER
+    fallback_mode: MANUAL
+    where: Steam Cloud > Auto-Cloud configuration
+    origin: valve
+    source_doc: https://partner.steamgames.com/doc/features/cloud

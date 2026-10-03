@@ -1,0 +1,612 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GateFile",
+  "$defs": {
+    "Answered": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "answered",
+          "title": "Kind",
+          "type": "string"
+        },
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Fields",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "fields"
+      ],
+      "title": "Answered",
+      "type": "object"
+    },
+    "AssetCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "asset",
+          "title": "Kind",
+          "type": "string"
+        },
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "asset"
+      ],
+      "title": "AssetCheck",
+      "type": "object"
+    },
+    "Checklist": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "checklist",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "Checklist",
+      "type": "object"
+    },
+    "Condition": {
+      "additionalProperties": false,
+      "description": "The rule only applies when this holds (all conditions of a rule must hold).",
+      "properties": {
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "is_true",
+            "is_not_true",
+            "empty",
+            "not_empty",
+            "contains",
+            "not_contains",
+            "equals"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "value": {
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "field",
+        "op"
+      ],
+      "title": "Condition",
+      "type": "object"
+    },
+    "Confirmed": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "confirmed",
+          "title": "Kind",
+          "type": "string"
+        },
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Fields",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "fields"
+      ],
+      "title": "Confirmed",
+      "type": "object"
+    },
+    "Crosscheck": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "crosscheck",
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "kind",
+        "name"
+      ],
+      "title": "Crosscheck",
+      "type": "object"
+    },
+    "DateGap": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "date_gap",
+          "title": "Kind",
+          "type": "string"
+        },
+        "from": {
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "title": "To",
+          "type": "string"
+        },
+        "min_days": {
+          "minimum": 0,
+          "title": "Min Days",
+          "type": "integer"
+        },
+        "business_days": {
+          "default": false,
+          "title": "Business Days",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "from",
+        "to",
+        "min_days"
+      ],
+      "title": "DateGap",
+      "type": "object"
+    },
+    "GateRule": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z0-9_]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "required",
+            "recommended",
+            "optional"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "check": {
+          "discriminator": {
+            "mapping": {
+              "answered": "#/$defs/Answered",
+              "asset": "#/$defs/AssetCheck",
+              "checklist": "#/$defs/Checklist",
+              "confirmed": "#/$defs/Confirmed",
+              "crosscheck": "#/$defs/Crosscheck",
+              "date_gap": "#/$defs/DateGap",
+              "info": "#/$defs/Info",
+              "min_items": "#/$defs/MinItems",
+              "present": "#/$defs/Present",
+              "range": "#/$defs/Range",
+              "screenshots": "#/$defs/Screenshots",
+              "store_rules": "#/$defs/StoreRules"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Present"
+            },
+            {
+              "$ref": "#/$defs/Answered"
+            },
+            {
+              "$ref": "#/$defs/Confirmed"
+            },
+            {
+              "$ref": "#/$defs/MinItems"
+            },
+            {
+              "$ref": "#/$defs/Range"
+            },
+            {
+              "$ref": "#/$defs/DateGap"
+            },
+            {
+              "$ref": "#/$defs/AssetCheck"
+            },
+            {
+              "$ref": "#/$defs/Screenshots"
+            },
+            {
+              "$ref": "#/$defs/StoreRules"
+            },
+            {
+              "$ref": "#/$defs/Crosscheck"
+            },
+            {
+              "$ref": "#/$defs/Checklist"
+            },
+            {
+              "$ref": "#/$defs/Info"
+            }
+          ],
+          "title": "Check"
+        },
+        "when": {
+          "items": {
+            "$ref": "#/$defs/Condition"
+          },
+          "title": "When",
+          "type": "array"
+        },
+        "applies_to": {
+          "default": [
+            "game"
+          ],
+          "items": {
+            "enum": [
+              "game",
+              "demo",
+              "playtest"
+            ],
+            "type": "string"
+          },
+          "title": "Applies To",
+          "type": "array"
+        },
+        "execution_mode": {
+          "enum": [
+            "API",
+            "BROWSER",
+            "ARTIFACT",
+            "MANUAL"
+          ],
+          "title": "Execution Mode",
+          "type": "string"
+        },
+        "fallback_mode": {
+          "anyOf": [
+            {
+              "enum": [
+                "API",
+                "BROWSER",
+                "ARTIFACT",
+                "MANUAL"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fallback Mode"
+        },
+        "where": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Where"
+        },
+        "rule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule"
+        },
+        "origin": {
+          "default": "valve",
+          "enum": [
+            "valve",
+            "tool"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "source_doc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Doc"
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quote"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        },
+        "unverified": {
+          "default": false,
+          "title": "Unverified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "description",
+        "severity",
+        "check",
+        "execution_mode"
+      ],
+      "title": "GateRule",
+      "type": "object"
+    },
+    "Info": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "info",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "Info",
+      "type": "object"
+    },
+    "MinItems": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "min_items",
+          "title": "Kind",
+          "type": "string"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "min": {
+          "minimum": 1,
+          "title": "Min",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "field",
+        "min"
+      ],
+      "title": "MinItems",
+      "type": "object"
+    },
+    "Present": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "present",
+          "title": "Kind",
+          "type": "string"
+        },
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Fields",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "fields"
+      ],
+      "title": "Present",
+      "type": "object"
+    },
+    "Range": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "range",
+          "title": "Kind",
+          "type": "string"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min"
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max"
+        }
+      },
+      "required": [
+        "kind",
+        "field"
+      ],
+      "title": "Range",
+      "type": "object"
+    },
+    "Screenshots": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "screenshots",
+          "title": "Kind",
+          "type": "string"
+        },
+        "min_count": {
+          "minimum": 1,
+          "title": "Min Count",
+          "type": "integer"
+        },
+        "min_width": {
+          "title": "Min Width",
+          "type": "integer"
+        },
+        "min_height": {
+          "title": "Min Height",
+          "type": "integer"
+        },
+        "aspect": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Aspect"
+        }
+      },
+      "required": [
+        "kind",
+        "min_count",
+        "min_width",
+        "min_height"
+      ],
+      "title": "Screenshots",
+      "type": "object"
+    },
+    "StoreRules": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "store_rules",
+          "title": "Kind",
+          "type": "string"
+        },
+        "rules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Rules",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "StoreRules",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "gate": {
+      "maximum": 3,
+      "minimum": 0,
+      "title": "Gate",
+      "type": "integer"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    },
+    "summary": {
+      "title": "Summary",
+      "type": "string"
+    },
+    "last_reviewed": {
+      "title": "Last Reviewed",
+      "type": "string"
+    },
+    "rules": {
+      "items": {
+        "$ref": "#/$defs/GateRule"
+      },
+      "title": "Rules",
+      "type": "array"
+    }
+  },
+  "required": [
+    "gate",
+    "title",
+    "summary",
+    "last_reviewed",
+    "rules"
+  ],
+  "type": "object"
+}

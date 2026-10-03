@@ -1,0 +1,727 @@
+# Steam event calendar and the discount / planning rules tied to it, from Valve's pages (retrieved 2026-10-03).
+# Dates are never hard-coded in code. Refresh this file when it is older than stale_after_days (checks warn).
+# Quotes from fest date tables join cells with ' | ' and lines with ' / '. Schema: src/steamworks_mcp/validate/rules_data.py
+last_verified: '2026-10-03'
+stale_after_days: 60
+events:
+  - id: next_fest_2026_10
+    name: 'Steam Next Fest: October 2026'
+    kind: next_fest
+    starts: '2026-10-19T10:00:00-07:00'
+    ends: '2026-10-26T10:00:00-07:00'
+    registration_deadline: '2026-08-31T23:59:00-07:00'
+    registration_url: https://partner.steamgames.com/optin/sale/nextfest_october_2026
+    requirements:
+      - type: milestone
+        rule: Live virtual Q&A session on Zoom (10-11am PDT)
+        date: 2026-08-18
+        quote: 'August 18, 10am – 11am PDT on Zoom: Live virtual Q&A session'
+      - type: deadline
+        rule: Registration deadline (11:59pm PDT); also the recommended date for up-to-date marketing assets
+        date: '2026-08-31T23:59:00-07:00'
+        quote: August 31 - Registration Deadline (11:59pm PDT)
+      - type: milestone
+        rule: Steam pulls trailers for the official Next Fest trailer
+        date: 2026-09-08
+        quote: September 8 - Steam pulls trailers for the official Next Fest trailer.
+      - type: deadline
+        rule: Submit demo build and store page for review by this date to have the demo live at the start of Press Preview
+        date: 2026-09-14
+        quote: September 14 - If you'd like your demo to be live at the start
+      - type: deadline
+        rule: All required items submitted for review
+        date: 2026-09-28
+        quote: September 28 - All required items must be submitted for review by this date
+      - type: deadline
+        rule: Last day to opt OUT of trailer permissions
+        date: 2026-10-01
+        quote: October 1 - This is the deadline to opt OUT of trailer permissions
+      - type: milestone
+        rule: Press Preview starts (10am PDT)
+        date: '2026-10-08T10:00:00-07:00'
+        quote: October 8 - Press preview starts at 10am PDT.
+      - type: deadline
+        rule: Set demo live (or opt out) before the fest starts at 10am PDT
+        date: '2026-10-19T10:00:00-07:00'
+        quote: 'October 19 - Steam Next Fest: October 2026 begins at 10am PDT'
+      - type: eligibility
+        rule: Game must not release until after the fest ends on 2026-10-26
+        date: 2026-10-26
+        quote: released any time after the conclusion of the fest on October 26, 2026
+      - type: eligibility
+        rule: Publicly playable demo by the time the festival begins
+        quote: Includes a publicly playable demo by the time the festival begins
+      - type: eligibility
+        rule: Store page published and public
+        quote: The store page must be published and public
+      - type: eligibility
+        rule: Not a prologue/chapter 1/demo version of existing content
+        quote: Is not a prologue, chapter 1, or otherwise 'demo' version of existing content
+      - type: eligibility
+        rule: One Next Fest per title
+        quote: Titles are only allowed to participate in one Next Fest.
+      - type: milestone
+        rule: Fest ends; Wrap-Up page (most played demos) launches
+        date: 2026-10-26
+        quote: 'October 26 - Steam Next Fest: October 2026 concludes.'
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest/2026october
+    last_verified: 2026-10-03
+    quote: runs October 19 at 10:00 AM PDT (UTC-7) to October 26
+    notes: As of 2026-10-03 registration is closed and the review-submission deadlines have passed.
+  - id: next_fest_2027_02
+    name: 'Steam Next Fest: February 2027'
+    kind: next_fest
+    starts: '2027-02-22T10:00:00-08:00'
+    ends: '2027-03-01T10:00:00-08:00'
+    registration_deadline: '2027-01-10T23:59:00-08:00'
+    registration_url: https://partner.steamgames.com/optin/sale/nextfest_feb_2027
+    requirements:
+      - type: milestone
+        rule: Live virtual Q&A session on Zoom (10-11am PST)
+        date: 2026-12-08
+        quote: December 8, 10 - 11am PST - Live virtual Q&A session on Zoom.
+      - type: deadline
+        rule: Registration deadline (11:59pm PST); also the recommended date for up-to-date marketing assets
+        date: '2027-01-10T23:59:00-08:00'
+        quote: January 10, 11:59pm PST - Registration Deadline
+      - type: milestone
+        rule: Steam pulls trailers for the official Next Fest trailer
+        date: 2027-01-18
+        quote: January 18 - Steam pulls trailers for the official Next Fest trailer.
+      - type: deadline
+        rule: Submit demo build and store page for review by this date to have the demo live at the start of Press Preview
+        date: 2027-01-25
+        quote: January 25 - If you'd like your demo to be live at the start
+      - type: deadline
+        rule: All required items submitted for review
+        date: 2027-02-08
+        quote: February 8 - All required items must be submitted for review by this date
+      - type: deadline
+        rule: Last day to opt OUT of trailer permissions
+        date: 2027-02-11
+        quote: February 11 - This is the deadline to opt OUT of trailer permissions
+      - type: milestone
+        rule: Press Preview starts (10am PST)
+        date: '2027-02-11T10:00:00-08:00'
+        quote: February 11 - Press preview starts at 10am PST.
+      - type: deadline
+        rule: Set demo live (or opt out) before the fest starts at 10am PST
+        date: '2027-02-22T10:00:00-08:00'
+        quote: 'February 22 - Steam Next Fest: February 2027 begins at 10am PST'
+      - type: eligibility
+        rule: Game must not release until after the fest ends on 2027-03-01
+        date: 2027-03-01
+        quote: Released any time after the conclusion of the fest on March 1, 2027
+      - type: eligibility
+        rule: Publicly playable demo by the time the festival begins
+        quote: Includes a publicly playable demo by the time the festival begins
+      - type: eligibility
+        rule: Store page published and public
+        quote: Store page must be published and public
+      - type: eligibility
+        rule: One Next Fest per game
+        quote: A game may only appear once in Steam Next Fest.
+      - type: milestone
+        rule: Fest ends; Wrap-Up page launches
+        date: 2027-03-01
+        quote: 'March 1 - Steam Next Fest: February 2027 concludes.'
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest/feb_2027
+    last_verified: 2026-10-03
+    quote: runs February 22 at 10:00 AM PST (UTC-8) to March 1
+  - id: next_fest_2027_06
+    name: 'Steam Next Fest: June 2027'
+    kind: next_fest
+    starts: '2027-06-14T10:00:00-07:00'
+    ends: '2027-06-21T10:00:00-07:00'
+    registration_deadline: '2027-04-25T23:59:00-07:00'
+    registration_url: https://partner.steamgames.com/optin/sale/nextfest_june_2027
+    requirements:
+      - type: milestone
+        rule: Live virtual Q&A session on Zoom (March 2027; date to be confirmed)
+        quote: Date TBD, 10 - 11am PDT - Live virtual Q&A session on Zoom.
+      - type: deadline
+        rule: Registration deadline (11:59pm PDT); also the recommended date for up-to-date marketing assets
+        date: '2027-04-25T23:59:00-07:00'
+        quote: April 25, 11:59pm PDT - Registration Deadline
+      - type: milestone
+        rule: Steam pulls trailers for the official Next Fest trailer
+        date: 2027-05-03
+        quote: May 3 - Steam pulls trailers for the official Next Fest trailer.
+      - type: deadline
+        rule: Submit demo build and store page for review by this date to have the demo live at the start of Press Preview
+        date: 2027-05-17
+        quote: May 17 - If you'd like your demo to be live at the start
+      - type: deadline
+        rule: All required items submitted for review
+        date: 2027-05-31
+        quote: May 31 - All required items must be submitted for review by this date
+      - type: deadline
+        rule: Last day to opt OUT of trailer permissions
+        date: 2027-06-03
+        quote: June 3 - This is the deadline to opt OUT of trailer permissions
+      - type: milestone
+        rule: Press Preview starts (10am PDT)
+        date: '2027-06-03T10:00:00-07:00'
+        quote: June 3 - Press preview starts at 10am PDT.
+      - type: deadline
+        rule: Set demo live (or opt out) before the fest starts at 10am PDT
+        date: '2027-06-14T10:00:00-07:00'
+        quote: 'June 14 - Steam Next Fest: June 2027 begins at 10am PDT'
+      - type: eligibility
+        rule: Game must not release until after the fest ends on 2027-06-21
+        date: 2027-06-21
+        quote: Released any time after the conclusion of the fest on June 21, 2027
+      - type: eligibility
+        rule: Publicly playable demo by the time the festival begins
+        quote: Includes a publicly playable demo by the time the festival begins
+      - type: eligibility
+        rule: Store page published and public
+        quote: Store page must be published and public
+      - type: eligibility
+        rule: One Next Fest per game
+        quote: A game may only appear once in Steam Next Fest.
+      - type: milestone
+        rule: Fest ends; Wrap-Up page launches
+        date: 2027-06-21
+        quote: 'June 21 - Steam Next Fest: June 2027 concludes.'
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest/june_2027
+    last_verified: 2026-10-03
+    quote: runs June 14 at 10:00 AM PDT (UTC-7) to June 21
+  - id: next_fest_2027_10
+    name: 'Steam Next Fest: October 2027'
+    kind: next_fest
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest/june_2027
+    last_verified: 2026-10-03
+    quote: The next edition planned is in October 2027.
+    notes: Only the month is announced. Dates, deadlines and the doc page are not yet published, so treat it as a placeholder.
+  - id: autumn_sale_2026
+    name: Steam Autumn Sale 2026
+    kind: sale
+    starts: 2026-10-01
+    ends: 2026-10-08
+    requirements:
+      - type: eligibility
+        rule: Game released at least 30 days before the event start date
+        quote: Any game released at least 30 days before the event start date
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Autumn Sale 2026 | 1 October, 2026 - 8 October, 2026
+    notes: In progress as of 2026-10-03.
+  - id: winter_sale_2026
+    name: Steam Winter Sale 2026
+    kind: sale
+    starts: 2026-12-17
+    ends: 2027-01-04
+    requirements:
+      - type: eligibility
+        rule: Game released at least 30 days before the event start date
+        quote: Any game released at least 30 days before the event start date
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Winter Sale 2026 | 17 December, 2026 - 4 January, 2027
+  - id: spring_sale_2027
+    name: Steam Spring Sale 2027
+    kind: sale
+    starts: 2027-03-18
+    ends: 2027-03-25
+    requirements:
+      - type: eligibility
+        rule: Game released at least 30 days before the event start date
+        quote: Any game released at least 30 days before the event start date
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Spring Sale 2027 | 18 March, 2027 - 25 March, 2027
+  - id: summer_sale_2027
+    name: Steam Summer Sale 2027
+    kind: sale
+    starts: 2027-06-24
+    ends: 2027-07-08
+    requirements:
+      - type: eligibility
+        rule: Game released at least 30 days before the event start date
+        quote: Any game released at least 30 days before the event start date
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Summer Sale 2027 | 24 June, 2027 - 8 July, 2027
+  - id: cooking_fest_2026
+    name: Cooking Fest
+    kind: fest
+    starts: '2026-10-12T10:00:00-07:00'
+    ends: '2026-10-19T10:00:00-07:00'
+    registration_deadline: '2026-10-12T10:00:00-07:00'
+    registration_url: https://partner.steamgames.com/optin/sale/cooking_2026
+    requirements:
+      - type: milestone
+        rule: Event announcement trailer launches; participation may be shared publicly
+        date: 2026-10-08
+        quote: 8 October - The trailer announcing the event launches on this day.
+      - type: deadline
+        rule: Event start is the deadline to enter a discount and to opt out
+        date: '2026-10-12T10:00:00-07:00'
+        quote: This is the deadline for entering a discount, and opting out
+      - type: eligibility
+        rule: Games primarily about cooking; Coming Soon titles and demos have their own sections
+        quote: unreleased titles in Coming Soon mode, games with demos, and more
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/themed_sales/cooking_2026
+    last_verified: 2026-10-03
+    quote: This event runs 12 October @ 10:00am PDT to 19 October @ 10:00am PDT
+  - id: steam_scream_v_2026
+    name: Steam Scream V
+    kind: fest
+    starts: 2026-10-26
+    ends: 2026-11-02
+    registration_url: https://partner.steamgames.com/optin/sale/horror_2026
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Oct 26 / Nov 2 | Steam Scream V
+    notes: 'Doc page returned an error on 2026-10-03. Eligibility: horror games and explicitly Halloween-centric games.'
+  - id: auto_battler_rpg_fest_2026
+    name: Auto-Battler RPG Fest
+    kind: fest
+    starts: 2026-11-16
+    ends: 2026-11-23
+    registration_url: https://partner.steamgames.com/optin/sale/auto_battler_2026
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Nov 16 / Nov 23 | Auto-Battler RPG Fest
+    notes: Doc page returned an error on 2026-10-03.
+  - id: desktop_companion_fest_2027
+    name: Desktop Companion Fest
+    kind: fest
+    starts: 2027-01-14
+    ends: 2027-01-18
+    registration_url: https://partner.steamgames.com/optin/sale/desktop_companion_2027
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Jan 14 / Jan 18 | Desktop Companion Fest
+    notes: Doc page returned an error on 2026-10-03.
+  - id: shop_keeper_fest_2027
+    name: Shop Keeper Fest
+    kind: fest
+    starts: 2027-01-25
+    ends: 2027-02-01
+    registration_url: https://partner.steamgames.com/optin/sale/shop_keep_2027
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Jan 25 / Feb 1 | Shop Keeper Fest
+    notes: Doc page returned an error on 2026-10-03.
+  - id: sheep_fest_2027
+    name: Sheep Fest
+    kind: fest
+    starts: 2027-02-04
+    ends: 2027-02-08
+    registration_url: https://partner.steamgames.com/optin/sale/sheep_2027
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Feb 4 / Feb 8 | Sheep Fest
+    notes: Doc page returned an error on 2026-10-03.
+  - id: couch_coop_fest_2027
+    name: Couch Co-Op Fest
+    kind: fest
+    starts: 2027-02-08
+    ends: 2027-02-15
+    registration_url: https://partner.steamgames.com/optin/sale/couch_coop_2027
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Feb 8 / Feb 15 | Couch Co-Op Fest
+    notes: Doc page returned an error on 2026-10-03. Games must support local co-op.
+  - id: rhythm_fest_2027
+    name: Rhythm Fest
+    kind: fest
+    starts: 2027-03-08
+    ends: 2027-03-15
+    registration_url: https://partner.steamgames.com/optin/sale/rhythm_2027
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Mar 8 / Mar 15 | Rhythm Fest
+    notes: Doc page returned an error on 2026-10-03.
+  - id: dinos_vs_robots_fest_2027
+    name: Dinos vs. Robots Fest
+    kind: fest
+    starts: 2027-03-29
+    ends: 2027-04-05
+    registration_url: https://partner.steamgames.com/optin/sale/dinos_robots_2027
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Mar 29 / Apr 5 | Dinos vs. Robots Fest
+    notes: Doc page returned an error on 2026-10-03.
+  - id: racing_fest_2027
+    name: Racing Fest
+    kind: fest
+    starts: 2027-04-12
+    ends: 2027-04-19
+    registration_url: https://partner.steamgames.com/optin/sale/racing_2027
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Apr 12 / Apr 19 | Racing Fest
+    notes: Doc page returned an error on 2026-10-03.
+  - id: witch_fest_2027
+    name: Witch Fest
+    kind: fest
+    starts: 2027-04-22
+    ends: 2027-04-26
+    registration_url: https://partner.steamgames.com/optin/sale/witch_2027
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Apr 22 / Apr 26 | Witch Fest
+    notes: Doc page returned an error on 2026-10-03.
+  - id: fighting_fest_2027
+    name: Fighting Fest
+    kind: fest
+    starts: 2027-04-26
+    ends: 2027-05-03
+    registration_url: https://partner.steamgames.com/optin/sale/fighting_2027
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: Apr 26 / May 3 | Fighting Fest
+    notes: Doc page returned an error on 2026-10-03.
+  - id: rts_fest_2027
+    name: Real-Time Strategy Fest
+    kind: fest
+    starts: 2027-05-10
+    ends: 2027-05-17
+    registration_url: https://partner.steamgames.com/optin/sale/rts_2027
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: May 10 / May 17 | Real-Time Strategy Fest
+    notes: Doc page returned an error on 2026-10-03.
+  - id: mountaineering_fest_2027
+    name: Mountaineering Fest
+    kind: fest
+    starts: 2027-05-31
+    ends: 2027-06-03
+    registration_url: https://partner.steamgames.com/optin/sale/mountaineering_2027
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    last_verified: 2026-10-03
+    quote: May 31 / Jun 3 | Mountaineering Fest
+    notes: Doc page returned an error on 2026-10-03.
+discount_rules:
+  - id: release_cooldown
+    rule: No discount for 30 days after release. This applies to the Early Access release and to the Full Release. The only exception is a Launch Discount.
+    value:
+      days: 30
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: A product cannot be discounted for 30 days following its release
+  - id: launch_discount_setup_before_release
+    rule: A Launch Discount is optional and can only be configured before the release date
+    value:
+      must_be_set_before_release: true
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: Launch Discounts can only be set up prior to product's release date, not after.
+  - id: launch_discount_percent
+    rule: Launch Discount must be 10% to 40%. Valve suggests about 10-15%.
+    value:
+      min_percent: 10
+      max_percent: 40
+      suggested_percent: 10-15
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: Launch discounts in particular cannot exceed 40%.
+  - id: launch_discount_duration
+    rule: Launch Discount starts at release and runs 7 to 14 days, ending at 10am Pacific
+    value:
+      min_days: 7
+      max_days: 14
+      ends_at: 10:00 America/Los_Angeles
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: can be staged to run for between 7 and 14 days, ending at 10am Pacific
+  - id: launch_discount_cooldown_vs_seasonal
+    rule: "A Launch Discount triggers a 30-day discount cooldown, but seasonal sales are exempt from it. Valve's example: an EA launch on Nov 15 with a launch discount on Nov 15-22 can still join a Winter Sale starting Dec 17. CONFLICT: the Seasonal Sales FAQ says products can't be discounted within 30 days of a launch discount ending."
+    value:
+      cooldown_days: 30
+      seasonal_sale_exempt: true
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: the Nov 15-22 launch discount would not prevent the game from joining the Dec 17 Winter Sale
+    conflict: 'https://partner.steamgames.com/doc/marketing/discounts/seasonalsales: "or 30 days from when the launch discount ends"'
+  - id: discount_cooldown
+    rule: At least 30 days between the end of one discount and the start of the next. The cooldown applies to Daily/Midweek/Weekend/Weeklong deals, Steam Fests, Publisher Sales and custom discounts.
+    value:
+      days: 30
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: A product cannot be discounted within 30 days of another discount.
+  - id: seasonal_sale_cooldown_exemption
+    rule: The four seasonal sales (Spring, Summer, Autumn, Winter) don't create a discount cooldown and ignore other discounts' cooldowns. This applies only to the official seasonal-sale discount in the Discount Management Dashboard.
+    value:
+      exempt_from_discount_cooldown: true
+      creates_cooldown: false
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: Seasonal sales are only exempt from 30-Day Discount Cooldowns.
+  - id: seasonal_sale_blocked_by_release_or_price_cooldown
+    rule: A product still in its 30-day release cooldown or 30-day price-increase cooldown cannot join a seasonal sale
+    value:
+      blocks_seasonal_sale:
+        - release_cooldown
+        - price_increase_cooldown
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: on a 30-day Release Cooldown or a 30-day Price Increase cooldown cannot join
+  - id: seasonal_sale_release_eligibility
+    rule: To discount in a seasonal sale, the game must have released at least 30 days before the event start date
+    value:
+      min_days_released_before_start: 30
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    quote: Any game released at least 30 days before the event start date
+  - id: seasonal_sale_join_midway
+    rule: If a release or price-increase cooldown ends during a seasonal sale, the game can join partway through. The discount can only be entered after the cooldown ends.
+    value:
+      join_after_cooldown_ends: true
+      pre_entry_allowed: false
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: you'll be joining the seasonal sale after it's already underway.
+  - id: price_increase_cooldown
+    rule: No discount for 30 days after a base-price increase in any currency (no exceptions). Price decreases don't trigger a cooldown.
+    value:
+      days: 30
+      exceptions: none
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: cannot be discounted for 30 days following a price increase in any currency
+  - id: no_price_increase_after_release
+    rule: The base price cannot be increased within 30 days of product release
+    value:
+      days: 30
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: Not possible within 30-days of product release
+  - id: no_base_price_change_during_discount
+    rule: The base price can't change while a discount is active or scheduled
+    value:
+      locked_while_discount_active_or_scheduled: true
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: increase or decrease the base price of a product during an active discount
+  - id: discount_percent_range
+    rule: Standard (post-launch) discounts must be 10% to 95%
+    value:
+      min_percent: 10
+      max_percent: 95
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: discount a product by less than 10% or more than 95%
+  - id: discount_duration
+    rule: Discounts run 1 to 14 days
+    value:
+      min_days: 1
+      max_days: 14
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: Discounts cannot run shorter than 1 day or longer than 14 days.
+  - id: ea_to_full_launch_discount
+    rule: A launch discount is allowed at the Early Access to full release transition. It is not allowed if EA began less than 30 days earlier or the base price was raised in the last 30 days.
+    value:
+      min_days_since_ea_start: 30
+      min_days_since_price_increase: 30
+    source: https://partner.steamgames.com/doc/marketing/discounts
+    quote: you may run a launch discount when transitioning from Early Access to fully released
+  - id: themed_fest_cooldown
+    rule: Themed fests follow the normal 30-day discount cooldown with no exceptions. A discount is not required to join a fest.
+    value:
+      cooldown_applies: true
+      discount_required: false
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/themed_sales
+    quote: Themed Sale Events adhere to the discount cooldown, and no exceptions are possible.
+  - id: wishlist_discount_notification_threshold
+    rule: Discounts of 20% or more trigger wishlist notifications. The discount must cover at least the lowest-priced package.
+    value:
+      min_percent: 20
+    source: https://partner.steamgames.com/doc/marketing/wishlist
+    quote: Any type of discount at or above 20%
+planning_rules:
+  - id: upcoming_events_calendar
+    rule: Valve's official calendar of announced seasonal sales, themed fests and Next Fest editions
+    value: https://partner.steamgames.com/doc/marketing/upcoming_events
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events
+    quote: Here's what's currently announced.
+  - id: coming_soon_minimum
+    rule: New products must have a public Coming Soon page for at least 2 weeks before release
+    value:
+      min_days: 14
+    source: https://partner.steamgames.com/doc/store/coming_soon
+    quote: you must have a Coming Soon page up for at least two weeks before releasing
+  - id: store_page_review_lead_time
+    rule: Submit the store page for review at least 7 business days before it should go live. Review typically takes 3-5 business days.
+    value:
+      submit_business_days_before: 7
+      typical_review_business_days: 3-5
+    source: https://partner.steamgames.com/doc/store/coming_soon
+    quote: at least 7 business days before you want your page live
+  - id: build_review_lead_time
+    rule: Plan for at least 7 business days of build review before release. Review typically takes 3-5 business days and can take longer for Adult Only content.
+    value:
+      plan_business_days: 7
+      typical_review_business_days: 3-5
+    source: https://partner.steamgames.com/doc/store/review_process
+    quote: we ask that you plan for at least 7 business days
+  - id: steam_direct_waiting_period
+    rule: A developer's first few titles must wait 21 days between paying the Steam Direct app fee and releasing
+    value:
+      days: 21
+      applies_to: first few titles
+    source: https://partner.steamgames.com/doc/gettingstarted/onboarding
+    quote: A 21-day waiting period between when you paid the app fee
+  - id: next_fest_cadence
+    rule: Next Fest runs three times a year, in February, June and October
+    value:
+      months:
+        - 2
+        - 6
+        - 10
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest
+    quote: occurs three times a year, in February, June, and October.
+  - id: next_fest_one_per_game
+    rule: A title may take part in only one Next Fest ever. Withdrawing before the fest keeps a future edition open.
+    value:
+      max_participations: 1
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest
+    quote: titles may only participate in ONE Next Fest
+  - id: next_fest_unreleased_until_end
+    rule: The game must not release (including Early Access) before the edition ends. Releasing before or during the fest makes the game ineligible.
+    value:
+      release_allowed_after: fest end
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest
+    quote: Will not be released before the applicable Next Fest edition concludes
+  - id: next_fest_early_access_counts_as_release
+    rule: Early Access and free games may join, but only while still unreleased
+    value:
+      early_access_launch_counts_as_release: true
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest
+    quote: the game must not yet be released to remain eligible for Next Fest
+  - id: next_fest_release_date_setting
+    rule: The release date set in Steamworks must not be earlier than the fest start, or the game won't show as eligible to register
+    value:
+      release_date_not_before: fest start
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest
+    quote: not set to a date before the start of Next Fest
+  - id: next_fest_store_page_public
+    rule: The base game store page must be published and public (Coming Soon) to register
+    value:
+      store_page_public_required: true
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest
+    quote: The base game store page must be published and public
+  - id: next_fest_demo_required
+    rule: A publicly playable demo must be live by the time Next Fest begins
+    value:
+      demo_live_by: fest start
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest
+    quote: Will include a publicly playable demo by the time Next Fest begins
+  - id: next_fest_not_prologue
+    rule: Prologues, previews and short-form versions of a game already released on Steam are not eligible
+    value:
+      prologue_allowed: false
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest
+    quote: Is not a prologue, preview, or short-form version of an existing game
+  - id: next_fest_no_demo_constraints
+    rule: There are no rules on demo exclusivity, newness or length, and no rule on how soon after the fest the game releases
+    value:
+      demo_length_requirement: none
+      demo_exclusivity_requirement: none
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest
+    quote: no requirements regarding exclusivity, newness, or length of demo
+  - id: next_fest_demo_review_press_preview
+    rule: To have the demo live for Press Preview, submit it for review at least 5 weeks before the fest (each edition page lists exact dates)
+    value:
+      weeks_before_fest: 5
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest
+    quote: no later than 5 weeks prior to the Fest
+  - id: next_fest_demo_review_fest
+    rule: Submit the demo for build review at least 3 weeks before the fest or risk missing it
+    value:
+      weeks_before_fest: 3
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest
+    quote: no later than 3 weeks prior to the Fest
+  - id: next_fest_press_preview
+    rule: Press Preview opens about 11 days before the fest (per the Workback Timeline) and includes every registered game, whatever its demo status. Cancel registration before it starts. Press see only what is public.
+    value:
+      days_before_fest: 11
+      includes_all_registered: true
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest
+    quote: will include all games registered for Steam Next Fest regardless of current demo status
+    notes: The 11-day figure is from the Workback Timeline table row '11 days prior'. Edition pages give the exact date (Oct 8 2026, Feb 11 2027, Jun 3 2027).
+  - id: next_fest_workback_caveat
+    rule: The generic workback timeline can differ by edition. The edition page's dates take precedence.
+    value:
+      authoritative: edition page
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest
+    quote: Edition-specific deadlines may vary slightly from the below
+  - id: next_fest_trailer_eligibility
+    rule: To be considered for the official Next Fest trailer, have at least one public trailer on the base game store page before registration closes
+    value:
+      public_trailer_required: true
+      by: registration close
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest
+    quote: Have at least one publicly visible trailer on your base game store page
+  - id: demo_wishlist_notification_window
+    rule: A one-time wishlist notification for a demo can be triggered only in the 2 weeks after the demo first launches. Using it earlier means no second send at Next Fest.
+    value:
+      window_days: 14
+      uses: 1
+    source: https://partner.steamgames.com/doc/store/application/demos
+    quote: available on your demo app landing page for two weeks following the initial launch
+  - id: wishlist_notification_cooldown
+    rule: Wishlist emails have a 2-week cooldown per App ID. Space demo, release and discount notifications at least 2 weeks apart.
+    value:
+      days: 14
+    source: https://partner.steamgames.com/doc/store/application/demos
+    quote: Wishlist notifications have a two week cooldown per App ID.
+  - id: wishlist_release_notification
+    rule: Wishlisters are notified at release (Early Access or full). The EA to full transition sends another notification.
+    value:
+      on_ea_release: true
+      on_full_release: true
+    source: https://partner.steamgames.com/doc/marketing/wishlist
+    quote: will receive an e-mail and/or mobile push notification about the game being available
+  - id: update_visibility_rounds_docs
+    rule: Update Visibility Rounds documentation. Each product starts with 5 rounds, shared between Early Access and full release. More may be granted to products that sell well.
+    value:
+      initial_rounds: 5
+      docs: https://partner.steamgames.com/doc/marketing/visibility/update_rounds
+    source: https://partner.steamgames.com/doc/marketing/visibility/update_rounds
+    quote: Each product will start with five rounds that can be used for this visibility.
+  - id: update_round_earliest_start
+    rule: Update Rounds become available after launch visibility ends. Early Access titles must wait 2 weeks after launch.
+    value:
+      early_access_wait_days: 14
+    source: https://partner.steamgames.com/doc/marketing/visibility
+    quote: you must wait two weeks after launch before starting an Update Round
+  - id: update_round_duration
+    rule: A round runs up to 30 days or 1M homepage impressions, whichever comes first. There is no minimum gap between rounds.
+    value:
+      max_days: 30
+      max_impressions: 1000000
+    source: https://partner.steamgames.com/doc/marketing/visibility/update_rounds
+    quote: up to 30 days from the date it started or cap out at 1M impressions
+  - id: update_round_seasonal_blackout
+    rule: Update rounds typically don't appear during major seasonal sales, so avoid starting one just before or during a sale
+    value:
+      blackout_during:
+        - spring_sale
+        - summer_sale
+        - autumn_sale
+        - winter_sale
+    source: https://partner.steamgames.com/doc/marketing/visibility/update_rounds
+    quote: Update visibility rounds will typically not show up during major seasonal sale events
+  - id: update_round_announcement_age
+    rule: An update round must link a community announcement posted within the last 30 days
+    value:
+      max_announcement_age_days: 30
+    source: https://partner.steamgames.com/doc/marketing/visibility/update_rounds
+    quote: the recent community announcement needs to have been posted within the last 30 days
+  - id: themed_fest_registration_window
+    rule: Valve invites eligible games (matched by tags and store page) to themed fests. Registration usually opens 6+ weeks ahead.
+    value:
+      typical_weeks_notice: 6
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/themed_sales
+    quote: Partners usually have six weeks or more to register for the event
+  - id: themed_fest_discount_entry_deadline
+    rule: A themed-fest discount can be entered any time before the event starts. This is the default deadline when the fest's own page is unavailable.
+    value:
+      deadline: event start
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/themed_sales
+    quote: You may enter your discount at any time prior to the event start
+  - id: themed_fest_marketing_optin_deadline
+    rule: If Valve asks for a marketing-materials opt-in, the deadline to opt in and enter a discount is typically 6 weeks before the event
+    value:
+      weeks_before_start: 6
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/themed_sales
+    quote: typically 6 weeks prior to event start
+  - id: themed_fest_upcoming_games
+    rule: Unreleased (Coming Soon) games and demos may join themed fests in their own sections, but usually not the official event trailer
+    value:
+      coming_soon_allowed: true
+      demos_allowed: true
+      trailer_eligible: false
+    source: https://partner.steamgames.com/doc/marketing/upcoming_events/themed_sales
+    quote: unreleased games are welcome to participate

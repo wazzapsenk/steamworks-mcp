@@ -1,0 +1,242 @@
+# Steam graphical asset specs (current since August 2024). Schema: src/steamworks_mcp/validate/rules_data.py
+last_reviewed: '2026-10-03'
+assets:
+  - id: header_capsule
+    label: Header capsule
+    group: store
+    width: 920
+    height: 430
+    formats: &id001
+      - png
+      - jpg
+    required: true
+    gate: 1
+    composition: capsule
+    logo_scale: 0.6
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    notes: File format not stated by Valve; PNG or JPG.
+  - id: small_capsule
+    label: Small capsule
+    group: store
+    width: 462
+    height: 174
+    formats: *id001
+    required: true
+    gate: 1
+    composition: capsule
+    logo_scale: 0.75
+    notes: The logo must stay readable at the smallest generated size (120x45). File format not stated by Valve; PNG or JPG.
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+  - id: main_capsule
+    label: Main capsule
+    group: store
+    width: 1232
+    height: 706
+    formats: *id001
+    required: true
+    gate: 1
+    composition: capsule
+    logo_scale: 0.55
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    notes: File format not stated by Valve; PNG or JPG.
+  - id: vertical_capsule
+    label: Vertical capsule
+    group: store
+    width: 748
+    height: 896
+    formats: *id001
+    required: true
+    gate: 1
+    composition: capsule
+    logo_scale: 0.8
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+    notes: File format not stated by Valve; PNG or JPG.
+  - id: page_background
+    label: Page background
+    group: store
+    width: 1438
+    height: 810
+    formats: *id001
+    required: false
+    gate: 1
+    composition: art_only
+    notes: Optional; generated from the last screenshot when missing. File format not stated by Valve; PNG or JPG.
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+  - id: bundle_header
+    label: Bundle header
+    group: store
+    width: 707
+    height: 232
+    formats: *id001
+    required: false
+    notes: Only for bundles. File format not stated by Valve; PNG or JPG.
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+  - id: library_capsule
+    label: Library capsule
+    group: library
+    width: 600
+    height: 900
+    formats: *id001
+    required: true
+    gate: 2
+    composition: capsule
+    logo_scale: 0.8
+    notes: Must include the game logo. File format not stated by Valve; PNG or JPG.
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+  - id: library_header
+    label: Library header
+    group: library
+    width: 920
+    height: 430
+    formats: *id001
+    required: true
+    gate: 2
+    composition: capsule
+    logo_scale: 0.6
+    notes: Falls back to the store header capsule when missing. File format not stated by Valve; PNG or JPG.
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+  - id: library_hero
+    label: Library hero
+    group: library
+    width: 3840
+    height: 1240
+    formats:
+      - png
+    required: true
+    gate: 2
+    composition: art_only
+    safe_area:
+      width: 860
+      height: 380
+    notes: 'Artwork only: no words or logo (the library logo is drawn on top).'
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+  - id: library_logo
+    label: Library logo
+    group: library
+    width: 1280
+    height: 720
+    fit: width_or_height
+    formats:
+      - png
+    required: true
+    gate: 2
+    composition: logo_only
+    notes: Transparent PNG, 1280 px wide and/or 720 px tall.
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+  - id: shortcut_icon
+    label: Shortcut icon
+    group: icon
+    width: 256
+    height: 256
+    sizes:
+      - 256x256
+      - 512x512
+    formats:
+      - ico
+      - png
+    required: true
+    gate: 2
+    composition: icon
+    notes: Formerly 'Client Icon'. macOS shortcuts need a separate ICNS 'Mac Icon'.
+    source_doc: https://partner.steamgames.com/doc/store/assets/community
+  - id: app_icon
+    label: App icon
+    group: icon
+    width: 184
+    height: 184
+    formats:
+      - jpg
+    required: true
+    gate: 2
+    composition: icon
+    notes: Formerly 'Community Icon'.
+    source_doc: https://partner.steamgames.com/doc/store/assets/community
+  - id: event_cover
+    label: Event cover
+    group: event
+    width: 800
+    height: 450
+    formats:
+      - png
+      - jpg
+    required: false
+    notes: Required for each event, not for release.
+    source_doc: https://partner.steamgames.com/doc/store/assets/eventassets
+  - id: event_header
+    label: Event header
+    group: event
+    width: 1920
+    height: 622
+    formats:
+      - png
+      - jpg
+    required: false
+    source_doc: https://partner.steamgames.com/doc/store/assets/eventassets
+  - id: achievement_icon
+    label: Achievement icon
+    group: achievement
+    width: 256
+    height: 256
+    formats:
+      - jpg
+    required: false
+    notes: Valve documents no size; 256x256 JPG was accepted by Steamworks on 2026-10-03 (tests/fixtures/steamworks/achievements/write.har).
+    unverified: true
+    source_doc: https://partner.steamgames.com/doc/features/achievements
+media:
+  - id: screenshots
+    params:
+      min_count: 5
+      min_width: 1920
+      min_height: 1080
+      aspect: 16:9
+    source_doc: https://partner.steamgames.com/doc/store/assets/standard
+  - id: trailer
+    params:
+      max_width: 1920
+      max_height: 1080
+      fps:
+        - 29.97
+        - 30
+        - 59.94
+        - 60
+      min_kbps: 5000
+      formats:
+        - mov
+        - wmv
+        - mp4
+    source_doc: https://partner.steamgames.com/doc/store/trailer
+  - id: trailer_thumbnail
+    params:
+      width: 1920
+      height: 1080
+      formats:
+        - jpg
+        - png
+    notes: Must be a frame from the trailer.
+    source_doc: https://partner.steamgames.com/doc/store/trailer
+  - id: description_media
+    params:
+      max_bytes: 5000000
+      total_max_bytes: 15000000
+      formats:
+        - png
+        - jpg
+        - jpeg
+        - gif
+        - webp
+        - mp4
+        - webm
+      max_animation_seconds: 12
+      recommended_width: 1170
+      max_width: 4096
+    source_doc: https://partner.steamgames.com/doc/store/page/assets
+previous_sizes:
+  header_capsule: 460x215
+  small_capsule: 231x87
+  main_capsule: 616x353
+  vertical_capsule: 374x448
+  community_icon: 184x184
+  client_icon: 32x32 .ico
+  library_logo: 1280x720 .png
+  screenshots: 1920x1080 or other 16:9 preferred; any size supported
