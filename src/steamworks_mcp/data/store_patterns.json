@@ -1,0 +1,1075 @@
+{
+  "patterns_version": 1,
+  "recorded_on": "2026-10-03",
+  "source": "Steam store 'Popular New Releases' (store.steampowered.com/search/?filter=popularnew&sort_by=Released_DESC) and /api/appdetails, English text, US store",
+  "appids": [
+    4285110,
+    3867170,
+    2288340,
+    2067820,
+    3841510,
+    1706510,
+    3493540,
+    3917700,
+    1488490,
+    2543830,
+    1912410,
+    3832490,
+    4080220,
+    3669870,
+    3699590,
+    4705510,
+    4019220,
+    4883590,
+    3407390,
+    3640200,
+    2689120,
+    4557380,
+    1374490,
+    2887580,
+    3195440,
+    892970,
+    2638890,
+    4356430,
+    4656000,
+    2075800,
+    1250410,
+    4075620,
+    4001890,
+    2584270,
+    2825860,
+    3849000,
+    3940610,
+    2764460,
+    1067360,
+    4113940,
+    3812600,
+    2950790,
+    2142790,
+    1478500,
+    2059170,
+    1368140,
+    3293260,
+    4108000,
+    4421010,
+    2684630,
+    2424420,
+    4570720,
+    3722330,
+    1913120,
+    4468030,
+    3712080,
+    3808690,
+    2524850,
+    3641000,
+    1623730,
+    4032350,
+    4380490,
+    3751950,
+    4508340,
+    4162040,
+    2679100,
+    3844970,
+    4704690,
+    1805110,
+    1297900,
+    3768760,
+    1118520,
+    2215200,
+    2863680,
+    2483190,
+    1962700,
+    3404260,
+    3892270,
+    4197610,
+    3105440
+  ],
+  "overall": {
+    "games": 80,
+    "short_description": {
+      "chars": {
+        "median": 238.0,
+        "p25": 194.8,
+        "p75": 271.0
+      },
+      "words": {
+        "median": 39.0,
+        "p25": 31.0,
+        "p75": 44.0
+      },
+      "sentences": {
+        "median": 2.0,
+        "p25": 2.0,
+        "p75": 3.0
+      },
+      "second_person_share": 0.62,
+      "mentions_players_share": 0.23,
+      "numbers_share": 0.31
+    },
+    "about": {
+      "words": {
+        "median": 288.5,
+        "p25": 209.0,
+        "p75": 448.0
+      },
+      "paragraphs": {
+        "median": 7.0,
+        "p25": 5.0,
+        "p75": 12.2
+      },
+      "paragraph_words": {
+        "median": 34.0,
+        "p25": 26.5,
+        "p75": 42.6
+      },
+      "max_paragraph_words": {
+        "median": 59.0,
+        "p25": 47.0,
+        "p75": 77.2
+      },
+      "with_headers_share": 0.47,
+      "headers": {
+        "median": 4.0,
+        "p25": 2.2,
+        "p75": 5.8
+      },
+      "headers_starting_with_verb_share": 0.22,
+      "with_lists_share": 0.36,
+      "list_items": {
+        "median": 7.0,
+        "p25": 6.0,
+        "p75": 10.0
+      },
+      "images": {
+        "median": 1.0,
+        "p25": 0.0,
+        "p75": 4.0
+      },
+      "animations": {
+        "median": 4.0,
+        "p25": 3.0,
+        "p75": 5.0
+      },
+      "opens_with_media_share": 0.39,
+      "words_before_first_media": {
+        "median": 20.5,
+        "p25": 0.0,
+        "p75": 68.2
+      }
+    },
+    "mentions": {
+      "coop_share": 0.2,
+      "multiplayer_share": 0.21,
+      "steam_deck_share": 0.0
+    },
+    "media": {
+      "screenshots": {
+        "median": 11.0,
+        "p25": 8.0,
+        "p75": 15.0
+      },
+      "trailers": {
+        "median": 3.0,
+        "p25": 2.0,
+        "p75": 4.0
+      }
+    },
+    "languages": {
+      "interface": {
+        "median": 11.0,
+        "p25": 6.8,
+        "p75": 14.0
+      },
+      "full_audio_share": 0.65
+    }
+  },
+  "genres": {
+    "Action": {
+      "games": 39,
+      "short_description": {
+        "chars": {
+          "median": 230.0,
+          "p25": 207.5,
+          "p75": 271.0
+        },
+        "words": {
+          "median": 39.0,
+          "p25": 34.5,
+          "p75": 43.0
+        },
+        "sentences": {
+          "median": 2.0,
+          "p25": 2.0,
+          "p75": 3.0
+        },
+        "second_person_share": 0.64,
+        "mentions_players_share": 0.26,
+        "numbers_share": 0.31
+      },
+      "about": {
+        "words": {
+          "median": 293.0,
+          "p25": 206.5,
+          "p75": 429.0
+        },
+        "paragraphs": {
+          "median": 7.0,
+          "p25": 5.0,
+          "p75": 11.0
+        },
+        "paragraph_words": {
+          "median": 34.3,
+          "p25": 25.2,
+          "p75": 43.4
+        },
+        "max_paragraph_words": {
+          "median": 60.0,
+          "p25": 47.5,
+          "p75": 71.0
+        },
+        "with_headers_share": 0.51,
+        "headers": {
+          "median": 5.0,
+          "p25": 4.0,
+          "p75": 6.0
+        },
+        "headers_starting_with_verb_share": 0.25,
+        "with_lists_share": 0.23,
+        "list_items": {
+          "median": 6.0,
+          "p25": 6.0,
+          "p75": 10.0
+        },
+        "images": {
+          "median": 0.0,
+          "p25": 0.0,
+          "p75": 2.5
+        },
+        "animations": {
+          "median": 4.0,
+          "p25": 3.5,
+          "p75": 5.5
+        },
+        "opens_with_media_share": 0.38,
+        "words_before_first_media": {
+          "median": 9.5,
+          "p25": 0.0,
+          "p75": 50.2
+        }
+      },
+      "mentions": {
+        "coop_share": 0.23,
+        "multiplayer_share": 0.15,
+        "steam_deck_share": 0.0
+      },
+      "media": {
+        "screenshots": {
+          "median": 12.0,
+          "p25": 9.0,
+          "p75": 14.5
+        },
+        "trailers": {
+          "median": 3.0,
+          "p25": 2.0,
+          "p75": 5.5
+        }
+      },
+      "languages": {
+        "interface": {
+          "median": 12.0,
+          "p25": 9.5,
+          "p75": 14.5
+        },
+        "full_audio_share": 0.64
+      }
+    },
+    "Adventure": {
+      "games": 32,
+      "short_description": {
+        "chars": {
+          "median": 238.0,
+          "p25": 207.8,
+          "p75": 267.2
+        },
+        "words": {
+          "median": 38.5,
+          "p25": 33.8,
+          "p75": 45.0
+        },
+        "sentences": {
+          "median": 2.0,
+          "p25": 2.0,
+          "p75": 3.0
+        },
+        "second_person_share": 0.5,
+        "mentions_players_share": 0.28,
+        "numbers_share": 0.25
+      },
+      "about": {
+        "words": {
+          "median": 273.0,
+          "p25": 213.0,
+          "p75": 391.0
+        },
+        "paragraphs": {
+          "median": 7.0,
+          "p25": 5.8,
+          "p75": 9.5
+        },
+        "paragraph_words": {
+          "median": 32.4,
+          "p25": 28.8,
+          "p75": 43.6
+        },
+        "max_paragraph_words": {
+          "median": 59.0,
+          "p25": 47.8,
+          "p75": 71.8
+        },
+        "with_headers_share": 0.53,
+        "headers": {
+          "median": 5.0,
+          "p25": 2.0,
+          "p75": 6.0
+        },
+        "headers_starting_with_verb_share": 0.15,
+        "with_lists_share": 0.25,
+        "list_items": {
+          "median": 6.5,
+          "p25": 5.0,
+          "p75": 7.0
+        },
+        "images": {
+          "median": 0.0,
+          "p25": 0.0,
+          "p75": 3.2
+        },
+        "animations": {
+          "median": 4.0,
+          "p25": 4.0,
+          "p75": 6.0
+        },
+        "opens_with_media_share": 0.34,
+        "words_before_first_media": {
+          "median": 20.5,
+          "p25": 0.0,
+          "p75": 86.8
+        }
+      },
+      "mentions": {
+        "coop_share": 0.28,
+        "multiplayer_share": 0.16,
+        "steam_deck_share": 0.0
+      },
+      "media": {
+        "screenshots": {
+          "median": 12.0,
+          "p25": 8.0,
+          "p75": 15.2
+        },
+        "trailers": {
+          "median": 3.0,
+          "p25": 2.0,
+          "p75": 5.2
+        }
+      },
+      "languages": {
+        "interface": {
+          "median": 11.5,
+          "p25": 9.8,
+          "p75": 14.0
+        },
+        "full_audio_share": 0.72
+      }
+    },
+    "Casual": {
+      "games": 14,
+      "short_description": {
+        "chars": {
+          "median": 269.0,
+          "p25": 170.5,
+          "p75": 290.0
+        },
+        "words": {
+          "median": 41.0,
+          "p25": 28.2,
+          "p75": 48.0
+        },
+        "sentences": {
+          "median": 3.0,
+          "p25": 2.0,
+          "p75": 3.0
+        },
+        "second_person_share": 0.79,
+        "mentions_players_share": 0.21,
+        "numbers_share": 0.36
+      },
+      "about": {
+        "words": {
+          "median": 229.0,
+          "p25": 187.2,
+          "p75": 318.0
+        },
+        "paragraphs": {
+          "median": 6.0,
+          "p25": 5.0,
+          "p75": 8.5
+        },
+        "paragraph_words": {
+          "median": 31.1,
+          "p25": 22.4,
+          "p75": 38.5
+        },
+        "max_paragraph_words": {
+          "median": 48.5,
+          "p25": 44.2,
+          "p75": 61.8
+        },
+        "with_headers_share": 0.5,
+        "headers": {
+          "median": 4.0,
+          "p25": 3.5,
+          "p75": 4.5
+        },
+        "headers_starting_with_verb_share": 0.32,
+        "with_lists_share": 0.64,
+        "list_items": {
+          "median": 9.0,
+          "p25": 5.0,
+          "p75": 11.0
+        },
+        "images": {
+          "median": 0.0,
+          "p25": 0.0,
+          "p75": 3.0
+        },
+        "animations": {
+          "median": 3.5,
+          "p25": 3.0,
+          "p75": 4.0
+        },
+        "opens_with_media_share": 0.0,
+        "words_before_first_media": {
+          "median": 41.0,
+          "p25": 32.0,
+          "p75": 65.0
+        }
+      },
+      "mentions": {
+        "coop_share": 0.07,
+        "multiplayer_share": 0.21,
+        "steam_deck_share": 0.0
+      },
+      "media": {
+        "screenshots": {
+          "median": 11.5,
+          "p25": 8.0,
+          "p75": 15.0
+        },
+        "trailers": {
+          "median": 2.0,
+          "p25": 1.0,
+          "p75": 4.0
+        }
+      },
+      "languages": {
+        "interface": {
+          "median": 11.0,
+          "p25": 7.8,
+          "p75": 13.0
+        },
+        "full_audio_share": 0.57
+      }
+    },
+    "Early Access": {
+      "games": 11,
+      "short_description": {
+        "chars": {
+          "median": 236.0,
+          "p25": 206.0,
+          "p75": 278.0
+        },
+        "words": {
+          "median": 40.0,
+          "p25": 34.0,
+          "p75": 44.0
+        },
+        "sentences": {
+          "median": 2.0,
+          "p25": 2.0,
+          "p75": 3.0
+        },
+        "second_person_share": 0.64,
+        "mentions_players_share": 0.55,
+        "numbers_share": 0.27
+      },
+      "about": {
+        "words": {
+          "median": 380.0,
+          "p25": 300.5,
+          "p75": 459.0
+        },
+        "paragraphs": {
+          "median": 7.0,
+          "p25": 6.0,
+          "p75": 9.0
+        },
+        "paragraph_words": {
+          "median": 41.2,
+          "p25": 31.6,
+          "p75": 61.2
+        },
+        "max_paragraph_words": {
+          "median": 60.0,
+          "p25": 54.0,
+          "p75": 94.5
+        },
+        "with_headers_share": 0.55,
+        "headers": {
+          "median": 5.0,
+          "p25": 2.0,
+          "p75": 5.0
+        },
+        "headers_starting_with_verb_share": 0.35,
+        "with_lists_share": 0.36,
+        "list_items": {
+          "median": 8.0,
+          "p25": 7.5,
+          "p75": 8.8
+        },
+        "images": {
+          "median": 2.0,
+          "p25": 0.0,
+          "p75": 4.0
+        },
+        "animations": {
+          "median": 4.0,
+          "p25": 2.5,
+          "p75": 6.0
+        },
+        "opens_with_media_share": 0.36,
+        "words_before_first_media": {
+          "median": 44.5,
+          "p25": 0.0,
+          "p75": 50.5
+        }
+      },
+      "mentions": {
+        "coop_share": 0.45,
+        "multiplayer_share": 0.18,
+        "steam_deck_share": 0.0
+      },
+      "media": {
+        "screenshots": {
+          "median": 10.0,
+          "p25": 6.5,
+          "p75": 10.0
+        },
+        "trailers": {
+          "median": 3.0,
+          "p25": 2.0,
+          "p75": 3.0
+        }
+      },
+      "languages": {
+        "interface": {
+          "median": 10.0,
+          "p25": 3.0,
+          "p75": 12.0
+        },
+        "full_audio_share": 0.55
+      }
+    },
+    "Indie": {
+      "games": 34,
+      "short_description": {
+        "chars": {
+          "median": 241.0,
+          "p25": 201.0,
+          "p75": 278.5
+        },
+        "words": {
+          "median": 40.0,
+          "p25": 33.0,
+          "p75": 44.8
+        },
+        "sentences": {
+          "median": 2.5,
+          "p25": 2.0,
+          "p75": 3.0
+        },
+        "second_person_share": 0.82,
+        "mentions_players_share": 0.26,
+        "numbers_share": 0.32
+      },
+      "about": {
+        "words": {
+          "median": 284.0,
+          "p25": 214.2,
+          "p75": 378.8
+        },
+        "paragraphs": {
+          "median": 7.0,
+          "p25": 5.0,
+          "p75": 11.5
+        },
+        "paragraph_words": {
+          "median": 30.2,
+          "p25": 24.9,
+          "p75": 38.8
+        },
+        "max_paragraph_words": {
+          "median": 50.0,
+          "p25": 45.0,
+          "p75": 63.8
+        },
+        "with_headers_share": 0.62,
+        "headers": {
+          "median": 4.0,
+          "p25": 2.0,
+          "p75": 6.0
+        },
+        "headers_starting_with_verb_share": 0.29,
+        "with_lists_share": 0.47,
+        "list_items": {
+          "median": 8.0,
+          "p25": 6.8,
+          "p75": 10.0
+        },
+        "images": {
+          "median": 0.5,
+          "p25": 0.0,
+          "p75": 4.0
+        },
+        "animations": {
+          "median": 4.0,
+          "p25": 3.0,
+          "p75": 5.0
+        },
+        "opens_with_media_share": 0.32,
+        "words_before_first_media": {
+          "median": 27.0,
+          "p25": 0.0,
+          "p75": 48.8
+        }
+      },
+      "mentions": {
+        "coop_share": 0.21,
+        "multiplayer_share": 0.21,
+        "steam_deck_share": 0.0
+      },
+      "media": {
+        "screenshots": {
+          "median": 12.0,
+          "p25": 8.2,
+          "p75": 16.8
+        },
+        "trailers": {
+          "median": 3.0,
+          "p25": 2.0,
+          "p75": 4.0
+        }
+      },
+      "languages": {
+        "interface": {
+          "median": 10.5,
+          "p25": 5.2,
+          "p75": 13.8
+        },
+        "full_audio_share": 0.41
+      }
+    },
+    "RPG": {
+      "games": 31,
+      "short_description": {
+        "chars": {
+          "median": 243.0,
+          "p25": 199.0,
+          "p75": 270.5
+        },
+        "words": {
+          "median": 39.0,
+          "p25": 32.5,
+          "p75": 45.0
+        },
+        "sentences": {
+          "median": 2.0,
+          "p25": 2.0,
+          "p75": 3.0
+        },
+        "second_person_share": 0.58,
+        "mentions_players_share": 0.19,
+        "numbers_share": 0.16
+      },
+      "about": {
+        "words": {
+          "median": 319.0,
+          "p25": 249.0,
+          "p75": 445.5
+        },
+        "paragraphs": {
+          "median": 8.0,
+          "p25": 6.0,
+          "p75": 14.0
+        },
+        "paragraph_words": {
+          "median": 31.5,
+          "p25": 24.9,
+          "p75": 43.5
+        },
+        "max_paragraph_words": {
+          "median": 64.0,
+          "p25": 44.5,
+          "p75": 88.5
+        },
+        "with_headers_share": 0.42,
+        "headers": {
+          "median": 4.0,
+          "p25": 4.0,
+          "p75": 6.0
+        },
+        "headers_starting_with_verb_share": 0.18,
+        "with_lists_share": 0.23,
+        "list_items": {
+          "median": 7.0,
+          "p25": 6.0,
+          "p75": 7.5
+        },
+        "images": {
+          "median": 1.0,
+          "p25": 0.0,
+          "p75": 4.0
+        },
+        "animations": {
+          "median": 4.0,
+          "p25": 3.0,
+          "p75": 5.0
+        },
+        "opens_with_media_share": 0.39,
+        "words_before_first_media": {
+          "median": 8.0,
+          "p25": 0.0,
+          "p75": 49.0
+        }
+      },
+      "mentions": {
+        "coop_share": 0.16,
+        "multiplayer_share": 0.06,
+        "steam_deck_share": 0.0
+      },
+      "media": {
+        "screenshots": {
+          "median": 12.0,
+          "p25": 9.5,
+          "p75": 16.0
+        },
+        "trailers": {
+          "median": 3.0,
+          "p25": 2.0,
+          "p75": 5.5
+        }
+      },
+      "languages": {
+        "interface": {
+          "median": 11.0,
+          "p25": 7.5,
+          "p75": 13.5
+        },
+        "full_audio_share": 0.68
+      }
+    },
+    "Simulation": {
+      "games": 35,
+      "short_description": {
+        "chars": {
+          "median": 239.0,
+          "p25": 185.5,
+          "p75": 269.0
+        },
+        "words": {
+          "median": 38.0,
+          "p25": 30.5,
+          "p75": 43.5
+        },
+        "sentences": {
+          "median": 2.0,
+          "p25": 2.0,
+          "p75": 3.0
+        },
+        "second_person_share": 0.74,
+        "mentions_players_share": 0.2,
+        "numbers_share": 0.37
+      },
+      "about": {
+        "words": {
+          "median": 333.0,
+          "p25": 225.0,
+          "p75": 508.0
+        },
+        "paragraphs": {
+          "median": 9.0,
+          "p25": 6.0,
+          "p75": 15.5
+        },
+        "paragraph_words": {
+          "median": 30.2,
+          "p25": 23.8,
+          "p75": 38.6
+        },
+        "max_paragraph_words": {
+          "median": 50.0,
+          "p25": 44.0,
+          "p75": 77.0
+        },
+        "with_headers_share": 0.46,
+        "headers": {
+          "median": 4.0,
+          "p25": 1.8,
+          "p75": 7.0
+        },
+        "headers_starting_with_verb_share": 0.2,
+        "with_lists_share": 0.46,
+        "list_items": {
+          "median": 7.5,
+          "p25": 6.0,
+          "p75": 10.2
+        },
+        "images": {
+          "median": 1.0,
+          "p25": 0.0,
+          "p75": 4.0
+        },
+        "animations": {
+          "median": 4.0,
+          "p25": 3.0,
+          "p75": 5.5
+        },
+        "opens_with_media_share": 0.4,
+        "words_before_first_media": {
+          "median": 25.0,
+          "p25": 0.0,
+          "p75": 50.5
+        }
+      },
+      "mentions": {
+        "coop_share": 0.14,
+        "multiplayer_share": 0.2,
+        "steam_deck_share": 0.0
+      },
+      "media": {
+        "screenshots": {
+          "median": 10.0,
+          "p25": 8.0,
+          "p75": 16.0
+        },
+        "trailers": {
+          "median": 2.0,
+          "p25": 2.0,
+          "p75": 4.0
+        }
+      },
+      "languages": {
+        "interface": {
+          "median": 11.0,
+          "p25": 6.0,
+          "p75": 13.5
+        },
+        "full_audio_share": 0.63
+      }
+    },
+    "Sports": {
+      "games": 7,
+      "short_description": {
+        "chars": {
+          "median": 167.0,
+          "p25": 161.0,
+          "p75": 214.5
+        },
+        "words": {
+          "median": 30.0,
+          "p25": 27.5,
+          "p75": 33.5
+        },
+        "sentences": {
+          "median": 2.0,
+          "p25": 1.5,
+          "p75": 2.0
+        },
+        "second_person_share": 0.29,
+        "mentions_players_share": 0.29,
+        "numbers_share": 0.71
+      },
+      "about": {
+        "words": {
+          "median": 257.0,
+          "p25": 160.0,
+          "p75": 348.0
+        },
+        "paragraphs": {
+          "median": 7.0,
+          "p25": 5.0,
+          "p75": 13.0
+        },
+        "paragraph_words": {
+          "median": 29.4,
+          "p25": 28.4,
+          "p75": 38.0
+        },
+        "max_paragraph_words": {
+          "median": 58.0,
+          "p25": 44.5,
+          "p75": 88.5
+        },
+        "with_headers_share": 0.14,
+        "headers": {
+          "median": 4.0,
+          "p25": 4.0,
+          "p75": 4.0
+        },
+        "headers_starting_with_verb_share": 0.0,
+        "with_lists_share": 0.0,
+        "list_items": null,
+        "images": {
+          "median": 1.0,
+          "p25": 1.0,
+          "p75": 1.0
+        },
+        "animations": {
+          "median": 0.0,
+          "p25": 0.0,
+          "p75": 5.0
+        },
+        "opens_with_media_share": 0.71,
+        "words_before_first_media": {
+          "median": 0.0,
+          "p25": 0.0,
+          "p75": 57.0
+        }
+      },
+      "mentions": {
+        "coop_share": 0.14,
+        "multiplayer_share": 0.43,
+        "steam_deck_share": 0.0
+      },
+      "media": {
+        "screenshots": {
+          "median": 7.0,
+          "p25": 5.0,
+          "p75": 9.0
+        },
+        "trailers": {
+          "median": 2.0,
+          "p25": 2.0,
+          "p75": 4.0
+        }
+      },
+      "languages": {
+        "interface": {
+          "median": 10.0,
+          "p25": 1.0,
+          "p75": 16.0
+        },
+        "full_audio_share": 1.0
+      }
+    },
+    "Strategy": {
+      "games": 16,
+      "short_description": {
+        "chars": {
+          "median": 233.5,
+          "p25": 162.0,
+          "p75": 270.0
+        },
+        "words": {
+          "median": 38.0,
+          "p25": 26.0,
+          "p75": 44.2
+        },
+        "sentences": {
+          "median": 2.0,
+          "p25": 2.0,
+          "p75": 3.0
+        },
+        "second_person_share": 0.5,
+        "mentions_players_share": 0.12,
+        "numbers_share": 0.19
+      },
+      "about": {
+        "words": {
+          "median": 265.0,
+          "p25": 205.2,
+          "p75": 820.8
+        },
+        "paragraphs": {
+          "median": 7.0,
+          "p25": 5.8,
+          "p75": 10.5
+        },
+        "paragraph_words": {
+          "median": 36.8,
+          "p25": 29.0,
+          "p75": 51.4
+        },
+        "max_paragraph_words": {
+          "median": 58.0,
+          "p25": 43.8,
+          "p75": 101.8
+        },
+        "with_headers_share": 0.44,
+        "headers": {
+          "median": 4.0,
+          "p25": 3.5,
+          "p75": 6.0
+        },
+        "headers_starting_with_verb_share": 0.42,
+        "with_lists_share": 0.44,
+        "list_items": {
+          "median": 8.0,
+          "p25": 7.5,
+          "p75": 13.5
+        },
+        "images": {
+          "median": 1.5,
+          "p25": 0.0,
+          "p75": 4.0
+        },
+        "animations": {
+          "median": 4.0,
+          "p25": 2.8,
+          "p75": 4.2
+        },
+        "opens_with_media_share": 0.25,
+        "words_before_first_media": {
+          "median": 40.0,
+          "p25": 10.0,
+          "p75": 65.5
+        }
+      },
+      "mentions": {
+        "coop_share": 0.0,
+        "multiplayer_share": 0.25,
+        "steam_deck_share": 0.0
+      },
+      "media": {
+        "screenshots": {
+          "median": 10.0,
+          "p25": 7.8,
+          "p75": 10.5
+        },
+        "trailers": {
+          "median": 2.0,
+          "p25": 1.8,
+          "p75": 3.2
+        }
+      },
+      "languages": {
+        "interface": {
+          "median": 11.0,
+          "p25": 9.2,
+          "p75": 12.2
+        },
+        "full_audio_share": 0.62
+      }
+    }
+  }
+}

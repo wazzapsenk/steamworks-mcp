@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -363,6 +364,25 @@ def test_patterns_group_for_a_game() -> None:
     assert group_of({"primary_genre": "indie", "genres": ["Casual"]}) == "Indie"
     assert group_of({"genres": ["Indie", "Casual"]}) == "Casual"  # the most specific group
     assert group_of({"genres": ["Racing"]}) == "all genres"
+
+
+def test_bundled_store_patterns_are_derived_only() -> None:
+    data = patterns.store_patterns()
+    assert data is not None and 0 < len(data.appids) <= patterns.MAX_GAMES
+    assert data.overall.games == len(data.appids) == len(set(data.appids))
+    assert data.genres and all(g.games >= patterns.MIN_GENRE_GAMES for g in data.genres.values())
+
+    def strings(v: Any) -> list[str]:
+        if isinstance(v, str):
+            return [v]
+        if isinstance(v, dict):
+            return [s for x in v.values() for s in strings(x)]
+        if isinstance(v, list):
+            return [s for x in v for s in strings(x)]
+        return []
+
+    raw = json.loads(resources.files("steamworks_mcp.data").joinpath("store_patterns.json").read_text("utf-8"))
+    assert sorted(strings(raw)) == sorted([raw["recorded_on"], raw["source"]])  # everything else is a number
 
 
 def test_style_guides() -> None:

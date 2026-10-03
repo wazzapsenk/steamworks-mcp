@@ -555,3 +555,4 @@ async def test_get_spec_info(game: Path) -> None:
     assert (await tool(config, "get_spec_info", kind="gate:3"))["gate"] == 3
     assert (await tool(config, "get_spec_info", kind="reference:3527290"))["appid"] == 3527290
     assert "guide" in await tool(config, "get_spec_info", kind="style_guide:coop_party")
+    assert (await tool(config, "get_spec_info", kind="store_patterns"))["overall"]["games"] > 0
