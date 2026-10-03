@@ -438,7 +438,8 @@ class Executor:
                 if section == "leaderboards":
                     boards = await anyio.to_thread.run_sync(self.api().leaderboards, appid)
                     f, n = importer.leaderboards(boards)
-                    n.append("The leaderboard list is cached by Steam; a board changed in the last minute may differ.")
+                    if boards:
+                        n.append("Steam caches the leaderboard list; a board changed in the last minute may differ.")
                 else:
                     assert t is not None
                     if section == "store_text":

@@ -7,6 +7,7 @@ what the user wrote.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from steamworks_mcp.execute import sync
@@ -36,6 +37,12 @@ Translations = dict[str, dict[str, str]]
 # ---------------------------------------------------------------------------------------------------- Steam -> values
 
 
+def paragraphs(text: str) -> str:
+    """Steamworks' editor wraps paragraphs in [p]…[/p] in some languages and not in others; blank lines instead."""
+    text = re.sub(r"\[/p\]\s*\[p\]", "\n\n", text.replace("\r\n", "\n"))
+    return re.sub(r"\[/?p\]", "", text).strip()
+
+
 def store_text(loc: dict[str, Any], source: str) -> tuple[Found, Translations]:
     found: Found = {}
     translations: Translations = {}
@@ -44,6 +51,7 @@ def store_text(loc: dict[str, Any], source: str) -> tuple[Found, Translations]:
             text = fields.get(key) if isinstance(fields, dict) else None
             if not text or not str(text).strip():
                 continue
+            text = paragraphs(str(text))
             if lang == source:
                 found[path] = text
             else:
@@ -183,6 +191,8 @@ def _differs(current: Any, steam: Any) -> bool:
     """Whether the file's value disagrees with Steam's; for an object only the keys Steam reports count."""
     if isinstance(current, dict) and isinstance(steam, dict):
         return any(current.get(k) != v for k, v in steam.items())
+    if isinstance(current, str) and isinstance(steam, str):
+        return sync.normalize_store_text(current) != sync.normalize_store_text(steam)
     return bool(current != steam)
 
 

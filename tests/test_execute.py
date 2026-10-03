@@ -778,6 +778,17 @@ async def test_import_fills_only_empty_fields(project: Project, consent: Consent
     assert audit_entries(p)[-1]["action"] == "import_from_steamworks"
 
 
+def test_import_turns_editor_paragraph_tags_into_blank_lines() -> None:
+    loc = {
+        "languages": {
+            "english": {"app[content][about]": "[p]One[/p][p]Two[/p]"},
+            "german": {"app[content][about]": "Eins"},
+        }
+    }
+    found, translations = importer.store_text(loc, "english")
+    assert found == {"store.about": "One\n\nTwo"} and translations == {"german": {"store.about": "Eins"}}
+
+
 def test_import_leaderboards_skips_boards_without_display_type() -> None:
     boards = [
         {"name": "FAST", "sortmethod": "Ascending", "displaytype": "Seconds"},
