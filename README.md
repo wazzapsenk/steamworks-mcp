@@ -1,5 +1,7 @@
 # steamworks-mcp
 
+[![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/wazzapsenk/steamworks-mcp)
+
 **Put your game on Steam with your AI assistant.** It reads your game project, asks you what it cannot find, writes
 your store page with you, checks everything against Valve's rules, and fills in Steamworks only after you say yes.
 It never publishes anything: you press Publish.
