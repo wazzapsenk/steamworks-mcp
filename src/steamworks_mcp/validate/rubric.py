@@ -313,11 +313,7 @@ def check_rule(rule: RubricRule, section: Section, text: str, ctx: Context) -> R
     if k == "phrase_list_max":
         lower = body.lower()
         found = [x for x in p.get("phrases", []) if re.search(rf"\b{re.escape(x.lower())}\b", lower)]
-        return (
-            res("pass")
-            if len(found) <= int(p.get("max", 0))
-            else res("warn", f"Stock phrases: {', '.join(found)}.")
-        )
+        return res("pass") if len(found) <= int(p.get("max", 0)) else res("warn", f"Stock phrases: {', '.join(found)}.")
     if k == "regex_forbidden":
         for pattern in p.get("patterns", []):
             m = re.search(pattern, body, re.I)
