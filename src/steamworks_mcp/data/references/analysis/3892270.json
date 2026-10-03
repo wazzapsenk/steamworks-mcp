@@ -1,0 +1,127 @@
+{
+  "analysis_version": 1,
+  "appid": 3892270,
+  "name": "Gamble With Your Friends",
+  "tags": [
+    "coop_party",
+    "online_coop",
+    "gambling_comedy"
+  ],
+  "fetched_on": "2026-10-03",
+  "store": {
+    "short_description": {
+      "chars": 279,
+      "words": 49,
+      "sentences": 2,
+      "mentions_players": true,
+      "second_person": 3,
+      "exclamations": 0,
+      "has_numbers": true
+    },
+    "about": {
+      "chars": 2249,
+      "words": 379,
+      "paragraphs": 9,
+      "avg_paragraph_words": 32.0,
+      "max_paragraph_words": 49,
+      "headings": 8,
+      "lists": 1,
+      "list_items": 8,
+      "images": 0,
+      "animations": 8,
+      "words_before_first_media": 0,
+      "structure": [
+        "animation",
+        "heading",
+        "paragraph",
+        "list",
+        "heading",
+        "paragraph",
+        "animation",
+        "heading",
+        "paragraph",
+        "animation",
+        "heading",
+        "paragraph",
+        "animation",
+        "heading",
+        "paragraph",
+        "animation",
+        "heading",
+        "paragraph",
+        "animation",
+        "heading",
+        "paragraph",
+        "animation",
+        "heading",
+        "paragraph",
+        "animation"
+      ]
+    },
+    "screenshots": 17,
+    "movies": 2,
+    "categories": [
+      "Single-player",
+      "Multi-player",
+      "Co-op",
+      "Online Co-op",
+      "Steam Achievements",
+      "Camera Comfort",
+      "Custom Volume Controls",
+      "Playable without Timed Input",
+      "Stereo Sound",
+      "Steam Cloud",
+      "Family Sharing"
+    ],
+    "genres": [
+      "Adventure",
+      "Indie",
+      "Simulation"
+    ],
+    "languages_interface": 14,
+    "languages_full_audio": 1,
+    "platforms": [
+      "windows"
+    ],
+    "controller_support": null,
+    "is_free": false,
+    "price_usd": 7.99,
+    "release_date": "May 1, 2026",
+    "early_access": false
+  },
+  "achievements": {
+    "count": 55,
+    "api_name_style": "UPPER_SNAKE",
+    "name_words_avg": 2.5,
+    "description_words_avg": 8.7,
+    "descriptions_with_numbers": 0.85,
+    "hidden_share": null,
+    "kinds": {
+      "progression": 39,
+      "collection": 5,
+      "skill": 0,
+      "secret_funny": 3,
+      "other": 8
+    },
+    "percent_median": 14.6,
+    "percent_p10": 2.5,
+    "percent_p90": 61.7,
+    "share_under_10_percent": 0.36,
+    "share_under_1_percent": 0.0
+  },
+  "steam_features": {
+    "achievements": true,
+    "cloud": true,
+    "leaderboards": false,
+    "trading_cards": false,
+    "workshop": false,
+    "remote_play_together": false,
+    "full_controller_support": false,
+    "partial_controller_support": false,
+    "online_coop": true,
+    "online_pvp": false,
+    "local_coop": false,
+    "single_player": true,
+    "in_app_purchases": false
+  }
+}

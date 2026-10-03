@@ -1,0 +1,9 @@
+{
+  "about": "Reference games: successful Steam releases whose public store data is measured (never copied) to guide generators. Tags decide which references a game is compared with. App ids verified against the store and appdetails on 2026-10-03.",
+  "games": [
+    {"appid": 3241660, "name": "R.E.P.O.", "released": "2025-02-26", "tags": ["coop_party", "online_coop", "horror_comedy"]},
+    {"appid": 3527290, "name": "PEAK", "released": "2025-06-16", "tags": ["coop_party", "online_coop", "climbing"]},
+    {"appid": 3892270, "name": "Gamble With Your Friends", "released": "2026-05-01", "tags": ["coop_party", "online_coop", "gambling_comedy"]},
+    {"appid": 4069520, "name": "Super Battle Golf", "released": "2026-02-19", "tags": ["coop_party", "online_pvp", "sports"]}
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "analysis_version": 1,
+  "appid": 4069520,
+  "name": "Super Battle Golf",
+  "tags": [
+    "coop_party",
+    "online_pvp",
+    "sports"
+  ],
+  "fetched_on": "2026-10-03",
+  "store": {
+    "short_description": {
+      "chars": 169,
+      "words": 33,
+      "sentences": 2,
+      "mentions_players": true,
+      "second_person": 0,
+      "exclamations": 0,
+      "has_numbers": true
+    },
+    "about": {
+      "chars": 1430,
+      "words": 251,
+      "paragraphs": 6,
+      "avg_paragraph_words": 31.3,
+      "max_paragraph_words": 60,
+      "headings": 4,
+      "lists": 1,
+      "list_items": 9,
+      "images": 1,
+      "animations": 3,
+      "words_before_first_media": 80,
+      "structure": [
+        "paragraph",
+        "heading",
+        "paragraph",
+        "animation",
+        "heading",
+        "paragraph",
+        "animation",
+        "heading",
+        "paragraph",
+        "animation",
+        "heading",
+        "list",
+        "paragraph",
+        "image"
+      ]
+    },
+    "screenshots": 11,
+    "movies": 3,
+    "categories": [
+      "Single-player",
+      "Multi-player",
+      "PvP",
+      "Online PvP",
+      "Co-op",
+      "Online Co-op",
+      "Steam Achievements",
+      "Full controller support",
+      "DualShock Controller Support",
+      "DualSense Controller Support",
+      "Steam Cloud",
+      "Family Sharing"
+    ],
+    "genres": [
+      "Casual",
+      "Indie",
+      "Sports"
+    ],
+    "languages_interface": 17,
+    "languages_full_audio": 0,
+    "platforms": [
+      "windows"
+    ],
+    "controller_support": "full",
+    "is_free": false,
+    "price_usd": 12.99,
+    "release_date": "Feb 19, 2026",
+    "early_access": false
+  },
+  "achievements": {
+    "count": 50,
+    "api_name_style": "UPPER_SNAKE",
+    "name_words_avg": 2.5,
+    "description_words_avg": 12.5,
+    "descriptions_with_numbers": 0.56,
+    "hidden_share": null,
+    "kinds": {
+      "progression": 29,
+      "collection": 0,
+      "skill": 4,
+      "secret_funny": 1,
+      "other": 16
+    },
+    "percent_median": 9.8,
+    "percent_p10": 2.5,
+    "percent_p90": 56.0,
+    "share_under_10_percent": 0.5,
+    "share_under_1_percent": 0.02
+  },
+  "steam_features": {
+    "achievements": true,
+    "cloud": true,
+    "leaderboards": false,
+    "trading_cards": false,
+    "workshop": false,
+    "remote_play_together": false,
+    "full_controller_support": true,
+    "partial_controller_support": false,
+    "online_coop": true,
+    "online_pvp": true,
+    "local_coop": false,
+    "single_player": true,
+    "in_app_purchases": false
+  }
+}

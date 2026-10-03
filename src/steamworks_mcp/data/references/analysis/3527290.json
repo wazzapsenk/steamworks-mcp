@@ -1,0 +1,117 @@
+{
+  "analysis_version": 1,
+  "appid": 3527290,
+  "name": "PEAK",
+  "tags": [
+    "coop_party",
+    "online_coop",
+    "climbing"
+  ],
+  "fetched_on": "2026-10-03",
+  "store": {
+    "short_description": {
+      "chars": 262,
+      "words": 52,
+      "sentences": 3,
+      "mentions_players": true,
+      "second_person": 3,
+      "exclamations": 0,
+      "has_numbers": false
+    },
+    "about": {
+      "chars": 1788,
+      "words": 313,
+      "paragraphs": 14,
+      "avg_paragraph_words": 19.5,
+      "max_paragraph_words": 52,
+      "headings": 0,
+      "lists": 3,
+      "list_items": 9,
+      "images": 0,
+      "animations": 7,
+      "words_before_first_media": 52,
+      "structure": [
+        "paragraph",
+        "animation",
+        "paragraph",
+        "animation",
+        "paragraph",
+        "animation",
+        "paragraph",
+        "animation",
+        "paragraph",
+        "animation",
+        "paragraph",
+        "animation",
+        "paragraph",
+        "animation",
+        "paragraph",
+        "list"
+      ]
+    },
+    "screenshots": 12,
+    "movies": 4,
+    "categories": [
+      "Single-player",
+      "Multi-player",
+      "Co-op",
+      "Online Co-op",
+      "Steam Achievements",
+      "Full controller support",
+      "Steam Trading Cards",
+      "DualShock Controller Support",
+      "DualSense Controller Support",
+      "Family Sharing"
+    ],
+    "genres": [
+      "Action",
+      "Adventure",
+      "Indie"
+    ],
+    "languages_interface": 15,
+    "languages_full_audio": 0,
+    "platforms": [
+      "windows"
+    ],
+    "controller_support": "full",
+    "is_free": false,
+    "price_usd": 7.99,
+    "release_date": "Jun 16, 2025",
+    "early_access": false
+  },
+  "achievements": {
+    "count": 64,
+    "api_name_style": "PascalCase",
+    "name_words_avg": 2.4,
+    "description_words_avg": 7.0,
+    "descriptions_with_numbers": 0.41,
+    "hidden_share": null,
+    "kinds": {
+      "progression": 35,
+      "collection": 0,
+      "skill": 11,
+      "secret_funny": 1,
+      "other": 17
+    },
+    "percent_median": 10.4,
+    "percent_p10": 3.5,
+    "percent_p90": 43.4,
+    "share_under_10_percent": 0.47,
+    "share_under_1_percent": 0.0
+  },
+  "steam_features": {
+    "achievements": true,
+    "cloud": false,
+    "leaderboards": false,
+    "trading_cards": true,
+    "workshop": false,
+    "remote_play_together": false,
+    "full_controller_support": true,
+    "partial_controller_support": false,
+    "online_coop": true,
+    "online_pvp": false,
+    "local_coop": false,
+    "single_player": true,
+    "in_app_purchases": false
+  }
+}

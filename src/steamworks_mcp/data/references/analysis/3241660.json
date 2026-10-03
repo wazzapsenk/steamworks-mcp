@@ -1,0 +1,112 @@
+{
+  "analysis_version": 1,
+  "appid": 3241660,
+  "name": "R.E.P.O.",
+  "tags": [
+    "coop_party",
+    "online_coop",
+    "horror_comedy"
+  ],
+  "fetched_on": "2026-10-03",
+  "store": {
+    "short_description": {
+      "chars": 183,
+      "words": 32,
+      "sentences": 2,
+      "mentions_players": true,
+      "second_person": 2,
+      "exclamations": 0,
+      "has_numbers": true
+    },
+    "about": {
+      "chars": 791,
+      "words": 126,
+      "paragraphs": 4,
+      "avg_paragraph_words": 31.5,
+      "max_paragraph_words": 40,
+      "headings": 0,
+      "lists": 0,
+      "list_items": 0,
+      "images": 5,
+      "animations": 3,
+      "words_before_first_media": 0,
+      "structure": [
+        "image",
+        "paragraph",
+        "image",
+        "animation",
+        "paragraph",
+        "image",
+        "animation",
+        "paragraph",
+        "image",
+        "animation",
+        "paragraph",
+        "image"
+      ]
+    },
+    "screenshots": 5,
+    "movies": 4,
+    "categories": [
+      "Single-player",
+      "Multi-player",
+      "Co-op",
+      "Online Co-op",
+      "Camera Comfort",
+      "Custom Volume Controls",
+      "Playable without Timed Input",
+      "Stereo Sound",
+      "Steam Cloud",
+      "Family Sharing"
+    ],
+    "genres": [
+      "Action",
+      "Early Access"
+    ],
+    "languages_interface": 1,
+    "languages_full_audio": 1,
+    "platforms": [
+      "windows"
+    ],
+    "controller_support": null,
+    "is_free": false,
+    "price_usd": 9.99,
+    "release_date": "Feb 26, 2025",
+    "early_access": true
+  },
+  "achievements": {
+    "count": 0,
+    "api_name_style": "none",
+    "name_words_avg": null,
+    "description_words_avg": null,
+    "descriptions_with_numbers": null,
+    "hidden_share": null,
+    "kinds": {
+      "progression": 0,
+      "collection": 0,
+      "skill": 0,
+      "secret_funny": 0,
+      "other": 0
+    },
+    "percent_median": null,
+    "percent_p10": null,
+    "percent_p90": null,
+    "share_under_10_percent": null,
+    "share_under_1_percent": null
+  },
+  "steam_features": {
+    "achievements": false,
+    "cloud": true,
+    "leaderboards": false,
+    "trading_cards": false,
+    "workshop": false,
+    "remote_play_together": false,
+    "full_controller_support": false,
+    "partial_controller_support": false,
+    "online_coop": true,
+    "online_pvp": false,
+    "local_coop": false,
+    "single_player": true,
+    "in_app_purchases": false
+  }
+}
