@@ -271,7 +271,7 @@ def api_name_style(names: list[str]) -> NameStyle:
     return top if hits / len(names) >= 0.8 else "mixed"
 
 
-def _quantile(values: list[float], q: float) -> float:
+def quantile(values: list[float], q: float) -> float:
     s = sorted(values)
     idx = (len(s) - 1) * q
     lo, hi = int(idx), min(int(idx) + 1, len(s) - 1)
@@ -301,8 +301,8 @@ def achievement_stats(
         hidden_share=round(sum(hidden_by_name.values()) / len(hidden_by_name), 2) if hidden_by_name else None,
         kinds=kinds,
         percent_median=round(statistics.median(pct), 1) if pct else None,
-        percent_p10=_quantile(pct, 0.1) if pct else None,
-        percent_p90=_quantile(pct, 0.9) if pct else None,
+        percent_p10=quantile(pct, 0.1) if pct else None,
+        percent_p90=quantile(pct, 0.9) if pct else None,
         share_under_10_percent=round(sum(1 for p in pct if p < 10) / len(pct), 2) if pct else None,
         share_under_1_percent=round(sum(1 for p in pct if p < 1) / len(pct), 2) if pct else None,
     )

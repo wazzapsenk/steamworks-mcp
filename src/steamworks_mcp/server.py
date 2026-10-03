@@ -340,7 +340,8 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
 
         kind: "schema" (steamworks.yaml fields), "gates" (overview), "gate:<0-3>" (all rules of a gate),
         "capabilities", "store_rules", "asset_specs", "events", "style_guide:<id>", "reference:<appid>"
-        (derived analysis of a reference game), "references" (catalog).
+        (derived analysis of a reference game), "references" (catalog), "store_patterns" (what the store pages of
+        popular new releases look like, per Steam genre; numbers only), "store_patterns:<Steam genre>".
         """
         return spec_info(kind)
 
@@ -478,23 +479,19 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
     def localization_status(path: str) -> dict[str, Any]:
-        """Per target language: how many player-facing texts are translated, missing, or stale (the source changed
-        after translating). Stale translations are marked needs_review."""
-        project = open_project(path)
-        statuses = loc.status(project.values(), project.files.root)
-        for st in statuses:
-            for key in st.stale:
-                fs = project.state.fields.get(f"localization.{st.language}.{key}")
-                if fs is not None and fs.status != "needs_review":
-                    fs.status = "needs_review"
+        """Per target language: how many player-facing texts (store page, Early Access answers, achievements, launch
+        options) are translated, missing, or stale (the source changed after translating; stale translations are
+        marked needs_review). `next` names the language to translate next."""
+        project = open_project(path)  # loading marks stale translations needs_review
         project.save()
-        return {"languages": [s.__dict__ for s in statuses]}
+        return loc.report(project.values(), project.files.root)
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=True))
     @user_errors
     def localization_pending(path: str, language: str, limit: int = 30) -> dict[str, Any]:
-        """Texts YOU should translate into `language` (Steam API code), with context, length limits and glossary terms
-        (localization/glossary.yaml). Translate them, then call localization_set."""
+        """Texts YOU should translate into `language` (Steam API code) from the source language, with context, length
+        limits and glossary terms (localization/glossary.yaml). Stale ones carry the previous translation to update.
+        Translate them, then call localization_set; repeat until nothing is pending."""
         project = open_project(path)
         items = loc.pending(project.values(), project.files.root, language, limit)
         return {
@@ -681,6 +678,12 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         """Derived measurements of a bundled reference game (no raw texts)."""
         return as_json(spec_info(f"reference:{int(appid)}"))
 
+    @server.resource("steam://store-patterns", mime_type="application/json")
+    def store_patterns_resource() -> str:
+        """What the store pages of popular new Steam releases look like, per Steam genre and overall: lengths,
+        structure, headers, lists, media, mentions, languages. Derived measurements only, no text."""
+        return as_json(spec_info("store_patterns"))
+
     @server.resource("steam://manifest/{project}", mime_type="application/json")
     def manifest_resource(project: str) -> str:
         """Current values and per-field status of a project (a folder directly under the workspace root)."""
@@ -698,7 +701,8 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "2. start_interview: ask me the questions in small batches and save my answers with set_field.\n"
             "3. generate the drafts (store_short, store_long, achievements, cloud, builds, requirements, code); show "
             "me each one and approve_fields only what I agree with.\n"
-            "4. validate, translate with localization_pending / localization_set, prepare_images.\n"
+            "4. validate, translate every text into every target language (the localize_everything prompt: "
+            "localization_pending / localization_set), prepare_images.\n"
             "5. export_package for the next gate; with the publisher key or the BROWSER mode, apply section by section "
             "(always a dry run first, then only with my OK).\n"
             "Never claim something is done in Steamworks unless a tool reported it applied, and never publish: I do "
@@ -713,7 +717,31 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "three variants it asks for, each saved with save_draft. Then generate(section='store_long', "
             "stage='outline'), let me pick an outline, and write the text with stage='text'. Run validate("
             "section='store') after each draft, judge its questions, fix what fails, and show me preview_store "
-            "before I pick drafts with set_field(from_draft=...)."
+            "before I pick drafts with set_field(from_draft=...).\n"
+            "If a brief lists missing_recommended answers, ask me those first (start_interview). Build on its "
+            "use_the_answers, and use recent_successful_pages (also steam://store-patterns) as what successful "
+            "recent pages in this genre look like: lengths, structure, headers, lists, media. Numbers only, never "
+            "a text to imitate. Write in the source language only; when I approved the texts, translate them with "
+            "the localize_everything prompt."
+        )
+
+    @server.prompt(title="Localize everything")
+    def localize_everything(path: str) -> str:
+        """Translate every pending text into every target language, batch by batch."""
+        return (
+            f"Translate the game in `{path}` into all of its target languages. Every text is written once in the "
+            "source language; you translate it, the server checks it.\n"
+            "1. Call localization_status. If there are no target languages, ask me which languages the store page "
+            "and achievements should be translated into (start_interview asks it) and stop there.\n"
+            "2. For each language with missing or stale texts: call localization_pending(language=..., limit=20), "
+            "translate every entry from the source language following its context, format (keep BBCode tags "
+            "exactly and in order), max_length and glossary (do_not_translate, use_terms), and save the batch with "
+            "localization_set(language=..., translations={key: text}). Stale entries show the previous "
+            "translation: update it to the new source instead of starting over. Fix and resend rejected entries. "
+            "Repeat until localization_pending returns nothing, then go to the next language.\n"
+            "3. Write natural text for players of that language, not word for word; keep names and numbers.\n"
+            "4. Call localization_status again and give me a short summary per language. Your translations are "
+            "drafts: approve_fields(['localization.<language>.*']) only after I reviewed and agreed."
         )
 
     @server.prompt(title="Design achievements")

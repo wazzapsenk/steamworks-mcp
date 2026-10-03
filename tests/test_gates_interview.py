@@ -9,16 +9,20 @@ from typing import Any
 
 import pytest
 from mcp import Client
+from mcp.server.elicitation import render_elicitation_schema
 from mcp_types import ElicitResult
 from PIL import Image
 
+from steamworks_mcp import spec_info as spec_info_module
 from steamworks_mcp.config import Config
 from steamworks_mcp.gates.engine import RuleResult, evaluate_gates
+from steamworks_mcp.interview.forms import form_key, form_model
 from steamworks_mcp.interview.questions import build_question, coerce, next_questions, pending_fields
 from steamworks_mcp.manifest.drafts import Draft
 from steamworks_mcp.manifest.io import ManifestFile, ProjectFiles, load_state, save_draft
 from steamworks_mcp.manifest.models import Manifest
 from steamworks_mcp.manifest.state import State
+from steamworks_mcp.references import patterns
 from steamworks_mcp.server import create_server
 from steamworks_mcp.validate.crosschecks import CHECKS, CheckContext
 from steamworks_mcp.validate.store_text import check_store_text
@@ -240,6 +244,29 @@ def test_questions_start_with_gate_zero_then_game_inputs() -> None:
     assert all(q.gate == qs[0].gate for q in qs)
 
 
+def test_store_page_inputs_are_asked() -> None:
+    values = Manifest().model_dump(mode="json")
+    s = State()
+    order = [p for p, _, _ in pending_fields(list(results(values, state=s).values()), values, s)]
+    wanted = [
+        "game.genres",
+        "game.comparable_games",
+        "game.hook",
+        "game.fantasy",
+        "game.core_loop",
+        "game.players.min",
+        "game.run_length",
+        "game.progression",
+        "game.launch_content",
+        "game.tone",
+    ]
+    assert [p for p in order if p in wanted] == wanted
+    content = build_question("game.launch_content", 1, values, s, "game")
+    assert content.kind == "list" and "at launch" in content.question
+    assert "solo" in build_question("game.players.min", 1, values, s, "players").question
+    assert "never named" in build_question("game.comparable_games", 1, values, s, "game").help
+
+
 def test_scanned_values_are_offered_for_confirmation() -> None:
     values = Manifest.model_validate({"game": {"name": "Pillow Fort Panic"}}).model_dump(mode="json")
     s = State()
@@ -255,6 +282,64 @@ def test_coerce() -> None:
     assert coerce("prerequisites.tax_interview_done", "Yes") is True
     assert coerce("prerequisites.tax_interview_done", "no") is False
     assert coerce("game.players.max", "4") == "4"  # pydantic converts on write
+
+
+def test_language_answers_become_steam_codes() -> None:
+    assert coerce("source_language", "German") == "german"
+    assert coerce("target_languages", "de, Simplified Chinese, Brazilian Portuguese") == [
+        "german",
+        "schinese",
+        "brazilian",
+    ]
+    assert coerce("target_languages", "none") == [] and coerce("target_languages", "no") == []
+    assert coerce("target_languages", "German, no") == ["german", "norwegian"]  # in a list, "no" is Norwegian
+    table = {"english": {"interface": True, "full_audio": True, "subtitles": True}}
+    assert coerce("store.supported_languages", ["english", "french"], table) == {
+        "english": table["english"],  # a chosen language keeps its row
+        "french": {},
+    }
+
+
+def test_language_questions() -> None:
+    empty = Manifest().model_dump(mode="json")
+    s = State()
+    s.reconcile(empty)
+    order = [p for p, _, _ in pending_fields(list(results(empty, state=s).values()), empty, s)]
+    # translations default to the supported languages, so those come first
+    assert order.index("source_language") < order.index("store.supported_languages")
+    assert "target_languages" not in order
+
+    values = Manifest.model_validate(
+        {"store": {"supported_languages": {"english": {}, "german": {}, "schinese": {}}}}
+    ).model_dump(mode="json")
+    s = State()
+    s.reconcile(values)
+    groups = {p: g for p, _, g in pending_fields(list(results(values, state=s).values()), values, s)}
+    assert groups["source_language"] == groups["target_languages"] == "languages"
+    assert "store.supported_languages" not in groups
+    source = build_question("source_language", 1, values, s, "languages")
+    assert source.kind == "choice" and source.confirm and source.suggestion == "english"
+    target = build_question("target_languages", 1, values, s, "languages")
+    assert target.kind == "multi" and "english" not in target.options and "koreana" in target.options
+    assert target.suggestion == ["german", "schinese"] and target.suggestion_source == "store.supported_languages"
+    assert target.labels["schinese"] == "Chinese (Simplified)"
+    supported = build_question("store.supported_languages", 1, values, s, "languages")
+    assert supported.kind == "multi" and supported.suggestion == ["english", "german", "schinese"]
+
+
+def test_language_form_uses_titled_options() -> None:
+    values = Manifest().model_dump(mode="json")
+    qs = [build_question(p, 1, values, State(), "languages") for p in ("source_language", "store.supported_languages")]
+    model = form_model(qs)
+    schema = render_elicitation_schema(model)["properties"]  # raises when a field is not spec-valid
+    assert {"const": "koreana", "title": "Korean"} in schema["source_language"]["oneOf"]
+    assert "enum" not in schema["source_language"]
+    multi = schema[form_key("store.supported_languages")]
+    assert (
+        multi["type"] == "array" and {"const": "latam", "title": "Spanish (Latin America)"} in multi["items"]["anyOf"]
+    )
+    answer = model.model_validate({"source_language": "french", form_key("store.supported_languages"): ["french"]})
+    assert answer.model_dump()["source_language"] == "french"
 
 
 # ------------------------------------------------------------------------------------------------ tools
@@ -399,6 +484,70 @@ async def test_interview_form_when_the_client_supports_it(game: Path, mode: str)
     assert all(state.get(f).status == "approved" for f in out["saved_from_form"])
 
 
+@pytest.fixture
+def example(tmp_path: Path) -> Path:
+    """The example game without translation languages (and so without a language decision yet)."""
+    shutil.copytree(EXAMPLE.parent, tmp_path / "game")
+    manifest = tmp_path / "game" / "steamworks.yaml"
+    text = manifest.read_text("utf-8")
+    manifest.write_text(text.replace("target_languages: [german, french, schinese]", "target_languages: []"), "utf-8")
+    return tmp_path
+
+
+@pytest.mark.anyio
+async def test_languages_through_a_form(example: Path) -> None:
+    config = Config(workspace_root=example)
+    seen: dict[str, Any] = {}
+
+    async def answer(context: Any, params: Any) -> ElicitResult:
+        props = params.requested_schema["properties"]
+        seen.update(props)
+        return ElicitResult(action="accept", content={"source_language": "english", "target_languages": ["german"]})
+
+    out = await tool(config, "start_interview", {"elicitation_callback": answer}, path="game", gate=1, max_questions=2)
+    assert set(seen) == {"source_language", "target_languages"}
+    assert seen["target_languages"]["default"] == ["german"]  # the supported languages besides the source
+    assert out["saved_from_form"] == ["source_language", "target_languages"]
+    assert ManifestFile.load(example / "game" / "steamworks.yaml").manifest.target_languages == ["german"]
+    assert load_state(ProjectFiles(example / "game")).get("target_languages").status == "approved"
+
+
+@pytest.mark.anyio
+async def test_no_translations_is_an_answer(example: Path) -> None:
+    config = Config(workspace_root=example)
+    first = await tool(config, "start_interview", path="game", gate=1, use_form=False)
+    assert [q["id"] for q in first["questions"]][:2] == ["source_language", "target_languages"]
+    saved = await tool(config, "set_field", path="game", values={"target_languages": "none"})
+    assert saved["status"]["target_languages"] == "missing"
+    again = await tool(config, "start_interview", path="game", gate=1, use_form=False)
+    assert not {"source_language", "target_languages"} & {q["id"] for q in again["questions"]}
+
+
+@pytest.mark.anyio
+async def test_the_source_language_is_never_a_target(example: Path) -> None:
+    config = Config(workspace_root=example)
+    out = await tool(
+        config, "set_field", path="game", values={"source_language": "German", "target_languages": "German, English"}
+    )
+    assert not out.get("not_saved")
+    m = ManifestFile.load(example / "game" / "steamworks.yaml").manifest
+    assert (m.source_language, m.target_languages) == ("german", ["english"])
+
+
+def test_spec_info_store_patterns(monkeypatch: pytest.MonkeyPatch) -> None:
+    page = {"type": "game", "genres": [{"description": "Action"}], "supported_languages": "English"}
+    data = patterns.build([patterns.measure(i, page) for i in range(5)], dt.date(2026, 10, 3))
+    monkeypatch.setattr(spec_info_module, "store_patterns", lambda: data)
+    assert spec_info_module.spec_info("store_patterns")["appids"] == [0, 1, 2, 3, 4]
+    action = spec_info_module.spec_info("store_patterns:action")
+    assert action["genre"] == "Action" and action["games"] == 5
+    with pytest.raises(ValueError, match="groups: Action"):
+        spec_info_module.spec_info("store_patterns:Racing")
+    monkeypatch.setattr(spec_info_module, "store_patterns", lambda: None)
+    with pytest.raises(ValueError, match="build_store_patterns"):
+        spec_info_module.spec_info("store_patterns")
+
+
 @pytest.mark.anyio
 async def test_get_spec_info(game: Path) -> None:
     config = Config(workspace_root=game)
@@ -406,3 +555,4 @@ async def test_get_spec_info(game: Path) -> None:
     assert (await tool(config, "get_spec_info", kind="gate:3"))["gate"] == 3
     assert (await tool(config, "get_spec_info", kind="reference:3527290"))["appid"] == 3527290
     assert "guide" in await tool(config, "get_spec_info", kind="style_guide:coop_party")
+    assert (await tool(config, "get_spec_info", kind="store_patterns"))["overall"]["games"] > 0

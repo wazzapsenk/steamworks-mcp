@@ -6,6 +6,7 @@ Sources (no key needed unless noted):
 * ``ISteamUserStats/GetGlobalAchievementPercentagesForApp`` - achievement API names and global unlock rates.
 * ``steamcommunity.com/stats/<appid>/achievements`` - achievement display names and descriptions (public page).
 * ``ISteamUserStats/GetSchemaForGame`` - needs a Steam Web API key; adds the hidden flags.
+* ``store.steampowered.com/search/results`` - the "Popular New Releases" list, for the store patterns.
 
 Raw responses (other games' texts) only ever live in the cache, never in the repository. Each cache entry records
 when and from where it was fetched. Requests are spaced out and retried with backoff.
@@ -26,6 +27,7 @@ from typing import Any
 import httpx
 
 STORE_API = "https://store.steampowered.com/api/appdetails"
+STORE_SEARCH = "https://store.steampowered.com/search/results/"
 WEB_API = "https://api.steampowered.com"
 COMMUNITY = "https://steamcommunity.com/stats/{appid}/achievements/"
 USER_AGENT = "steamworks-mcp (reference research; https://github.com/wazzapsenk/steamworks-mcp)"
@@ -167,7 +169,24 @@ class ReferenceFetcher:
             raise FetchError(f"schema {appid}: HTTP {res.status_code}")
         return self._store(appid, "schema", res.json().get("game", {}), self._redact(str(res.url)))
 
+    def popular_new_releases(self, count: int = 100) -> list[int]:
+        """App ids on the store's "Popular New Releases" list, newest first (not cached: it changes every day)."""
+        params = {
+            "filter": "popularnew",
+            "sort_by": "Released_DESC",
+            "json": 1,
+            "count": count,
+            "cc": "us",
+            "l": "english",
+        }
+        res = self._get(STORE_SEARCH, params)
+        if res.status_code != 200:
+            raise FetchError(f"popular new releases: HTTP {res.status_code}")
+        ids = [_APP_IN_URL.search(str(item.get("logo", ""))) for item in res.json().get("items", [])]
+        return list(dict.fromkeys(int(m.group(1)) for m in ids if m))  # bundles and packages have no /apps/ url
 
+
+_APP_IN_URL = re.compile(r"/apps/(\d+)/")
 _ROW = re.compile(
     r'<div class="achieveRow[^"]*">.*?<div class="achievePercent">([\d.]+)%</div>.*?<h3>(.*?)</h3>\s*<h5>(.*?)</h5>',
     re.S,

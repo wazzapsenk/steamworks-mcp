@@ -1,7 +1,8 @@
 """Interview questions: what to ask next, at most a few per turn, each with a suggested answer.
 
-Questions come from two places: the gate rules (fields that are missing or still need approval, in gate order) and
-the ``game`` inputs every text generator needs. Wording, type and options are derived from the schema (field
+Questions come from three places: the gate rules (fields that are missing or still need approval, in gate order),
+the ``game`` inputs every text generator needs, and the languages (the one texts are written in, the ones the game
+supports, the ones its texts are translated into). Wording, type and options are derived from the schema (field
 descriptions and types); a small catalog overrides the wording for the important ones. Values that were scanned are
 shown for confirmation instead of being asked from scratch. Fields that generators write (store texts) are not asked.
 """
@@ -21,8 +22,9 @@ from pydantic import BaseModel
 
 from steamworks_mcp.gates.engine import RuleResult
 from steamworks_mcp.gates.models import Confirmed
+from steamworks_mcp.languages import all_languages, find_language
 from steamworks_mcp.manifest import paths as fp
-from steamworks_mcp.manifest.models import Manifest
+from steamworks_mcp.manifest.models import LanguageCode, Manifest
 from steamworks_mcp.manifest.state import State, is_empty
 
 Kind = Literal["text", "long_text", "int", "number", "bool", "choice", "multi", "list", "date", "path"]
@@ -34,9 +36,15 @@ GAME_INPUTS = [
     "game.name",
     "game.pitch",
     "game.genres",
+    "game.comparable_games",
+    "game.hook",
+    "game.fantasy",
+    "game.core_loop",
     "game.players",
     "game.session_length",
-    "game.core_loop",
+    "game.run_length",
+    "game.progression",
+    "game.launch_content",
     "game.usps",
     "game.target_audience",
     "game.tone",
@@ -44,22 +52,59 @@ GAME_INPUTS = [
     "game.platform_features.controller",
     "game.platform_features.steam_deck",
 ]
-"""Inputs for writing the store page; asked first (gate 1)."""
+"""Inputs for writing the store page; asked first (gate 1), in an order that builds the picture of the game."""
+
+NONE_ANSWERS = {"none", "-", "nothing"}
+"""Answers that mean "no languages" in a language list."""
 
 CATALOG: dict[str, dict[str, Any]] = {
     "game.name": {"q": "What is the game's name as it should appear on Steam?"},
     "game.pitch": {"q": "In one sentence: what do players do, and why is it fun?", "kind": "long_text"},
     "game.genres": {"q": "Which genres describe it, in your own words? (comma-separated)", "suggest_from": "genres"},
-    "game.players.min": {"q": "Minimum number of players?"},
+    "game.comparable_games": {
+        "q": "Which two or three games do your players already love? ('For fans of X and Y.')",
+        "help": "Used to position the page and pick the genre's vocabulary; never named on the store page (Valve "
+        "bans references to other products there).",
+        "kind": "list",
+    },
+    "game.hook": {
+        "q": "What is the hook: the one thing that makes it different from other games in its genre?",
+        "kind": "long_text",
+    },
+    "game.fantasy": {
+        "q": "What is the player fantasy: who do players get to be, and what does that feel like?",
+        "kind": "long_text",
+    },
+    "game.players.min": {"q": "Can it be played solo? Minimum number of players (1 means solo works)."},
     "game.players.max": {"q": "Maximum number of players playing together?"},
     "game.players.online_coop": {"q": "Can players team up online (online co-op)?"},
     "game.players.local_coop": {"q": "Can players team up on one screen or one PC (local co-op)?"},
     "game.players.online_pvp": {"q": "Can players play against each other online (PvP)?"},
+    "game.players.local_pvp": {"q": "Can players play against each other on one screen or one PC (local PvP)?"},
+    "game.players.shared_split_screen": {"q": "Is there split-screen play on one screen?"},
     "game.session_length.min_minutes": {"q": "How long is a typical session, at the short end (minutes)?"},
     "game.session_length.max_minutes": {"q": "And at the long end (minutes)?"},
-    "game.core_loop": {"q": "Describe the core loop: what does a player do again and again?", "kind": "long_text"},
+    "game.run_length": {
+        "q": "How long does one run, match, round or level take? (Free text, e.g. '20-40 minute runs'; "
+        "'same as a session' is fine.)"
+    },
+    "game.progression": {
+        "q": "What carries over between sessions and grows: unlocks, upgrades, story, ranks? Say 'none' if every "
+        "session starts fresh.",
+        "kind": "long_text",
+    },
+    "game.launch_content": {
+        "q": "What is in the game at launch? List it with numbers where you can (e.g. '4 maps', '30 weapons', "
+        "'a 6-hour story', 'endless mode').",
+        "kind": "list",
+    },
+    "game.core_loop": {
+        "q": "Describe the core loop in player verbs (e.g. scavenge, build, defend, upgrade): what does a player do "
+        "again and again?",
+        "kind": "long_text",
+    },
     "game.usps": {
-        "q": "What makes it different? List 2-4 unique selling points, most important first.",
+        "q": "Which 2-4 selling points should the page make, most important first? (The hook can be the first.)",
         "kind": "list",
     },
     "game.target_audience": {"q": "Who is it for?"},
@@ -91,7 +136,21 @@ CATALOG: dict[str, dict[str, Any]] = {
     "content.survey_completed": {"q": "Is the Content Survey in Steamworks completed (all three sections)?"},
     "store.platforms": {"q": "Which operating systems does the game support?", "kind": "multi"},
     "store.tags": {"q": "Which user tags fit best? Give at least 5, most important first.", "kind": "list"},
-    "store.supported_languages": {"q": "Which languages does the game itself support?"},
+    "source_language": {
+        "q": "Which language do you write the store page, achievements and other texts in? Everything is written "
+        "once in this language and translated from it."
+    },
+    "store.supported_languages": {
+        "q": "Which languages does the game itself support (menus and in-game text)? This fills the store page's "
+        "language table; translating the store page is a separate question.",
+        "help": "Full audio or subtitles in a language: set_field(field='store.supported_languages.<language>', "
+        "value={interface: true, full_audio: true, subtitles: true}).",
+    },
+    "target_languages": {
+        "q": "Which languages should the store page, achievements and other player-facing texts be translated "
+        "into? Your assistant translates them from the source language. Suggested: the languages the game supports.",
+        "help": "Answer 'none' to keep every text in the source language only.",
+    },
     "store.genres": {"q": "Which Steam genres fit (e.g. Action, Casual, Indie, Strategy)?", "kind": "list"},
     "store.developers": {"q": "Developer name(s) as shown on the store page?", "kind": "list"},
     "store.publishers": {"q": "Publisher name(s)? (Your own studio when you self-publish.)", "kind": "list"},
@@ -107,7 +166,6 @@ CATALOG: dict[str, dict[str, Any]] = {
         "save anytime, color alternatives)? Say 'none' if it has none.",
         "kind": "list",
     },
-    "target_languages": {"q": "Which languages should the store page be translated into?", "kind": "list"},
     "release.planned_date": {"q": "Planned release date? (YYYY-MM-DD; Steam keeps it hidden until you show it)"},
     "release.display_date": {"q": "What should the store show before the exact date (e.g. 'Q2 2027', 'Coming soon')?"},
     "release.coming_soon_since": {"q": "On which date did the store page go public as Coming Soon? (YYYY-MM-DD)"},
@@ -131,6 +189,8 @@ class Question:
     group: str
     gate: int
     options: list[str] = field(default_factory=list)
+    labels: dict[str, str] = field(default_factory=dict)
+    """Display names of the options, e.g. "Chinese (Simplified)" for Steam's code "schinese"."""
     suggestion: Any = None
     """Pre-filled answer (scanned value, current draft or a sensible default) the user can confirm or change."""
     suggestion_source: str | None = None
@@ -143,6 +203,8 @@ class Question:
         out: dict[str, Any] = {"id": self.id, "question": self.question, "type": self.kind}
         if self.options:
             out["options"] = self.options
+        if self.labels:
+            out["option_labels"] = self.labels
         if self.suggestion is not None:
             out["suggestion"] = self.suggestion
             out["suggestion_source"] = self.suggestion_source
@@ -183,7 +245,8 @@ def field_info(path: str) -> tuple[Any, str]:
             info = tp.model_fields.get(seg)
             if info is None:
                 return Any, ""
-            model, annotation, description = tp, info.annotation, info.description or ""
+            # rebuild_annotation keeps Annotated metadata (LanguageCode is told apart from str by its validator)
+            model, annotation, description = tp, info.rebuild_annotation(), info.description or ""
             continue
         origin = get_origin(tp)
         if origin is list:
@@ -196,7 +259,22 @@ def field_info(path: str) -> tuple[Any, str]:
     return annotation, description
 
 
+def language_field(annotation: Any) -> Literal["one", "list", "dict"] | None:
+    """Whether a field holds one Steam language code, a list of them, or a dict keyed by language."""
+    tp = annotation
+    if get_origin(tp) in (Union, types.UnionType):
+        args = [a for a in get_args(tp) if a is not type(None)]
+        tp = args[0] if len(args) == 1 else tp
+    if tp == LanguageCode:
+        return "one"
+    if get_origin(tp) in (list, dict) and get_args(tp)[0] == LanguageCode:
+        return "list" if get_origin(tp) is list else "dict"
+    return None
+
+
 def kind_of(annotation: Any) -> tuple[Kind, list[str]]:
+    if lang := language_field(annotation):
+        return ("choice" if lang == "one" else "multi"), [lg.api for lg in all_languages()]
     tp = _strip(annotation)
     if tp is bool:
         return "bool", []
@@ -243,8 +321,20 @@ def build_question(
         description.split(". ")[0].rstrip(".") + "?" if description else f"What is the {_humanize(path)}?"
     )
     current = fp.get(values, path)
+    if isinstance(current, dict) and kind == "multi":
+        current = list(current)  # a dict keyed by language: the chosen languages are the answer
     fs = state.fields.get(path)
-    q = Question(path, text, kind, group, gate, options, help=description if spec.get("q") and description else "")
+    q = Question(
+        path, text, kind, group, gate, options, help=spec.get("help") or (description if spec.get("q") else "")
+    )
+    if language_field(annotation):
+        q.labels = {lg.api: lg.name for lg in all_languages()}
+    if path == "target_languages":
+        source = values.get("source_language")
+        q.options = [o for o in q.options if o != source]
+        supported = [lang for lang in fp.get(values, "store.supported_languages") or {} if lang != source]
+        if is_empty(current) and supported:
+            q.suggestion, q.suggestion_source = supported, "store.supported_languages"
     if kind == "path" and not is_empty(current) and root is not None and not (root / str(current)).is_file():
         q.help = f"{current} was not found next to steamworks.yaml; give the right path."
     elif not is_empty(current):
@@ -270,10 +360,26 @@ def _expand_units(path: str, values: dict[str, Any], state: State) -> list[str]:
     return [k for k in kids if draft or is_empty(fp.get(values, k))]
 
 
-def pending_fields(results: list[RuleResult], values: dict[str, Any], state: State) -> list[tuple[str, int, str]]:
-    """``(field, gate, group)`` to ask about, in order (gate 0, the game inputs, then gates 1-3), without duplicates.
+def _open(path: str, values: dict[str, Any], state: State) -> bool:
+    """Still to ask: a value (or part of it) waits for confirmation, or it is empty and the user never answered it
+    (an empty answer such as "no translations" counts as answered)."""
+    if any(
+        fs.status in ("draft", "needs_review")
+        for p, fs in state.fields.items()
+        if p == path or p.startswith(path + ".")
+    ):
+        return True
+    fs = state.fields.get(path)
+    return is_empty(fp.get(values, path)) and not (fs is not None and fs.source == "user")
 
-    Yes/no confirmations answered "no" are not asked again: they are steps to do in Steamworks first.
+
+def pending_fields(results: list[RuleResult], values: dict[str, Any], state: State) -> list[tuple[str, int, str]]:
+    """``(field, gate, group)`` to ask about, in order (gate 0, the game inputs, the languages, then gates 1-3),
+    without duplicates.
+
+    Yes/no confirmations answered "no" are not asked again: they are steps to do in Steamworks first. The source
+    language has a default, so it is confirmed while the translation languages are still open; those are asked after
+    the supported languages, which they default to.
     """
     out: list[tuple[str, int, str]] = []
     seen: set[str] = set()
@@ -301,6 +407,13 @@ def pending_fields(results: list[RuleResult], values: dict[str, Any], state: Sta
         fs = state.fields.get(path)
         if is_empty(fp.get(values, path)) or (fs and fs.status in ("draft", "needs_review")):
             add(path, 1, path.split(".")[1] if path.count(".") > 1 else "game")
+    targets_open = _open("target_languages", values, state)
+    if targets_open:
+        add("source_language", 1, "languages")
+    if _open("store.supported_languages", values, state):
+        add("store.supported_languages", 1, "languages")
+    elif targets_open:
+        add("target_languages", 1, "languages")
     add_rules({1, 2, 3})
     return out
 
@@ -330,10 +443,37 @@ TRUE = {"yes", "y", "true", "1", "evet", "ja", "oui"}
 FALSE = {"no", "n", "false", "0", "hayir", "hayır", "nein", "non"}
 
 
-def coerce(path: str, value: Any) -> Any:
-    """Turn a chat answer into the field's type (lists from comma-separated text, yes/no into booleans)."""
+def _language_codes(value: Any) -> Any:
+    """Steam API codes from language names or codes ("German, Simplified Chinese" style answers welcome)."""
+    if isinstance(value, str) and value.strip().lower() in (*NONE_ANSWERS, "no"):  # alone, "no" is not Norwegian
+        return []
+    items = re.split(r"[,\n]", value) if isinstance(value, str) else value
+    if not isinstance(items, list):
+        return value
+    codes = []
+    for item in items:
+        text = str(item).strip()
+        if text and text.lower() not in NONE_ANSWERS:
+            lang = find_language(text)
+            codes.append(lang.api if lang else text)  # unknown names stay, so the schema's error names them
+    return list(dict.fromkeys(codes))
+
+
+def coerce(path: str, value: Any, current: Any = None) -> Any:
+    """Turn a chat answer into the field's type (lists from comma-separated text, yes/no into booleans, language
+    names into Steam codes). ``current`` is the field's value now: a language table keeps its rows' details."""
     annotation, _ = field_info(path)
     kind, _ = kind_of(annotation)
+    lang = language_field(annotation)
+    if lang == "one" and isinstance(value, str):
+        found = find_language(value)
+        return found.api if found else value.strip()
+    if lang == "list":
+        return _language_codes(value)
+    if lang == "dict" and not isinstance(value, dict):
+        rows = current if isinstance(current, dict) else {}
+        codes = _language_codes(value)
+        return {c: rows.get(c) or {} for c in codes} if isinstance(codes, list) else value
     if isinstance(value, str):
         v = value.strip()
         if kind in ("list", "multi"):

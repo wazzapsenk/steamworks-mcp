@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from steamworks_mcp.interview.questions import coerce, unit_ancestor
-from steamworks_mcp.localization.store import Localization
+from steamworks_mcp.localization.store import Localization, accept_sources
 from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.io import ManifestError, load_drafts, save_draft
 from steamworks_mcp.manifest.state import Source, TransitionError, is_empty
@@ -41,7 +41,11 @@ def set_fields(
     for path in changes:
         if not fp.is_valid(path):
             raise fp.FieldPathError(f'"{path}" is not a field of steamworks.yaml (see get_spec_info("schema")).')
-    coerced = {path: coerce(path, value) for path, value in changes.items()}
+    before = project.values()
+    coerced = {path: coerce(path, value, fp.get(before, path)) for path, value in changes.items()}
+    if isinstance(coerced.get("target_languages"), list):  # the source language is never a translation target
+        written_in = coerced.get("source_language") or before.get("source_language")
+        coerced["target_languages"] = [lang for lang in coerced["target_languages"] if lang != written_in]
     findings = _store_findings(project, coerced)
     errors = [f for f in findings if f["severity"] == "error"]
     if errors and source not in ("user", "steamworks"):  # what Steam already has is imported as it is
@@ -153,6 +157,9 @@ def approve_fields(project: Project, patterns: list[str]) -> dict[str, Any]:
             continue
         project.state.approve(path, value)
         approved.append(path)
+    if translations_ok := [p for p in approved if p.startswith("localization.")]:
+        # Approving a translation whose source changed means it still fits: it is no longer stale.
+        accept_sources(project.values(), project.files.root, translations_ok)
     return {"approved": approved, "skipped": skipped}
 
 

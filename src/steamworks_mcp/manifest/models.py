@@ -127,11 +127,26 @@ class Game(Model):
     players: Players = Field(default_factory=Players)
     session_length: SessionLength = Field(default_factory=SessionLength)
     core_loop: str | None = None
+    """What a player does again and again, in player verbs, e.g. "scavenge, build, defend, upgrade"."""
     usps: list[str] = Field(default_factory=list)
     """Unique selling points, most important first."""
     target_audience: str | None = None
     tone: str | None = None
     """e.g. "chaotic and funny", "cozy", "tense"."""
+    hook: str | None = None
+    """What makes it different from other games in its genre: the twist, in one sentence."""
+    fantasy: str | None = None
+    """The player fantasy: who the player gets to be, and what that feels like."""
+    run_length: str | None = None
+    """How long one run, match, round or level takes when that differs from a session, e.g. "20-40 minute runs"."""
+    progression: str | None = None
+    """What carries over between sessions and grows (unlocks, upgrades, story, ranks); "none" when every session
+    starts fresh."""
+    launch_content: list[str] = Field(default_factory=list)
+    """What is in the game at launch, with numbers where possible, e.g. ["4 houses", "30 fort pieces"]."""
+    comparable_games: list[str] = Field(default_factory=list)
+    """Two or three games its players love ("for fans of X and Y"). They position the store text and pick its
+    vocabulary, but are never named on the store page: Valve bans references to other products there."""
     platform_features: PlatformFeatures = Field(default_factory=PlatformFeatures)
     engine: Engine = Field(default_factory=Engine)
     reference_appids: list[int] = Field(default_factory=list)

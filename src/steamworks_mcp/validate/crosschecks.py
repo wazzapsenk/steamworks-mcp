@@ -183,7 +183,7 @@ def store_translations_complete(ctx: CheckContext) -> CheckResult:
 
     problems = []
     for st in status(ctx.values, ctx.root):
-        store_keys = [k for k in st.missing + st.stale if k.startswith("store.")]
+        store_keys = [k for k in st.missing + st.stale if k.startswith(("store.", "release.early_access_answers."))]
         if store_keys:
             stale = [k for k in store_keys if k in st.stale]
             problems.append(

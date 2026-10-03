@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +12,7 @@ import httpx
 import pytest
 
 from steamworks_mcp.data import load_yaml
-from steamworks_mcp.references import bundled_analysis, catalog, matching
+from steamworks_mcp.references import bundled_analysis, catalog, matching, patterns
 from steamworks_mcp.references.analyze import about_stats, achievement_kind, analyze, api_name_style, short_stats
 from steamworks_mcp.references.anticopy import MIN_RUN, find_overlaps, is_original, words
 from steamworks_mcp.references.fetch import FetchError, ReferenceFetcher, parse_community_achievements
@@ -274,6 +275,114 @@ def test_bundled_analysis_is_derived_only(appid: int) -> None:
     data = a.model_dump(mode="json", exclude={"name"})
     long = [s for s in strings(data) if len(s.split()) > 4]
     assert not long, long
+
+
+# ------------------------------------------------------------------------------------------------ store patterns
+
+
+def store_page(genres: list[str], header: str = "Build the fort", **changes: Any) -> dict[str, Any]:
+    return {
+        **APPDETAILS,
+        "type": "game",
+        "genres": [{"description": g} for g in genres],
+        "about_the_game": f'<img src="a.gif"><h2>{header}</h2><p>Stack cushions, then play it on Steam Deck.</p>'
+        "<ul><li>Online co-op</li><li>Endless nights</li></ul>",
+        **changes,
+    }
+
+
+def test_store_page_measurements() -> None:
+    page = patterns.measure(1000000, APPDETAILS)
+    assert page.genres == ["Casual", "Early Access"]
+    assert page.verb_headers == 0  # "Modes" is not a verb
+    assert page.mentions_coop and not page.mentions_steam_deck and not page.mentions_multiplayer
+    assert (page.screenshots, page.trailers, page.languages_interface, page.languages_full_audio) == (3, 1, 3, 1)
+    built = patterns.measure(1, store_page(["Casual"], header="BUILD YOUR FORT"))
+    assert built.verb_headers == 1 and built.mentions_steam_deck
+
+
+def test_patterns_per_genre_and_overall() -> None:
+    pages = [patterns.measure(i, store_page(["Casual", "Indie"])) for i in range(5)]
+    pages += [patterns.measure(10, store_page(["Action"], header="Key features", short_description="Fight."))]
+    data = patterns.build(pages, dt.date(2026, 10, 3))
+    assert data.appids == [0, 1, 2, 3, 4, 10] and data.overall.games == 6
+    assert set(data.genres) == {"Casual", "Indie"}  # one Action game is too few for its own group
+    casual = data.genres["Casual"]
+    assert casual.about.with_headers_share == 1.0 and casual.about.headers_starting_with_verb_share == 1.0
+    assert data.overall.about.headers_starting_with_verb_share == 0.83  # 5 of 6 headers
+    assert casual.mentions.steam_deck_share == 1.0 and casual.about.opens_with_media_share == 1.0
+    assert casual.about.list_items == patterns.Dist(median=2, p25=2, p75=2)
+    assert casual.languages.full_audio_share == 1.0
+    with pytest.raises(ValueError):
+        patterns.build([], dt.date(2026, 10, 3))
+
+
+def test_patterns_sample_only_games_with_english_text(tmp_path: Path) -> None:
+    search = {
+        "items": [
+            {"name": "a", "logo": "https://cdn.example/steam/apps/1/capsule.jpg?t=1"},
+            {"name": "b", "logo": "https://cdn.example/steam/apps/2/capsule.jpg"},
+            {"name": "c", "logo": "https://cdn.example/steam/bundles/3/capsule.jpg"},
+            {"name": "d", "logo": "https://cdn.example/steam/apps/4/capsule.jpg"},
+            {"name": "e", "logo": "https://cdn.example/steam/apps/5/capsule.jpg"},
+            {"name": "f", "logo": "https://cdn.example/steam/apps/6/capsule.jpg"},
+        ]
+    }
+    details = {
+        "1": {"success": True, "data": store_page(["Casual"])},
+        "2": {"success": True, "data": store_page(["Casual"], type="dlc")},
+        "4": {"success": True, "data": store_page(["Casual"], supported_languages="German")},
+        "5": {"success": False},
+        "6": {"success": True, "data": store_page(["Casual"])},
+    }
+    calls: list[httpx.Request] = []
+    f = fetcher(
+        tmp_path,
+        calls,
+        {"search/results": [httpx.Response(200, json=search)], "appdetails": [httpx.Response(200, json=details)]},
+        min_interval=1.0,
+    )
+    log: list[str] = []
+    pages, raw = patterns.sample(f, limit=1, log=log.append)
+    assert [p.appid for p in pages] == [1] and set(raw) == {"1:short", "1:about"}
+    assert "filter=popularnew" in str(calls[0].url) and "sort_by=Released_DESC" in str(calls[0].url)
+    pages, _ = patterns.sample(f, log=log.append)
+    assert [p.appid for p in pages] == [1, 6]  # not a dlc, a bundle, a page without English, an unavailable app
+    assert len(log) == 1 and log[0].startswith("5: skipped")
+
+
+def test_patterns_group_for_a_game() -> None:
+    pages = [patterns.measure(i, store_page(["Casual", "Indie"])) for i in range(6)]
+    pages += [patterns.measure(10 + i, store_page(["Indie", "Strategy"])) for i in range(5)]
+    data = patterns.build(pages, dt.date(2026, 10, 3))
+
+    def group_of(store: dict[str, Any]) -> str:
+        found = patterns.for_game({"store": store}, data)
+        assert found is not None
+        return found[0]
+
+    assert group_of({"primary_genre": "indie", "genres": ["Casual"]}) == "Indie"
+    assert group_of({"genres": ["Indie", "Casual"]}) == "Casual"  # the most specific group
+    assert group_of({"genres": ["Racing"]}) == "all genres"
+
+
+def test_bundled_store_patterns_are_derived_only() -> None:
+    data = patterns.store_patterns()
+    assert data is not None and 0 < len(data.appids) <= patterns.MAX_GAMES
+    assert data.overall.games == len(data.appids) == len(set(data.appids))
+    assert data.genres and all(g.games >= patterns.MIN_GENRE_GAMES for g in data.genres.values())
+
+    def strings(v: Any) -> list[str]:
+        if isinstance(v, str):
+            return [v]
+        if isinstance(v, dict):
+            return [s for x in v.values() for s in strings(x)]
+        if isinstance(v, list):
+            return [s for x in v for s in strings(x)]
+        return []
+
+    raw = json.loads(resources.files("steamworks_mcp.data").joinpath("store_patterns.json").read_text("utf-8"))
+    assert sorted(strings(raw)) == sorted([raw["recorded_on"], raw["source"]])  # everything else is a number
 
 
 def test_style_guides() -> None:

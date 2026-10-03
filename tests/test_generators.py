@@ -5,6 +5,7 @@ Every sample text is written for a fictional game.
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import shutil
 from pathlib import Path
@@ -17,12 +18,16 @@ from PIL import Image
 from steamworks_mcp.config import Config
 from steamworks_mcp.export.preview import bbcode_to_html, store_preview
 from steamworks_mcp.export.vdf import build_scripts
+from steamworks_mcp.fields import approve_fields, set_fields
 from steamworks_mcp.generate import deterministic as det
+from steamworks_mcp.generate import text as gen_text
 from steamworks_mcp.localization import store as loc
 from steamworks_mcp.manifest.io import ManifestFile, ProjectFiles, load_drafts, load_state
 from steamworks_mcp.manifest.models import Manifest
 from steamworks_mcp.manifest.state import State
 from steamworks_mcp.media.images import prepare_achievement_icons, prepare_store_images, screenshot_report
+from steamworks_mcp.project import Project
+from steamworks_mcp.references import patterns
 from steamworks_mcp.server import create_server
 from steamworks_mcp.style_guides import guide
 from steamworks_mcp.validate import rubric
@@ -140,6 +145,48 @@ def test_translation_loop(tmp_path: Path) -> None:
     v["achievements"][0]["name"] = "Blanket Engineer"  # source changed -> translation stale
     st = loc.status(v, tmp_path, ["german"])[0]
     assert "achievements.ACH_FIRST_FORT.name" in st.stale
+
+
+def test_early_access_answers_are_translated_too(tmp_path: Path) -> None:
+    v = values()
+    v["release"]["early_access"] = None
+    v["release"]["early_access_answers"]["why"] = "We want groups to shape the raid modes with us."
+    pending = {p["key"]: p for p in loc.pending(v, tmp_path, "german", limit=100)}
+    why = pending["release.early_access_answers.why"]
+    assert "Why Early Access?" in why["context"] and why["format"] == "plain"
+    assert not any(k.startswith("release.") and k != "release.early_access_answers.why" for k in pending)
+    v["release"]["early_access"] = False  # answers of a game that is not in Early Access are not translated
+    assert "release.early_access_answers.why" not in {p["key"] for p in loc.pending(v, tmp_path, "german", 100)}
+
+
+def test_a_changed_source_sends_its_translations_back_to_review(tmp_path: Path) -> None:
+    shutil.copytree(EXAMPLE, tmp_path / "game")
+    project = Project.open(tmp_path / "game")
+    key = "achievements.ACH_FIRST_FORT.name"
+    loc.set_translations(project.values(), project.files.root, project.state, "german", {key: "Deckenarchitekt"})
+    approve_fields(project, [f"localization.german.{key}"])
+    project.save()
+    assert Project.open(tmp_path / "game").state.get(f"localization.german.{key}").status == "approved"
+
+    set_fields(project, {key: "Blanket Engineer"})  # the source text changes
+    project.save()
+    project = Project.open(tmp_path / "game")
+    assert project.state.get(f"localization.german.{key}").status == "needs_review"
+
+    approve_fields(project, [f"localization.german.{key}"])  # the user says the translation still fits
+    project.save()
+    project = Project.open(tmp_path / "game")
+    assert project.state.get(f"localization.german.{key}").status == "approved"
+    assert key not in loc.status(project.values(), project.files.root, ["german"])[0].stale
+
+
+def test_status_report_names_the_next_language(tmp_path: Path) -> None:
+    v = values()
+    out = loc.report(v, tmp_path)
+    assert out["source_language"] == "english" and out["next"] == "localization_pending(path, language='german')"
+    assert out["to_translate"] == 3 * out["texts"]
+    v["target_languages"] = []
+    assert "No target languages" in loc.report(v, tmp_path)["next"]
 
 
 def test_glossary_warnings(tmp_path: Path) -> None:
@@ -434,6 +481,62 @@ async def test_short_description_three_variants_then_pick(project: tuple[Config,
 
 
 @pytest.mark.anyio
+async def test_briefs_build_on_the_interview_answers(project: tuple[Config, Path]) -> None:
+    config, _ = project
+    short = await call(config, "generate", path="game", section="store_short")
+    answers = short["use_the_answers"]
+    assert answers["game.players"]["answer"] == "solo, online co-op (1-4 players)"
+    assert answers["game.hook"]["answer"].startswith("The fort is a pile of physics objects")
+    assert "never name" in answers["game.comparable_games"]["use"]
+    assert short["write_in"].startswith("English (english), the source language")
+    assert "missing_recommended" not in short
+    outline = await call(config, "generate", path="game", section="store_long", stage="outline")
+    long = outline["use_the_answers"]
+    assert (
+        long["game.session_length"]["answer"]
+        == "sessions of 15-30 minutes; runs: One night of three raid waves, 15-30 minutes"
+    )
+    assert "feature list" in long["game.launch_content"]["use"] and "game.progression" in long
+
+
+def test_briefs_ask_for_missing_recommended_answers(tmp_path: Path) -> None:
+    v = values(hook=None, fantasy=None, launch_content=[])
+    b = gen_text.brief(v, ProjectFiles(tmp_path), "store_short")
+    assert b["status"] == "ready" and b["missing_recommended"] == ["game.hook", "game.fantasy", "game.launch_content"]
+    assert "game.hook" not in b["use_the_answers"]
+
+
+def test_briefs_show_what_recent_pages_in_the_genre_look_like(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    page = {
+        "type": "game",
+        "short_description": "Stack a fort with friends.",
+        "about_the_game": "<h2>Build it</h2><p>Stack cushions.</p>",
+        "genres": [{"description": "Casual"}],
+        "supported_languages": "English",
+    }
+    data = patterns.build([patterns.measure(i, page) for i in range(5)], dt.date(2026, 10, 3))
+    monkeypatch.setattr(patterns, "store_patterns", lambda: data)
+    v = values()  # primary genre Casual
+    short = gen_text.brief(v, ProjectFiles(tmp_path), "store_short")["recent_successful_pages"]
+    assert short["group"] == "Casual" and short["games"] == 5 and short["recorded_on"] == "2026-10-03"
+    assert short["short_description"]["chars"]["median"] == 26 and "about" not in short
+    outline = gen_text.brief(v, ProjectFiles(tmp_path), "store_long", "outline")["recent_successful_pages"]
+    assert (
+        outline["about"]["with_headers_share"] == 1.0 and "media" in outline and "Numbers only" in outline["how_to_use"]
+    )
+    monkeypatch.setattr(patterns, "store_patterns", lambda: None)
+    assert gen_text.brief(v, ProjectFiles(tmp_path), "store_short")["recent_successful_pages"] is None
+
+
+def test_player_modes() -> None:
+    assert gen_text.player_modes({"min": 1, "max": 1}) == "solo"
+    assert gen_text.player_modes({"min": 2, "max": 8, "online_pvp": True, "local_pvp": True}) == (
+        "online PvP, local PvP (2-8 players)"
+    )
+    assert gen_text.player_modes({}) is None
+
+
+@pytest.mark.anyio
 async def test_long_description_outline_first(project: tuple[Config, Path]) -> None:
     config, game = project
     before = await call(config, "generate", path="game", section="store_long", stage="text")
@@ -512,5 +615,6 @@ async def test_deterministic_generate_and_localization_tools(project: tuple[Conf
     assert ok["approved"] == ["localization.german.achievements.ACH_FIRST_FORT.name"]
     status = await call(config, "localization_status", path="game")
     assert {s["language"] for s in status["languages"]} == {"german", "french", "schinese"}
+    assert status["next"] == "localization_pending(path, language='german')"
     preview = await call(config, "preview_store", path="game")
     assert (game / preview["file"]).exists() and preview["fold_verified"] is False

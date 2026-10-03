@@ -36,8 +36,8 @@ ever written to Steamworks, empty ones are left as they are there.
 
 | Section | What it holds | Usually filled by |
 |---|---|---|
-| `game` | What the game is: name, pitch, genres, players, session length, core loop, USPs, audience, tone, platform features, engine, reference app ids. Input for writing; never uploaded. | scan + interview |
-| `source_language`, `target_languages` | Steam API language codes (`english`, `schinese`, `koreana`, `brazilian`, `latam`, …) | interview |
+| `game` | What the game is: name, pitch, genres, players (solo, co-op, PvP and how many), session length, core loop in player verbs, USPs, audience, tone, the hook (what sets it apart in its genre), the player fantasy, run length, progression, what is in the game at launch, comparable games ("for fans of X and Y": they position the text but are never named on the store page), platform features, engine, reference app ids. Input for writing; never uploaded. | scan + interview |
+| `source_language`, `target_languages` | Steam API language codes (`english`, `schinese`, `koreana`, `brazilian`, `latam`, …): the language every text is written in, and the languages those texts are translated into (store page, Early Access answers, achievements, launch options). Separate from `store.supported_languages`, the languages the game itself supports. | interview |
 | `apps` (`main`, `demo`, `playtest`) | One profile per Steam app: `appid`, `installation` (install folder, launch options), `cloud` (quotas, Auto-Cloud paths, root overrides), `builds` (depots with their language, branches) | scan + interview |
 | `prerequisites` | Gate 0: partner account, Steam Direct fee (+ date), tax, bank, identity, restricted automation account | interview (never scanned) |
 | `store` | Main store page: short description, About This Game (BBCode), developers, publishers, support info (website, e-mail, phone), platforms, primary genre and genres, tags, categories, languages table, system requirements, controller support (the Controller Support wizard), accessibility features (the Accessibility Features wizard), third-party DRM and accounts, links, legal line | generators + interview |
@@ -64,7 +64,7 @@ Every tracked value has a dotted path:
 | `apps.main.installation.launch_options.0.executable` | an item of any other list, by index |
 | `store.system_requirements.windows.minimum` | a *unit*: small objects tracked as one field (requirements block, language row, player counts, progress) |
 | `store.tags` | a list of plain values is one field |
-| `localization.german.store.about` | a translation (stored in `localization/german.yaml`) |
+| `localization.german.store.about` | a translation (stored in `localization/german.yaml`). Translated from the source language: `store.short_description`, `store.about`, `release.early_access_answers.*` (unless the game is not in Early Access), `achievements.*.name` and `.description`, `apps.*.installation.launch_options.*.description` |
 | `checklist.<rule id>` | a manual gate step the user confirmed |
 
 Patterns use `*` for one segment: `achievements.*.icon`. Gate files may only reference paths that exist in the
@@ -110,6 +110,9 @@ schema; a test enforces it.
 - Each time the files are loaded, the state is reconciled with the values. A changed value drops to `needs_review`.
   A value that was removed becomes `missing`. **A value with no state entry was typed by the user and counts as
   `approved`.**
+- Translations are reconciled too: `localization/.lock.json` keeps the hash of the source text each translation was
+  made from, and when the source changes, its translations drop to `needs_review`. Approving such a translation
+  again records that it fits the new source.
 
 ## Drafts
 
@@ -138,3 +141,6 @@ Other bundled data:
 - `events.yaml`: Next Fest, sales and fests, with the discount and planning rules. Checks warn when it is stale.
 - `capabilities.yaml`: rendered as [CAPABILITIES.md](CAPABILITIES.md).
 - `languages.yaml`: Steam language codes.
+- `store_patterns.json`: what the store pages of popular new releases look like, per Steam genre and overall
+  (lengths, paragraphs, headers, lists, media, mentions, languages), with the recording date and the sampled app ids.
+  Derived numbers only; `scripts/build_store_patterns.py` refreshes it.
