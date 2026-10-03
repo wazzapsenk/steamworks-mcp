@@ -19,6 +19,7 @@ client.
 | Step | Tools |
 |---|---|
 | Start tracking a game; read what the Unity project already says (name, platforms, input, saves, achievements and stats in code, SteamPipe settings) | `init_project`, `scan_project` |
+| Game already in Steamworks? Fill the empty fields from what Steam has (store texts in every language, achievements, Steam Cloud, installation, leaderboards, finished checklist items); never overwrites | `import_from_steamworks` |
 | See what is missing before each release gate (0 prerequisites, 1 store page, 2 build review, 3 release), with Valve's source for every rule | `gap_report` |
 | Answer short batches of questions (shown as a form when your client supports it) | `start_interview`, `set_field`, `approve_fields` |
 | Draft store text, achievements, Steam Cloud, depots, system requirements | `generate`, `save_draft`, `preview_store` |

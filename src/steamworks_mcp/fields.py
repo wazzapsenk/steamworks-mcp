@@ -44,7 +44,7 @@ def set_fields(
     coerced = {path: coerce(path, value) for path, value in changes.items()}
     findings = _store_findings(project, coerced)
     errors = [f for f in findings if f["severity"] == "error"]
-    if errors and source != "user":
+    if errors and source not in ("user", "steamworks"):  # what Steam already has is imported as it is
         raise ValueError(
             "Rejected, breaks Valve's store rules: "
             + "; ".join(f"[{e['rule_id']}] {e['field']}: {e['message']}" for e in errors)

@@ -179,7 +179,7 @@ def _listed(board: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def _board_settings(b: dict[str, Any]) -> dict[str, Any]:
+def board_settings(b: dict[str, Any]) -> dict[str, Any]:
     """Settings of a leaderboard as GetLeaderboardsForGame reports them, in steamworks.yaml vocabulary. An empty
     displaytype (a board created with a name Steam does not know) is reported as "unset"."""
     display = str(b.get("displaytype", b.get("display_type", "Numeric")) or "").lower()
@@ -211,12 +211,12 @@ def plan_leaderboards(
     create, differs = [], []
     for d in desired:
         want = {k: d.get(k) for k in SETTINGS}
-        want = {**_board_settings({}), **{k: v for k, v in want.items() if v is not None}}
+        want = {**board_settings({}), **{k: v for k, v in want.items() if v is not None}}
         cur = by_name.get(d["name"])
         if cur is None:
             create.append({"name": d["name"], **want})
-        elif _board_settings(cur) != want:
-            differs.append({"name": d["name"], "steam": _board_settings(cur), "steamworks_yaml": want})
+        elif board_settings(cur) != want:
+            differs.append({"name": d["name"], "steam": board_settings(cur), "steamworks_yaml": want})
     wanted = {d["name"] for d in desired}
     delete = sorted(n for n in by_name if n not in wanted) if remove_extra else []
     return {"create": create, "delete": delete, "settings_differ": differs}

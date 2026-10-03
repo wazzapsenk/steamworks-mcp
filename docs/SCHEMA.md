@@ -100,10 +100,12 @@ schema; a test enforces it.
 | `approved` | the user confirmed it |
 | `applied` | confirmed present in Steamworks: read back through API/BROWSER, or the user confirmed a manual step |
 
-`source` is one of `scan`, `user`, `generated`, `reference_default`. Rules:
+`source` is one of `scan`, `user`, `generated`, `reference_default`, `steamworks`. Rules:
 
 - Answers the user gives are stored as `approved`. Scanned, generated and default values are always `draft`; they
   are never auto-approved.
+- Values read from Steamworks by `import_from_steamworks` are stored as `applied`: Steam already has them. The
+  import only fills empty fields; a different value in the file is reported, never overwritten.
 - Only `approved` values can be marked `applied`, and only while their hash still matches.
 - Each time the files are loaded, the state is reconciled with the values. A changed value drops to `needs_review`.
   A value that was removed becomes `missing`. **A value with no state entry was typed by the user and counts as

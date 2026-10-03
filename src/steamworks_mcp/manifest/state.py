@@ -2,7 +2,7 @@
 
 Status lifecycle of a field::
 
-    missing --set(user)--------------------------> approved --mark_applied--> applied
+    missing --set(user)--------------------------> approved --mark_applied--> applied <--set(steamworks)-- missing
        |                                              ^   |                      |
        +--set(scan|generated|reference_default)--> draft  |  value edited       | value edited
                                                      |    v                      v
@@ -11,6 +11,7 @@ Status lifecycle of a field::
 
 * ``approved`` means the user confirmed the value. Scanned, generated and default values are never auto-approved.
 * ``applied`` means the value is confirmed present in Steamworks (read back, or the user confirmed a manual step).
+  A value imported from Steamworks (``import_from_steamworks``) starts as ``applied``: it is what Steam has.
 * If the value in ``steamworks.yaml`` changes after approval or application (hash mismatch), the field drops back to
   ``needs_review``. A value found in the file without any state was typed by the user, so it counts as approved.
 """
@@ -27,8 +28,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from steamworks_mcp.manifest.paths import iter_fields
 
 Status = Literal["missing", "draft", "needs_review", "approved", "applied"]
-Source = Literal["scan", "user", "generated", "reference_default"]
+Source = Literal["scan", "user", "generated", "reference_default", "steamworks"]
 ExecutionMode = Literal["API", "BROWSER", "ARTIFACT", "MANUAL"]
+FIRST_STATUS: dict[str, Status] = {"user": "approved", "steamworks": "applied"}
 
 STATE_VERSION = 1
 
@@ -105,21 +107,23 @@ class State(BaseModel):
         evidence: list[Evidence] | None = None,
         notes: str | None = None,
     ) -> FieldState:
-        """A value was written to ``path``. Users' answers are approved; everything else is a draft."""
+        """A value was written to ``path``. Users' answers are approved, values read from Steamworks are applied;
+        everything else is a draft."""
         fs = self.fields.get(path) or FieldState()
         if is_empty(value):
             fs.status, fs.value_hash = "missing", None
         else:
-            fs.status = "approved" if source == "user" else "draft"
+            fs.status = FIRST_STATUS.get(source, "draft")
             fs.value_hash = value_hash(value)
         fs.source = source
-        fs.confidence = 1.0 if source == "user" else (confidence if confidence is not None else fs.confidence)
+        sure = source in ("user", "steamworks")
+        fs.confidence = 1.0 if sure else (confidence if confidence is not None else fs.confidence)
         if evidence is not None:
             fs.evidence = evidence
         if notes is not None:
             fs.notes = notes
         fs.updated_at = now()
-        fs.applied_at = None
+        fs.applied_at = fs.updated_at if fs.status == "applied" else None
         self.fields[path] = fs
         return fs
 

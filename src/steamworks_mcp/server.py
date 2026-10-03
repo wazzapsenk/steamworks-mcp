@@ -593,6 +593,24 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         "snapshots" lists the snapshots saved before writes (local)."""
         return await execu.inspect(open_project(path), what, app)
 
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True))
+    @user_errors
+    async def import_from_steamworks(
+        path: str,
+        app: Literal["main", "demo", "playtest"] = "main",
+        sections: list[Literal["store_text", "achievements", "cloud", "installation", "leaderboards", "checklist"]]
+        | None = None,
+        dry_run: bool = True,
+    ) -> dict[str, Any]:
+        """For a game that already exists in Steamworks: read what Steam has (store texts in every language,
+        achievements, Steam Cloud, installation, leaderboards, the landing page's release checklists) and fill the
+        EMPTY fields of steamworks.yaml with it, marked "applied". Never writes to Steamworks and never overwrites a
+        value in the file: differences come back as conflicts for the user to settle. Dry run first; save with
+        dry_run=false after the user agreed. Leaderboards need the publisher key, the rest the BROWSER mode."""
+        return await execu.import_from_steamworks(
+            open_project(path), app, list(sections or []) or None, dry_run=dry_run
+        )
+
     @server.tool(annotations=ToolAnnotations(destructive_hint=True, open_world_hint=True))
     @user_errors
     def set_build_live(

@@ -55,7 +55,8 @@
                 "scan",
                 "user",
                 "generated",
-                "reference_default"
+                "reference_default",
+                "steamworks"
               ],
               "type": "string"
             },

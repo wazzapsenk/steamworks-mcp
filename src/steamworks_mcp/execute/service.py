@@ -16,7 +16,7 @@ import anyio
 
 from steamworks_mcp.config import Config
 from steamworks_mcp.execute import apply as A
-from steamworks_mcp.execute import sync
+from steamworks_mcp.execute import importer, sync
 from steamworks_mcp.execute.api import PartnerApi, SteamApiError, plan_leaderboards, run_steamcmd
 from steamworks_mcp.execute.browser import partner as P
 from steamworks_mcp.execute.browser.transport import NotLoggedInError, Transport
@@ -401,6 +401,92 @@ class Executor:
                 "Ask the user to confirm the build change in the Steam Mobile app; it is not live until then."
             )
         return {**result, "warning": warning}
+
+    # ------------------------------------------------------------------------------------------------ import
+
+    async def import_from_steamworks(
+        self, project: Project, app: str, sections: list[str] | None, *, dry_run: bool
+    ) -> dict[str, Any]:
+        """Read what Steamworks has (never writes there) and fill the empty fields of steamworks.yaml."""
+        values = project.values()
+        appid = appid_of(values, app)
+        source = str(values.get("source_language") or "english")
+        wanted = list(sections or importer.SECTIONS)
+        unknown = [s for s in wanted if s not in importer.SECTIONS]
+        if unknown:
+            raise ValueError(f"sections: {', '.join(importer.SECTIONS)}")
+        if app != "main":  # steamworks.yaml keeps store text, achievements and leaderboards for the main game only
+            wanted = [s for s in wanted if s in ("cloud", "installation")]
+        found: dict[str, Any] = {}
+        translations: dict[str, dict[str, str]] = {}
+        done: list[str] = []
+        notes: list[str] = []
+        errors: dict[str, str] = {}
+        t: Transport | None = None
+        if any(s != "leaderboards" for s in wanted):
+            try:
+                t = await self.transport("import_from_steamworks")
+            except A.ApplyRefused as exc:
+                errors |= {s: str(exc) for s in wanted if s != "leaderboards"}
+        for section in wanted:
+            if section in errors:
+                continue
+            try:
+                f: dict[str, Any] = {}
+                tr: dict[str, dict[str, str]] = {}
+                n: list[str] = []
+                if section == "leaderboards":
+                    boards = await anyio.to_thread.run_sync(self.api().leaderboards, appid)
+                    f, n = importer.leaderboards(boards)
+                    n.append("The leaderboard list is cached by Steam; a board changed in the last minute may differ.")
+                else:
+                    assert t is not None
+                    if section == "store_text":
+                        loc = await P.read_store_localization(t, await P.store_item_id(t, appid))
+                        f, tr = importer.store_text(loc, source)
+                    elif section == "achievements":
+                        f, tr, n = importer.achievements(await P.read_achievements(t, appid), source)
+                    elif section == "cloud":
+                        f = importer.cloud(await P.read_cloud(t, appid), app)
+                    elif section == "installation":
+                        f, tr, n = importer.installation(await P.read_installation(t, appid), app, source)
+                    elif section == "checklist":
+                        manual = {
+                            r.steamworks_checklist: r.id
+                            for g in gate_files()
+                            for r in g.rules
+                            if r.steamworks_checklist and r.execution_mode == "MANUAL"
+                        }
+                        done = importer.checklist(await P.read_checklists(t, appid), manual)
+            except NotLoggedInError:
+                raise
+            except (SteamApiError, RuntimeError, ValueError) as exc:
+                errors[section] = str(exc)
+                continue
+            found |= f
+            for lang, texts in tr.items():
+                translations.setdefault(lang, {}).update(texts)
+            notes += n
+        out = importer.merge(project, found, translations, done, dry_run=dry_run)
+        out = {"appid": appid, "dry_run": dry_run, **out}
+        if errors:
+            out["errors"] = errors
+        if notes:
+            out["notes"] = notes
+        likely = importer.likely_prerequisites(values) if app == "main" else {}
+        if likely:
+            out["confirm_with_user"] = {"values": likely, "why": importer.PREREQUISITES_NOTE}
+        if dry_run:
+            out["next"] = (
+                "Show the user what would be filled and the conflicts; with their OK call again with dry_run=false. "
+                "Nothing is written to Steamworks either way."
+            )
+        else:
+            A.audit(
+                project.files,
+                {"action": "import_from_steamworks", "app": app, "appid": appid, "filled": out.get("saved", [])},
+            )
+        return out
 
     # ------------------------------------------------------------------------------------------------ inspect
 

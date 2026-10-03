@@ -79,7 +79,8 @@
         "scan",
         "user",
         "generated",
-        "reference_default"
+        "reference_default",
+        "steamworks"
       ],
       "title": "Source",
       "type": "string"

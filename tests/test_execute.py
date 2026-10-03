@@ -16,7 +16,7 @@ from mcp import Client
 
 from steamworks_mcp import project as proj
 from steamworks_mcp.config import Config, load_config
-from steamworks_mcp.execute import guard, sync
+from steamworks_mcp.execute import guard, importer, sync
 from steamworks_mcp.execute.api import DISPLAY_TYPES, PartnerApi, SteamApiError, plan_leaderboards, run_steamcmd
 from steamworks_mcp.execute.apply import ApplyRefused, Consent, apply_section, restore_snapshot, save_snapshot
 from steamworks_mcp.execute.browser import partner as P
@@ -744,6 +744,55 @@ def test_leaderboard_apply_reads_back_past_the_cached_list(tmp_path: Path) -> No
     again = ex.apply_leaderboards(project, "main", dry_run=False, user_confirmed=True, remove_extra=True)
     assert again["done"] == [{"action": "delete", "name": "OLD", "already_gone": True}]
     assert again["still_different"] == {"create": [], "delete": [], "settings_differ": []}
+
+
+async def test_import_fills_only_empty_fields(project: Project, consent: Consent, tmp_path: Path) -> None:
+    project = setv(project, {"store.about": "My own about text."})
+    root = project.files.root
+
+    async def transport() -> ReplayTransport:
+        return replay("store/read", "achievements/read", "cloud/read", "installation/read", "visibility/before")
+
+    ex = Executor(
+        Config(workspace_root=tmp_path, browser_enabled=True, home_dir=tmp_path / "home"), transport_factory=transport
+    )
+    sections = ["store_text", "achievements", "cloud", "installation", "checklist"]
+    dry = await ex.import_from_steamworks(project, "main", sections, dry_run=True)
+    assert [c["field"] for c in dry["conflicts"]] == ["store.about"]
+    assert {"store.short_description", "apps.main.cloud.byte_quota", "apps.main.installation.launch_options"} <= set(
+        dry["fill"]
+    )
+    assert Project.open(root).values()["store"]["short_description"] is None  # a dry run saves nothing
+
+    out = await ex.import_from_steamworks(Project.open(root), "main", sections, dry_run=False)
+    p = Project.open(root)
+    assert p.values()["store"]["about"] == "My own about text."  # never overwritten
+    short = p.state.get("store.short_description")
+    assert (short.status, short.source) == ("applied", "steamworks") and short.applied_at is not None
+    assert p.state.get("checklist.depots_configured").status == "applied"
+    assert p.values()["target_languages"] == ["german", "turkish"]
+    assert p.state.get("localization.german.store.short_description").status == "applied"
+    assert "localization.german.store.about" not in p.state.fields  # the file's About differs: no translation of it
+    assert out["confirm_with_user"]["values"]["prerequisites.partner_account"] is True
+    assert p.values()["prerequisites"]["partner_account"] is None  # gate 0 is the user's to confirm
+    assert audit_entries(p)[-1]["action"] == "import_from_steamworks"
+
+
+def test_import_leaderboards_skips_boards_without_display_type() -> None:
+    boards = [
+        {"name": "FAST", "sortmethod": "Ascending", "displaytype": "Seconds"},
+        {"name": "BROKEN", "sortmethod": "Ascending", "displaytype": ""},
+    ]
+    found, notes = importer.leaderboards(boards)
+    assert found == {
+        "leaderboards.FAST": {
+            "sort_method": "ascending",
+            "display_type": "seconds",
+            "only_trusted_writes": False,
+            "only_friends_reads": False,
+        }
+    }
+    assert "BROKEN" in notes[0]
 
 
 def test_leaderboard_plan() -> None:
