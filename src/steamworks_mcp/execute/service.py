@@ -88,6 +88,11 @@ class Executor:
             "Steam Guard code themselves), then call steamworks_open again.",
         }
 
+    async def close(self) -> None:
+        if self._session is not None:
+            await self._session.close()
+            self._session = None
+
     async def transport(self, what: str) -> Transport:
         if not self.config.browser_enabled:
             raise A.ApplyRefused(NO_BROWSER.format(what=what))
@@ -388,10 +393,14 @@ class Executor:
             return {"appid": appid, "achievements": stats.get("achievements") or [], "stats": stats.get("stats") or []}
         t = await self.transport(f"steamworks_inspect({what})")
         if what == "pending":
+            pending = await P.pending_changes(t, appid)
             return {
                 "appid": appid,
-                "unpublished_changes": await P.pending_changes(t, appid),
-                "note": "Read-only. Publishing is always done by the user in Steamworks.",
+                "unpublished_changes": pending["text"],
+                "changed_sections": pending["changed_sections"],
+                "sections": pending["sections"],
+                "note": "Read-only. Saving a page opens a new revision even when nothing changed; only "
+                "changed_sections hold real changes. Publishing is always done by the user in Steamworks.",
             }
         return {"appid": appid, "steamworks": await A.read_section(t, what, appid)}
 

@@ -103,7 +103,10 @@ async def save_achievement(
     names: dict[str, str],
     descriptions: dict[str, str],
     hidden: bool,
+    permission: int = 0,
 ) -> dict[str, Any]:
+    """``permission`` (0 client, 1 game server, 2 official game server) is sent back as Steamworks has it, so saving
+    never changes who may unlock the achievement."""
     data = _ok(
         await t.post(
             f"/apps/saveachievement/{appid}",
@@ -113,7 +116,7 @@ async def save_achievement(
                 "apiname": api_name,
                 "displayname": localized(names),
                 "description": localized(descriptions),
-                "permission": "0",
+                "permission": str(permission),
                 "hidden": "true" if hidden else "false",
                 "progressStat": "-1",
                 "progressMin": "",
@@ -377,13 +380,57 @@ async def delete_launch_option(t: Transport, appid: int, index: int) -> None:
 # ---------------------------------------------------------------------------------------------------- pending changes
 
 
-async def pending_changes(t: Transport, appid: int) -> str:
-    """What is still unpublished (the Publish page's read-only "View Diffs"), as plain text."""
-    data = _checked(await t.post(f"/apps/diff/{appid}", {"section": "technical"}), "pending changes").json()
-    text = f"{data.get('opened', '')}{data.get('diff', '')}"
-    text = re.sub(r"<br\s*/?>", "\n", text)
+def _plain(html: str) -> str:
+    text = re.sub(r"<br\s*/?>", "\n", html)
     text = re.sub(r"<[^>]+>", "", text)
-    return text.replace("&quot;", '"').replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+    return text.replace("&quot;", '"').replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+
+
+SECTION = re.compile(
+    r'===\s*(?:Changes to "([^"]+)" section[^=]*|"([^"]+)" section is new\s*)===(.*?)(?=<br>\s*===|$)', re.S
+)
+
+
+def _squeeze(parts: list[str]) -> str:
+    """Without whitespace and empty KeyValues blocks (deleting the last launch option leaves ``"launch" { }``)."""
+    s = re.sub(r"\s+", "", "".join(parts))
+    while True:
+        shorter = re.sub(r'"[^"]*"\{\}', "", s)
+        if shorter == s:
+            return s
+        s = shorter
+
+
+def parse_diff(diff_html: str) -> dict[str, dict[str, Any]]:
+    """Per app section: whether it is new, the removed and added text, and whether anything really changed.
+
+    Saving a page with the same values still opens a new revision; its diff is empty or differs only in whitespace,
+    which does not count as a change. A new section's content is not shown, so it always counts as changed.
+    """
+    out: dict[str, dict[str, Any]] = {}
+    for m in SECTION.finditer(diff_html):
+        body = m.group(3)
+        removed = [_plain(x) for x in re.findall(r"<del[^>]*>(.*?)</del>", body, re.S)]
+        added = [_plain(x) for x in re.findall(r"<ins[^>]*>(.*?)</ins>", body, re.S)]
+        new = m.group(2) is not None
+        out[m.group(1) or m.group(2)] = {
+            "new": new,
+            "removed": removed,
+            "added": added,
+            "changed": new or _squeeze(removed) != _squeeze(added),
+        }
+    return out
+
+
+async def pending_changes(t: Transport, appid: int) -> dict[str, Any]:
+    """What is still unpublished (the Publish page's read-only "View Diffs"): plain text, and per app section."""
+    data = _checked(await t.post(f"/apps/diff/{appid}", {"section": "technical"}), "pending changes").json()
+    sections = parse_diff(str(data.get("diff", "")))
+    return {
+        "text": _plain(f"{data.get('opened', '')}{data.get('diff', '')}"),
+        "sections": sections,
+        "changed_sections": sorted(k for k, v in sections.items() if v["changed"]),
+    }
 
 
 def item_from_url(url: str) -> str | None:

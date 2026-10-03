@@ -80,7 +80,9 @@ areas:
     browser: {status: verified, how: "apps/setufsparameters, setautocloudpath, setautocloudoverride"}
     default_mode: BROWSER
     fallback_mode: MANUAL
-    notes: Steamworks silently clamps quotas and replaces unknown roots with gameinstall; the tool validates first.
+    notes: >-
+      Steamworks silently clamps quotas and replaces unknown roots with gameinstall; the tool validates first.
+      Saving an Auto-Cloud path turns "developers only" back on, so quotas and flags are written last.
   - id: store_text
     name: Store page short description and About This Game, all languages
     api: {status: never}

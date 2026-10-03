@@ -209,15 +209,10 @@ def desired_store(values: dict[str, Any], translations: dict[str, dict[str, str]
 def plan_cloud(
     appid: int, desired: dict[str, Any], current: dict[str, Any], remove_extra: bool, force: bool = False
 ) -> list[Op]:
+    """Rows first, quotas and flags last: saving an Auto-Cloud row turns "developers only" back on in
+    Steamworks (seen live), so the flags are written again after any row changed."""
     ops: list[Op] = []
     keys = ("byte_quota", "file_quota", "shared_appid", "developers_only", "sync_on_suspend")
-    if force or {k: desired[k] for k in keys} != {k: current[k] for k in keys}:
-        new = {k: desired[k] for k in keys}
-
-        async def ufs(t: Transport, s: dict[str, Any] = new) -> None:
-            await P.set_ufs(t, appid, s)
-
-        ops.append(Op("cloud", "set", "quotas and flags", {k: current[k] for k in keys}, new, ufs))
     for kind, setter, deleter in (
         ("roots", P.set_root, P.delete_root),
         ("overrides", P.set_override, P.delete_override),
@@ -237,6 +232,13 @@ def plan_cloud(
                 await f(t, appid, idx)
 
             ops.append(Op("cloud", "delete", f"{kind[:-1]} #{i}", cur[i], None, drop))
+    if force or ops or {k: desired[k] for k in keys} != {k: current[k] for k in keys}:
+        new = {k: desired[k] for k in keys}
+
+        async def ufs(t: Transport, s: dict[str, Any] = new) -> None:
+            await P.set_ufs(t, appid, s)
+
+        ops.append(Op("cloud", "set", "quotas and flags", {k: current[k] for k in keys}, new, ufs))
     return ops
 
 
@@ -334,7 +336,8 @@ def plan_achievements(
                 stat, bit = str(made["achievement"]["stat_id"]), str(made["achievement"]["bit_id"])
             else:
                 stat, bit = str(existing["stat_id"]), str(existing["bit_id"])
-            await P.save_achievement(t, appid, stat, bit, want["api_name"], names, descs, want["hidden"])
+            permission = int((existing or {}).get("permission") or 0)
+            await P.save_achievement(t, appid, stat, bit, want["api_name"], names, descs, want["hidden"], permission)
             if art:
                 await P.upload_achievement_icon(t, appid, stat, bit, art[0], False, f"{want['api_name']}.jpg")
                 await P.upload_achievement_icon(t, appid, stat, bit, art[1], True, f"{want['api_name']}_locked.jpg")

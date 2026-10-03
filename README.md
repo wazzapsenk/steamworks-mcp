@@ -212,6 +212,11 @@ proving the tool reads and writes that app correctly. Until that worked, `apply`
 least visible area to the most visible one: Steam Cloud, a hidden test achievement, installation, store text last.
 `restore_snapshot` also undoes an apply.
 
+`scripts/live/validate.py <appid>` runs exactly that on a test app of yours and restores everything afterwards: a
+quick way to check that Steamworks still behaves as this tool expects. Steamworks keeps an "uncommitted" revision
+for every section it saved, even when nothing changed; `steamworks_inspect(what="pending")` lists only the sections
+with real changes.
+
 ## BROWSER mode: read this first
 
 The BROWSER mode (`STEAM_MCP_BROWSER=1`, `[browser]` extra) is optional. Without it, everything still works through

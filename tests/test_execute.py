@@ -21,7 +21,7 @@ from steamworks_mcp.execute.api import PartnerApi, SteamApiError, plan_leaderboa
 from steamworks_mcp.execute.apply import ApplyRefused, Consent, apply_section, restore_snapshot, save_snapshot
 from steamworks_mcp.execute.browser import partner as P
 from steamworks_mcp.execute.browser.html import parse
-from steamworks_mcp.execute.browser.transport import NotLoggedInError, PlaywrightTransport, ReplayTransport
+from steamworks_mcp.execute.browser.transport import NotLoggedInError, PlaywrightTransport, ReplayTransport, Response
 from steamworks_mcp.execute.service import Executor
 from steamworks_mcp.fields import set_fields
 from steamworks_mcp.localization.store import set_translations
@@ -212,11 +212,30 @@ async def test_reads_match_the_recordings() -> None:
     assert item == "2000000" and "app[content][short_description]" in store["languages"]["english"]
 
 
-async def test_pending_changes_is_read_only_text() -> None:
-    t = replay("visibility/before")
-    text = await P.pending_changes(t, APP)
-    assert "<" not in text and text.strip()
+async def test_pending_changes_per_section() -> None:
+    t = replay("visibility/after_writes")
+    pending = await P.pending_changes(t, APP)
+    assert "<" not in pending["text"] and "SWMCPRec.exe" in pending["text"]
     assert [(s.method, s.path) for s in t.sent] == [("POST", "/apps/diff/1000000")]
+    sections = pending["sections"]
+    assert sections["stats"]["new"] and sections["stats"]["changed"]  # a new section's content is not shown
+    assert sections["config"]["changed"] and "SWMCPRec.exe" in "".join(sections["config"]["added"])
+    assert not sections["common"]["changed"]  # only tabs differ
+    assert pending["changed_sections"] == ["config", "stats", "ufs"]
+
+
+def test_an_empty_block_left_by_a_deleted_row_is_not_a_change() -> None:
+    diff = (
+        '<br>=== Changes to "config" section (Revision 1 vs 2 )===<br><span>&quot;5&quot;\n{\n</span>'
+        '<del class="diff_delete">\t&quot;installdir&quot;\t\t&quot;Game&quot;\n</del>'
+        '<ins class="diff_insert">\t&quot;installdir&quot;\t&quot;Game&quot;\n\t&quot;launch&quot;\n\t{\n\t}\n</ins>'
+    )
+    assert P.parse_diff(diff)["config"]["changed"] is False
+
+
+def test_a_saved_but_unchanged_section_is_not_a_change() -> None:
+    diff = '<br>=== Changes to "ufs" section (Revision 1 vs 2 )===<br>'
+    assert P.parse_diff(diff) == {"ufs": {"new": False, "removed": [], "added": [], "changed": False}}
 
 
 async def test_expired_session_is_reported() -> None:
@@ -263,10 +282,10 @@ async def test_cloud_plan_deletes_extra_rows_only_when_asked() -> None:
     after = await P.read_cloud(replay("cloud/readback"), APP)
     assert {op.action for op in sync.plan_cloud(APP, before, after, remove_extra=False)} == {"set"}
     ops = sync.plan_cloud(APP, before, after, remove_extra=True)
-    assert sorted((op.action, op.target) for op in ops) == [
-        ("delete", "override #1"),
+    assert [(op.action, op.target) for op in ops] == [
         ("delete", "root #1"),
-        ("set", "quotas and flags"),
+        ("delete", "override #1"),
+        ("set", "quotas and flags"),  # last: saving rows turns "developers only" back on
     ]
 
 
@@ -290,6 +309,37 @@ def test_achievements_with_a_progress_bar_are_left_alone() -> None:
         APP, [{"api_name": "A", "names": {"english": "New"}, "descriptions": {}, "hidden": False}], current, False
     )
     assert [(op.action, op.target) for op in ops] == [("skip", "A")]
+
+
+async def test_saving_keeps_the_unlock_permission() -> None:
+    current = {
+        "achievements": [
+            {
+                "api_name": "A",
+                "stat_id": 1,
+                "bit_id": 0,
+                "display_name": "Old",
+                "description": "d",
+                "hidden": "0",
+                "permission": 2,
+                "progress": False,
+            }
+        ],
+        "max_statid": "1",
+        "max_bitid": "0",
+    }
+    desired = [{"api_name": "A", "names": {"english": "New"}, "descriptions": {}, "hidden": False}]
+    (op,) = sync.plan_achievements(APP, desired, current, False)
+
+    sent: list[dict[str, str]] = []
+
+    class Recorder:
+        async def post(self, path: str, form: dict[str, str]) -> Any:
+            sent.append(form)
+            return Response(200, "https://partner.steamgames.com" + path, '{"success": 1, "saved": true}')
+
+    await op.run(Recorder())  # type: ignore[arg-type]
+    assert sent[0]["permission"] == "2" and sent[0]["displayname"] == '"New"'
 
 
 def test_store_text_comparison_ignores_paragraph_tags() -> None:

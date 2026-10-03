@@ -65,7 +65,30 @@ The test showed:
 Conclusion: app-section edits (Cloud, installation, achievements) are drafts until published. This follows from
 Valve's revision model and is what `/apps/diff` shows. **Unverified**: a direct check on a *public* app (anonymous
 `steamcmd +app_info_print` before and after a draft edit, and the partner `GetSchemaForGame` with a publisher key)
-was not recorded. Store page text drafts were not compared against a public store page.
+was not recorded.
+
+Store page text: in the live validation (below), a test short description uploaded through the Localization tab
+did **not** appear in the public `appdetails` of an app with a public store page while it was unpublished.
+
+### Live validation of the Python implementation (2026-10-03)
+
+`scripts/live/validate.py` ran the whole protocol through the MCP tools on a second app with a public store page
+(read every section, mapping round trip, restore round trip, then per section: test change, write, readback,
+restore). Every step passed, including achievement icon upload and the store-text upload through the page UI.
+What it showed beyond the recordings:
+
+- **Saving the same values still opens a revision.** Writing back exactly what was read gave
+  `App section "ufs" has uncommitted changes` with an empty diff. The tool therefore compares the diff's
+  `<del class="diff_delete">` and `<ins class="diff_insert">` blocks (ignoring whitespace and empty KeyValues
+  blocks) and reports only sections with real changes as `changed_sections`.
+- **Saving an Auto-Cloud path turns "developers only" (`hideInClient`) on.** The quotas and flags are therefore
+  written last, after any row changed.
+- **Deleting the last launch option leaves an empty `"launch" { }` block** in the `config` diff, and the install
+  folder line differs only in whitespace. Neither is a real change.
+- **A new section's content is not shown** (`=== "stats" section is new ===`). Creating and then deleting a test
+  achievement on an app without achievements leaves such a section in the diff; the tool counts new sections as
+  changed because it cannot see inside them.
+- The earlier `restore round trip` step writes Steam Cloud back unchanged; it only leaves the empty revision above.
 
 ## Store page text (Localization tab)
 
