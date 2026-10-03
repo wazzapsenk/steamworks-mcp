@@ -1,5 +1,5 @@
 ---
-name: steam-market-research
+name: steamworks-market-research
 description: What the store pages of the game's closest popular Steam games do, before writing its store text. Uses the steamworks-mcp server's tools; use it when the user asks for this and the server is connected.
 ---
 

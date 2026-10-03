@@ -1,5 +1,5 @@
 ---
-name: steam-review-gate
+name: steamworks-review-gate
 description: Everything still open before one Steam release gate, and the next three steps. Uses the steamworks-mcp server's tools; use it when the user asks for this and the server is connected.
 ---
 

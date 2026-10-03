@@ -67,11 +67,11 @@ Resources: `steam://capabilities`, `steam://gates/{n}`, `steam://style-guide/{ge
 `review_gate`.
 
 Skills: every prompt is also a skill in [`skills/`](skills/), for clients that don't show MCP prompts (the Code tab of
-Claude Desktop lists skills under `/`, not MCP prompts): `steam-release`, `steam-market-research`,
-`steam-store-page` (the whole store-page workflow: interview, market study, brief, draft, validate, save,
-translate), `steam-localize`, `steam-achievements`, `steam-review-gate`. Copy the folders to `~/.claude/skills/` for
+Claude Desktop lists skills under `/`, not MCP prompts): `steamworks-release`, `steamworks-market-research`,
+`steamworks-store-page` (the whole store-page workflow: interview, market study, brief, draft, validate, save,
+translate), `steamworks-localize`, `steamworks-achievements`, `steamworks-review-gate`. Copy the folders to `~/.claude/skills/` for
 Claude Code, or add them as skills in Claude's settings. `scripts/gen_skills.py` writes them from the server's
-prompts (a test keeps them in step); `steam-store-page` is written by hand.
+prompts (a test keeps them in step); `steamworks-store-page` is written by hand.
 
 ### Market study
 
@@ -396,7 +396,7 @@ uv run pytest                     # unit, replay and in-memory MCP tests; no net
 uv run ruff check src tests && uv run ruff format --check src tests
 uv run mypy
 uv run python scripts/gen_docs.py --check   # docs/CAPABILITIES.md and docs/schema/ are generated
-uv run python scripts/gen_skills.py --check # skills/ (all but steam-store-page) come from the server's prompts
+uv run python scripts/gen_skills.py --check # skills/ (all but steamworks-store-page) come from the server's prompts
 ```
 
 The BROWSER-mode tests replay real, sanitized Steamworks traffic from

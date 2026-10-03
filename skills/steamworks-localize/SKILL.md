@@ -1,5 +1,5 @@
 ---
-name: steam-localize
+name: steamworks-localize
 description: Translate the Steam store page, achievements and other player-facing texts into every target language. Uses the steamworks-mcp server's tools; use it when the user asks for this and the server is connected.
 ---
 

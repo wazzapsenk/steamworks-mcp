@@ -24,12 +24,12 @@ from steamworks_mcp.server import create_server
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "skills"
 NAMES = {
-    "release_assistant": "steam-release",
-    "market_research": "steam-market-research",
-    "write_store_page": "steam-store-page",
-    "localize_everything": "steam-localize",
-    "design_achievements": "steam-achievements",
-    "review_gate": "steam-review-gate",
+    "release_assistant": "steamworks-release",
+    "market_research": "steamworks-market-research",
+    "write_store_page": "steamworks-store-page",
+    "localize_everything": "steamworks-localize",
+    "design_achievements": "steamworks-achievements",
+    "review_gate": "steamworks-review-gate",
 }
 """Prompt name -> skill name. Every prompt needs one (the tests check it)."""
 HANDWRITTEN = {"write_store_page"}

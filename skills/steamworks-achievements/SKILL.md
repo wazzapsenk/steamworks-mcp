@@ -1,5 +1,5 @@
 ---
-name: steam-achievements
+name: steamworks-achievements
 description: Steam achievement names, descriptions and icon briefs that fit the game. Uses the steamworks-mcp server's tools; use it when the user asks for this and the server is connected.
 ---
 

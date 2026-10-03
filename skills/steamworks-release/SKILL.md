@@ -1,5 +1,5 @@
 ---
-name: steam-release
+name: steamworks-release
 description: Walk a game from nothing configured to released on Steam. Uses the steamworks-mcp server's tools; use it when the user asks for this and the server is connected.
 ---
 

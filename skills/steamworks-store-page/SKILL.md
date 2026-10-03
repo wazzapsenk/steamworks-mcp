@@ -1,5 +1,5 @@
 ---
-name: steam-store-page
+name: steamworks-store-page
 description: Write, check and translate a Steam store page (short description and About This Game) with the steamworks-mcp server's tools, from the interview and a study of the closest popular games' pages through brief, draft, validation and saving to localization. Use when the user wants to write or improve their game's Steam store text and the steamworks-mcp server is connected.
 ---
 
