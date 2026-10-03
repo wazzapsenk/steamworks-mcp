@@ -19,6 +19,7 @@ Environment:
   STEAMWORKS_MCP_ROOT            Folder that all project paths must live in (default: current directory)
   STEAMWORKS_MCP_TOKEN           Bearer token required in HTTP mode (strongly recommended)
   STEAMWORKS_MCP_BROWSER_PROFILE Where the Steamworks browser session is kept (default: ~/.steamworks-mcp/browser-profile)
+  STEAMWORKS_MCP_BROWSER         auto (default: Chrome, then Edge, then Playwright Chromium) | chrome | msedge | chromium
 `;
 
 function arg(name: string): string | undefined {

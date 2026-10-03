@@ -76,6 +76,14 @@ export async function validateProject(m: Manifest, paths: ProjectPaths): Promise
     if (!a.description) warn("achievements", `${a.id}: description is empty.`);
   }
 
+  if (m.cloud) {
+    const { byteQuota, fileQuota } = m.cloud;
+    if (byteQuota !== undefined && byteQuota > LIMITS.cloudByteQuotaMax) err("cloud", `byteQuota ${byteQuota} exceeds Steam's maximum of ${LIMITS.cloudByteQuotaMax} bytes (10 GB).`);
+    if (fileQuota !== undefined && fileQuota > LIMITS.cloudFileQuotaMax) err("cloud", `fileQuota ${fileQuota} exceeds Steam's maximum of ${LIMITS.cloudFileQuotaMax}.`);
+    if ((m.cloud.autoCloud?.roots.length ?? 0) > 0 && (!byteQuota || !fileQuota)) {
+      err("cloud", "Steamworks only shows Auto-Cloud settings after byteQuota and fileQuota are set and saved.");
+    }
+  }
   for (const r of m.cloud?.autoCloud?.roots ?? []) {
     if (!(AUTO_CLOUD_ROOTS as readonly string[]).includes(r.root)) {
       err("cloud", `Auto-Cloud root "${r.root}" is not one of: ${AUTO_CLOUD_ROOTS.join(", ")}.`);

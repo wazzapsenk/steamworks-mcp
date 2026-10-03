@@ -11,4 +11,7 @@ export const LIMITS = {
   /** New apps are capped at 100 achievements until they reach the Profile Features threshold. */
   achievementsBeforeProfileFeatures: 100,
   minScreenshots: 5,
+  /** Shown on the Steam Cloud settings page. */
+  cloudByteQuotaMax: 10_000_000_000,
+  cloudFileQuotaMax: 10_000,
 } as const;

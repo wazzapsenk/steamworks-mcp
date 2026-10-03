@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { fillFields, inspectPage } from "./browser/forms.js";
-import { assertEditable, assertNavigable, closeBrowser, getPage, isLoggedIn } from "./browser/session.js";
+import { assertEditable, assertNavigable, closeBrowser, getPage, isLoggedIn, wasRedirectedToSignIn } from "./browser/session.js";
 import type { Config } from "./config.js";
 import { exportBundle } from "./export/bundle.js";
 import { localizationStatus, pendingTranslations, setTranslations } from "./localization/store.js";
@@ -17,6 +17,9 @@ import { STEAM_LANGUAGES } from "./steam/languages.js";
 import { steamworksUrls } from "./steam/urls.js";
 import { SteamWebApi } from "./steam/webapi.js";
 import { diffAchievements } from "./steam/diff.js";
+import { fetchAchievementLocalization, fetchStoreLocalization, storeItemId, uploadStoreLocalization } from "./browser/steamworks.js";
+import { buildStoreLocalization, diffStoreLocalization, normalizeStoreText } from "./export/storeLocalization.js";
+import path from "node:path";
 
 const VERSION = "0.1.0";
 
@@ -363,15 +366,89 @@ export function createServer(config: Config): McpServer {
         target = id ? steamworksUrls(id)[name ?? "landing"] : "https://partner.steamgames.com/";
       }
       assertNavigable(target);
-      const page = await getPage(config.browserProfileDir);
+      const page = await getPage(config.browserProfileDir, config.browser);
       await page.goto(target, { waitUntil: "domcontentloaded" });
-      const loggedIn = await isLoggedIn(page);
+      const loggedIn = (await isLoggedIn(page)) && !wasRedirectedToSignIn(page);
       return ok({
         url: page.url(),
         title: await page.title(),
         loggedIn,
-        ...(loggedIn ? {} : { next: "Ask the user to log in to Steamworks in the opened browser window, then call steamworks_open again." }),
+        ...(loggedIn ? {} : { next: "Ask the user to click \"Sign in\" and log in to Steamworks in the opened browser window themselves, then call steamworks_open again. If they are logged in but still see the landing page, their account may lack access to this app." }),
       });
+    }),
+  );
+
+  server.registerTool(
+    "steamworks_store_text_sync",
+    {
+      title: "Sync store description texts",
+      description:
+        "Compares the short description and About This Game in every language (steamworks.yaml + localization/*.yaml) with what " +
+        "Steamworks has, using the store page's official Download/Upload Localization. dryRun=true (default) only returns the diff. " +
+        "With dryRun=false and userConfirmed=true it uploads the JSON, re-downloads and verifies. Saves the store page draft; never publishes.",
+      inputSchema: {
+        projectDir,
+        languages: z.array(z.string()).optional().describe("Defaults to source + all target languages"),
+        dryRun: z.boolean().default(true),
+        userConfirmed: z.boolean().default(false).describe("true only after the user approved the shown diff"),
+      },
+      annotations: { openWorldHint: true },
+    },
+    wrap(async ({ projectDir, languages, dryRun, userConfirmed }) => {
+      const { p, m } = await load(projectDir);
+      if (!m.appId) throw new Error("steamworks.yaml has no appId.");
+      const page = await getPage(config.browserProfileDir, config.browser);
+      const itemId = await storeItemId(page, m.appId);
+      const current = await fetchStoreLocalization(page, itemId);
+      const next = await buildStoreLocalization(m, p, itemId, languages);
+      const changes = diffStoreLocalization(current, next);
+      const preview = changes.map((c) => ({ ...c, before: c.before.slice(0, 160), after: c.after.slice(0, 160) }));
+      if (dryRun || changes.length === 0) {
+        return ok({ itemId, changes: preview, ...(changes.length ? { next: "Show the user these changes; on approval call again with dryRun=false, userConfirmed=true." } : { inSync: true }) });
+      }
+      if (!userConfirmed) throw new Error("Show the diff to the user and get their OK, then call again with userConfirmed: true.");
+      // Upload only the languages/fields that change.
+      const upload = { itemid: itemId, languages: {} as Record<string, Record<string, string>> };
+      for (const c of changes) (upload.languages[c.language] ??= {})[c.field] = c.after;
+      const file = path.join(p.outputDir, "store", `storepage_${itemId}_upload.json`);
+      await fs.mkdir(path.dirname(file), { recursive: true });
+      await fs.writeFile(file, JSON.stringify(upload, null, 2), "utf8");
+      const message = await uploadStoreLocalization(page, m.appId, file);
+      const after = await fetchStoreLocalization(page, itemId);
+      const failed = changes.filter((c) => {
+        const f = after.languages[c.language];
+        return normalizeStoreText((Array.isArray(f) || !f ? {} : f)[c.field] ?? "") !== normalizeStoreText(c.after);
+      });
+      return ok({
+        itemId,
+        steamMessage: message,
+        uploaded: changes.length,
+        verified: changes.length - failed.length,
+        failed: failed.map((c) => `${c.language} ${c.field}`),
+        note: "Saved as a store page draft. Publishing is a separate step in Steamworks.",
+      });
+    }),
+  );
+
+  server.registerTool(
+    "steamworks_achievement_loc_download",
+    {
+      title: "Download achievement localization",
+      description: "Downloads the app's achievement localization (KeyValues/VDF, all languages) from Steamworks into steamworks-out/ and returns it.",
+      inputSchema: { projectDir },
+      annotations: { readOnlyHint: true, openWorldHint: true },
+    },
+    wrap(async ({ projectDir }) => {
+      const { p, m } = await load(projectDir);
+      if (!m.appId) throw new Error("steamworks.yaml has no appId.");
+      const page = await getPage(config.browserProfileDir, config.browser);
+      await page.goto(steamworksUrls(m.appId).achievementLocalization, { waitUntil: "domcontentloaded" });
+      if (!(await isLoggedIn(page)) || wasRedirectedToSignIn(page)) throw new Error("Not logged in to Steamworks; call steamworks_open first.");
+      const vdf = await fetchAchievementLocalization(page, m.appId);
+      const file = path.join(p.outputDir, `achievements_loc_${m.appId}_steam.vdf`);
+      await fs.mkdir(p.outputDir, { recursive: true });
+      await fs.writeFile(file, vdf, "utf8");
+      return ok({ file, content: vdf.length > 20000 ? `${vdf.slice(0, 20000)}\n… (truncated)` : vdf });
     }),
   );
 
@@ -384,7 +461,7 @@ export function createServer(config: Config): McpServer {
       annotations: { readOnlyHint: true },
     },
     wrap(async ({ includeHidden, maxValueLength }) => {
-      const page = await getPage(config.browserProfileDir);
+      const page = await getPage(config.browserProfileDir, config.browser);
       const info = await inspectPage(page, maxValueLength);
       return ok({
         ...info,
@@ -407,7 +484,7 @@ export function createServer(config: Config): McpServer {
       },
     },
     wrap(async ({ fields, dryRun }) => {
-      const page = await getPage(config.browserProfileDir);
+      const page = await getPage(config.browserProfileDir, config.browser);
       const changes = await fillFields(page, fields, dryRun);
       return ok({ dryRun, changes, next: dryRun ? "Show the user the diff; call again with dryRun=false once they agree." : "Fields filled. Ask the user before saving." });
     }),
@@ -424,7 +501,7 @@ export function createServer(config: Config): McpServer {
       const p = paths(projectDir);
       const abs = p.file(file);
       await fs.access(abs);
-      const page = await getPage(config.browserProfileDir);
+      const page = await getPage(config.browserProfileDir, config.browser);
       assertEditable(page);
       await page.locator(selector).setInputFiles(abs);
       return ok({ uploaded: file, selector });
@@ -447,7 +524,7 @@ export function createServer(config: Config): McpServer {
     },
     wrap(async ({ selector, userConfirmed, waitForNavigation }) => {
       if (!userConfirmed) throw new Error("Ask the user to confirm this click, then call again with userConfirmed: true.");
-      const page = await getPage(config.browserProfileDir);
+      const page = await getPage(config.browserProfileDir, config.browser);
       assertEditable(page);
       const loc = page.locator(selector);
       const count = await loc.count();
@@ -469,7 +546,7 @@ export function createServer(config: Config): McpServer {
       annotations: { readOnlyHint: true },
     },
     wrap(async ({ fullPage }) => {
-      const page = await getPage(config.browserProfileDir);
+      const page = await getPage(config.browserProfileDir, config.browser);
       const buf = await page.screenshot({ fullPage, type: "jpeg", quality: 70 });
       return { content: [{ type: "image", data: buf.toString("base64"), mimeType: "image/jpeg" }] };
     }),

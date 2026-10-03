@@ -18,17 +18,38 @@ async function loadPlaywright() {
     return await import("playwright");
   } catch {
     throw new BrowserUnavailableError(
-      "Browser tools need Playwright. Install it next to steamworks-mcp:\n  npm i playwright\n  npx playwright install chromium",
+      "Browser tools need Playwright. Install it next to steamworks-mcp:\n  npm i playwright",
     );
   }
 }
 
-export async function getPage(profileDir: string): Promise<Page> {
+/** "auto" tries installed Google Chrome, then Microsoft Edge, then Playwright's bundled Chromium. */
+export type BrowserChoice = "auto" | "chrome" | "msedge" | "chromium";
+
+export async function getPage(profileDir: string, browser: BrowserChoice = "auto"): Promise<Page> {
   if (page && !page.isClosed()) return page;
   if (!context) {
     const { chromium } = await loadPlaywright();
     await fs.mkdir(profileDir, { recursive: true });
-    context = await chromium.launchPersistentContext(profileDir, { headless: false, viewport: null });
+    const candidates: BrowserChoice[] = browser === "auto" ? ["chrome", "msedge", "chromium"] : [browser];
+    const errors: string[] = [];
+    for (const choice of candidates) {
+      try {
+        context = await chromium.launchPersistentContext(profileDir, {
+          headless: false,
+          viewport: null,
+          ...(choice === "chromium" ? {} : { channel: choice }),
+        });
+        break;
+      } catch (err: any) {
+        errors.push(`${choice}: ${String(err?.message ?? err).split("\n")[0]}`);
+      }
+    }
+    if (!context) {
+      throw new BrowserUnavailableError(
+        `Could not start a browser.\n${errors.join("\n")}\nInstall Google Chrome or Microsoft Edge, or run: npx playwright install chromium`,
+      );
+    }
     context.on("close", () => {
       context = undefined;
       page = undefined;
@@ -57,9 +78,17 @@ export function assertEditable(p: Page): void {
   if (host !== EDIT_HOST) throw new Error(`The current page is on ${host}; form tools only work on ${EDIT_HOST}.`);
 }
 
+/**
+ * Steam sets the httpOnly `steamLoginSecure` cookie once you're signed in. Only its presence is checked;
+ * the value is never read out. Anonymous visits to protected pages are redirected to `/?goto=...`.
+ */
 export async function isLoggedIn(p: Page): Promise<boolean> {
-  if (new URL(p.url()).hostname !== EDIT_HOST) return false;
-  // The partner site redirects anonymous users to a login page that contains a password field.
-  const hasPassword = await p.locator('input[type="password"]').count();
-  return hasPassword === 0 && !/\/login/i.test(p.url());
+  const cookies = await p.context().cookies(`https://${EDIT_HOST}`);
+  return cookies.some((c) => c.name === "steamLoginSecure" && c.value !== "");
+}
+
+/** True when Steamworks bounced a protected page back to its sign-in landing page. */
+export function wasRedirectedToSignIn(p: Page): boolean {
+  const u = new URL(p.url());
+  return u.hostname === EDIT_HOST && u.searchParams.has("goto");
 }

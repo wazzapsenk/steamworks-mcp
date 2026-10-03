@@ -1,5 +1,6 @@
 import os from "node:os";
 import path from "node:path";
+import type { BrowserChoice } from "./browser/session.js";
 
 export interface Config {
   /** Steamworks publisher Web API key. Only needed for tools that talk to partner.steam-api.com. */
@@ -13,6 +14,8 @@ export interface Config {
   httpToken: string | undefined;
   /** Where the Playwright browser profile (Steamworks login cookies) is stored. */
   browserProfileDir: string;
+  /** Which browser drives Steamworks: auto (Chrome → Edge → bundled Chromium), chrome, msedge or chromium. */
+  browser: BrowserChoice;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -23,5 +26,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     browserProfileDir: path.resolve(
       env.STEAMWORKS_MCP_BROWSER_PROFILE?.trim() || path.join(os.homedir(), ".steamworks-mcp", "browser-profile"),
     ),
+    browser: parseBrowser(env.STEAMWORKS_MCP_BROWSER),
   };
+}
+
+function parseBrowser(v: string | undefined): BrowserChoice {
+  const b = v?.trim().toLowerCase() || "auto";
+  if (b === "auto" || b === "chrome" || b === "msedge" || b === "chromium") return b;
+  if (b === "edge") return "msedge";
+  throw new Error(`STEAMWORKS_MCP_BROWSER must be auto, chrome, msedge or chromium (got "${v}").`);
 }

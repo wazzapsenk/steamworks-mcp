@@ -24,7 +24,7 @@ const call = async (name: string, args: Record<string, unknown> = {}) => {
 beforeAll(async () => {
   root = await fs.mkdtemp(path.join(os.tmpdir(), "swmcp-e2e-"));
   await fs.cp(path.resolve("examples/demo-game"), path.join(root, "demo"), { recursive: true });
-  const server = createServer({ publisherKey: undefined, workspaceRoot: root, httpToken: undefined, browserProfileDir: path.join(root, ".profile") });
+  const server = createServer({ publisherKey: undefined, workspaceRoot: root, httpToken: undefined, browserProfileDir: path.join(root, ".profile"), browser: "auto" });
   const [a, b] = InMemoryTransport.createLinkedPair();
   client = new Client({ name: "test", version: "0" });
   await Promise.all([server.connect(a), client.connect(b)]);

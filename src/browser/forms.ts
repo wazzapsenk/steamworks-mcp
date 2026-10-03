@@ -15,6 +15,14 @@ export interface FormControl {
   visible: boolean;
 }
 
+/**
+ * esbuild/tsx (keepNames) rewrites functions passed to page.evaluate to call `__name`, which doesn't exist in the page.
+ * Define a no-op once per document; the string form is never transformed.
+ */
+async function ensureNameShim(page: Page): Promise<void> {
+  await page.evaluate("globalThis.__name ??= (f) => f");
+}
+
 export interface ButtonInfo {
   selector: string;
   text: string;
@@ -27,6 +35,7 @@ export interface ButtonInfo {
  */
 export async function inspectPage(page: Page, maxValueLength = 200): Promise<{ url: string; title: string; controls: FormControl[]; buttons: ButtonInfo[] }> {
   assertEditable(page);
+  await ensureNameShim(page);
   const data = await page.evaluate((maxLen) => {
     const cssEscape = (s: string) => (window as any).CSS.escape(s);
     const selectorFor = (el: Element): string => {
@@ -129,6 +138,7 @@ export interface FillChange {
 /** Fills controls by selector. With dryRun, only reports what would change. Never submits the form. */
 export async function fillFields(page: Page, fields: { selector: string; value: string | boolean }[], dryRun: boolean): Promise<FillChange[]> {
   assertEditable(page);
+  await ensureNameShim(page);
   const changes: FillChange[] = [];
   for (const f of fields) {
     const loc = page.locator(f.selector);
