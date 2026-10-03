@@ -382,6 +382,17 @@ def checks(online: bool = True) -> list[Check]:
                 "" if ok else "check the internet connection; offline work still runs",
             )
         )
+    from steamworks_mcp.remote import find_cloudflared
+
+    tunnel = find_cloudflared()
+    out.append(
+        Check(
+            True if tunnel else None,
+            "cloudflared "
+            + ("found" if tunnel else "not found")
+            + " (for ChatGPT and claude.ai: steamworks-mcp remote)",
+        )
+    )
     for c in clients():
         state = is_connected(c)
         if state:

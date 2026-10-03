@@ -1,5 +1,6 @@
 """Command line: ``steamworks-mcp`` (stdio), ``steamworks-mcp --http`` (Streamable HTTP), ``steamworks-mcp setup``
-(connect it to the user's apps) and ``steamworks-mcp doctor`` (check the installation).
+(connect it to the user's apps), ``steamworks-mcp remote`` (HTTP plus a tunnel, for ChatGPT and claude.ai) and
+``steamworks-mcp doctor`` (check the installation).
 
 HTTP is for remote clients such as ChatGPT and Codex. It binds to 127.0.0.1 by default, always requires a token
 (``STEAMWORKS_MCP_TOKEN``, 24+ characters) and validates Host/Origin headers. Clients send the token as
@@ -102,10 +103,15 @@ def main(argv: list[str] | None = None) -> int:
         from steamworks_mcp import setup_cli
 
         return setup_cli.setup(argv[1:]) if argv[0] == "setup" else setup_cli.doctor(argv[1:])
+    if argv and argv[0] == "remote":
+        from steamworks_mcp import remote
+
+        return remote.main(argv[1:])
     parser = argparse.ArgumentParser(
         prog="steamworks-mcp",
         description="Steamworks release assistant (MCP server). Also: `steamworks-mcp setup` connects it to your "
-        "apps, `steamworks-mcp doctor` checks the installation.",
+        "apps, `steamworks-mcp remote` makes it reachable for ChatGPT and claude.ai, `steamworks-mcp doctor` checks "
+        "the installation.",
     )
     parser.add_argument("--http", action="store_true", help="serve Streamable HTTP instead of stdio")
     parser.add_argument("--host", default="127.0.0.1", help="HTTP interface (default 127.0.0.1)")
