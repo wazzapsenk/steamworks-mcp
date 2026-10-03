@@ -41,7 +41,11 @@ def set_fields(
     for path in changes:
         if not fp.is_valid(path):
             raise fp.FieldPathError(f'"{path}" is not a field of steamworks.yaml (see get_spec_info("schema")).')
-    coerced = {path: coerce(path, value) for path, value in changes.items()}
+    before = project.values()
+    coerced = {path: coerce(path, value, fp.get(before, path)) for path, value in changes.items()}
+    if isinstance(coerced.get("target_languages"), list):  # the source language is never a translation target
+        written_in = coerced.get("source_language") or before.get("source_language")
+        coerced["target_languages"] = [lang for lang in coerced["target_languages"] if lang != written_in]
     findings = _store_findings(project, coerced)
     errors = [f for f in findings if f["severity"] == "error"]
     if errors and source != "user":

@@ -45,9 +45,28 @@ def _default(q: Question) -> Any:
     return q.suggestion
 
 
+def _titles(q: Question) -> Any:
+    """Show option labels (e.g. "Chinese (Simplified)" for "schinese") as the spec's titled single/multi select."""
+    if not q.labels or q.kind not in ("choice", "multi"):
+        return None
+    options = [{"const": o, "title": q.labels.get(o, o)} for o in q.options]
+
+    def extra(schema: dict[str, Any]) -> None:
+        if schema.get("type") == "array":
+            schema["items"] = {"anyOf": options}
+        else:
+            schema.pop("enum", None)
+            schema["oneOf"] = options
+
+    return extra
+
+
 def form_model(questions: list[Question]) -> type[BaseModel]:
     fields: dict[str, Any] = {}
     for q in questions:
         hint = " (comma-separated)" if q.kind == "list" else " (YYYY-MM-DD)" if q.kind == "date" else ""
-        fields[form_key(q.id)] = (_annotation(q), Field(default=_default(q), description=q.question + hint))
+        fields[form_key(q.id)] = (
+            _annotation(q),
+            Field(default=_default(q), description=q.question + hint, json_schema_extra=_titles(q)),
+        )
     return create_model("InterviewAnswers", **fields)

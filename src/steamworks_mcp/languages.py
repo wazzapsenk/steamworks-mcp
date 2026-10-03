@@ -17,8 +17,17 @@ class SteamLanguage:
     name: str
 
 
-# Common mistakes people (and models) make.
-_ALIASES = {"korean": "koreana", "chinese": "schinese", "portuguese-brazil": "brazilian", "spanish-latam": "latam"}
+# Common mistakes people (and models) make, and the usual English names.
+_ALIASES = {
+    "korean": "koreana",
+    "chinese": "schinese",
+    "simplified chinese": "schinese",
+    "traditional chinese": "tchinese",
+    "portuguese-brazil": "brazilian",
+    "brazilian portuguese": "brazilian",
+    "spanish-latam": "latam",
+    "latin american spanish": "latam",
+}
 
 
 @cache
