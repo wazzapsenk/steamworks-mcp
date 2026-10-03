@@ -358,6 +358,10 @@ def test_accepted_proposals_let_good_texts_pass() -> None:
         ]
         == "pass"
     )
+    # headers written in capitals are not acronyms; a lone acronym next to them still is
+    headers = "[h2]ARENAS BY DAY AND NIGHT[/h2]Rooms change at night.[h2]SOLO OR UP TO FOUR[/h2]Team up online."
+    assert results("long", headers, v)["plain_language_no_jargon"] == "pass"
+    assert results("long", headers + " Lower your TTK.", v)["plain_language_no_jargon"] == "warn"
 
 
 def test_headers_rule_and_its_genre_switch() -> None:

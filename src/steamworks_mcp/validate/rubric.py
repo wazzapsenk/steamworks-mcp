@@ -31,6 +31,8 @@ SENTENCE_END = re.compile(r"(?<=[.!?])\s")
 HEADER = re.compile(r"\[h[1-3]\][^\[]+\[/h[1-3]\]|^\s*\[b\][^\[\n]+\[/b\]\s*$", re.I | re.M)
 ACRONYM = re.compile(r"\b(?=[A-Za-z0-9]*[A-Z][A-Za-z0-9]*[A-Z])[A-Z0-9][A-Za-z0-9]{1,5}\b")
 """Short tokens with at least two capitals: DPS, TTK, PvPvE."""
+SHOUTED = re.compile(r"\b[A-Z0-9][A-Z0-9'’&-]*(?:[ \t]+[A-Z0-9][A-Z0-9'’&-]*)+\b")
+"""Runs of capitalized words, such as section headers in capitals ("ARENAS BY DAY AND NIGHT"): not acronyms."""
 
 
 class RubricRule(BaseModel):
@@ -367,7 +369,8 @@ def check_rule(rule: RubricRule, section: Section, text: str, ctx: Context) -> R
         allow = {a.lower() for a in p.get("allow", [])}
         title = {w.lower() for w in re.findall(r"\w+", str(ctx.get("game", "name") or ""))}
         flagged = []
-        for m in ACRONYM.finditer(body):
+        scanned = SHOUTED.sub(lambda m: " " * len(m.group(0)), body)
+        for m in ACRONYM.finditer(scanned):
             tok = m.group(0)
             if tok.lower() in allow or tok.lower() in title or tok in flagged:
                 continue
