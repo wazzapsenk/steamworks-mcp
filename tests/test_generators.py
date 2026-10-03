@@ -493,7 +493,8 @@ async def test_briefs_build_on_the_interview_answers(project: tuple[Config, Path
     outline = await call(config, "generate", path="game", section="store_long", stage="outline")
     long = outline["use_the_answers"]
     assert (
-        long["game.length"]["answer"] == "sessions of 15-30 minutes; runs: One night of three raid waves, 15-30 minutes"
+        long["game.session_length"]["answer"]
+        == "sessions of 15-30 minutes; runs: One night of three raid waves, 15-30 minutes"
     )
     assert "feature list" in long["game.launch_content"]["use"] and "game.progression" in long
 
