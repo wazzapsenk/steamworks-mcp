@@ -38,22 +38,29 @@ areas:
       also has to confirm on its phone / Steam Mobile app.
   - id: builds_list
     name: List builds and branches
-    api: {status: unverified, how: "ISteamApps/GetAppBuilds, GetAppBetas"}
+    api: {status: partial, how: "ISteamApps/GetAppBuilds, GetAppBetas"}
     browser: {status: never}
     default_mode: API
     fallback_mode: MANUAL
+    notes: >-
+      Recorded on an app without builds only: both calls then answer HTTP 500. The answer for an app with builds is
+      not recorded yet.
   - id: leaderboards
     name: Leaderboards
-    api: {status: unverified, how: "ISteamLeaderboards/FindOrCreateLeaderboard, GetLeaderboardsForGame, DeleteLeaderboard"}
+    api: {status: verified, how: "ISteamLeaderboards/FindOrCreateLeaderboard, GetLeaderboardsForGame, DeleteLeaderboard"}
     browser: {status: never}
     default_mode: API
     fallback_mode: MANUAL
+    notes: >-
+      GetLeaderboardsForGame is cached for about a minute, so the tool reads the boards it changes one by one
+      (FindOrCreateLeaderboard without creating). Settings of an existing board are only reported, never changed.
   - id: achievement_schema_read
     name: Read the achievement and stat schema
-    api: {status: unverified, how: "ISteamUserStats/GetSchemaForGame (publisher key)"}
+    api: {status: partial, how: "ISteamUserStats/GetSchemaForGame (publisher key)"}
     browser: {status: verified, how: "apps/fetchachievements"}
     default_mode: API
     fallback_mode: MANUAL
+    notes: The API returns the published schema only; recorded on an app with nothing published yet (empty answer).
   - id: achievements
     name: Achievement definitions, localized names, icons
     api: {status: never, how: "no Web API writes achievement definitions"}

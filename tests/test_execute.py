@@ -17,7 +17,7 @@ from mcp import Client
 from steamworks_mcp import project as proj
 from steamworks_mcp.config import Config, load_config
 from steamworks_mcp.execute import guard, sync
-from steamworks_mcp.execute.api import PartnerApi, SteamApiError, plan_leaderboards, run_steamcmd
+from steamworks_mcp.execute.api import DISPLAY_TYPES, PartnerApi, SteamApiError, plan_leaderboards, run_steamcmd
 from steamworks_mcp.execute.apply import ApplyRefused, Consent, apply_section, restore_snapshot, save_snapshot
 from steamworks_mcp.execute.browser import partner as P
 from steamworks_mcp.execute.browser.html import parse
@@ -592,17 +592,19 @@ def test_api_sends_the_documented_parameters() -> None:
             )
         if request.url.path.endswith("SetAppBuildLive/v2/"):
             return httpx.Response(201, json={"response": {"result": 1}})
-        return httpx.Response(200, json={"response": {"result": 1}})
+        board = {"leaderBoardID": 7, "leaderboardName": "TIME", "leaderBoardDisplayType": "Seconds"}
+        return httpx.Response(200, json={"result": {"result": 1, "leaderboard": board}})
 
     api = mock_api(handler)
     assert api.leaderboards(APP)[0]["name"] == "BEST"
-    api.find_or_create_leaderboard(APP, {"name": "TIME", "sort_method": "ascending", "display_type": "seconds"})
+    made = api.find_or_create_leaderboard(APP, {"name": "TIME", "sort_method": "ascending", "display_type": "seconds"})
+    assert made["id"] == 7 and made["displaytype"] == "Seconds"
     live = api.set_build_live(APP, 42, "beta")
     assert live["needs_mobile_confirmation"] is True
     with pytest.raises(SteamApiError, match="never sets the default branch"):
         api.set_build_live(APP, 42, "public")
     create = dict(seen)["/ISteamLeaderboards/FindOrCreateLeaderboard/v2/"]
-    assert create["sortmethod"] == "Ascending" and create["displaytype"] == "TimeSeconds"
+    assert create["sortmethod"] == "Ascending" and create["displaytype"] == "Seconds"
     assert create["createifnotfound"] == "true" and create["onlytrustedwrites"] == "false"
     setlive = dict(seen)["/ISteamApps/SetAppBuildLive/v2/"]
     assert setlive["betakey"] == "beta" and setlive["buildid"] == "42"
@@ -617,6 +619,102 @@ def test_api_errors_never_show_the_key() -> None:
     assert KEY not in str(exc.value) and "<key>" in str(exc.value)
     with pytest.raises(SteamApiError, match="publisher key was rejected"):
         mock_api(lambda r: httpx.Response(403)).betas(APP)
+
+
+def recorded_api(step: str) -> tuple[PartnerApi, list[dict[str, Any]]]:
+    """A PartnerApi that answers with the recorded responses of ``step``, in order. Each request must send what the
+    recording sent (the key aside); the list left over shows which recorded calls were not made."""
+    pairs: list[dict[str, Any]] = json.loads((FIX / f"{step}.json").read_text(encoding="utf-8"))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        want = pairs.pop(0)
+        assert (request.method, request.url.path) == (want["method"], urlsplit(want["url"]).path)
+        recorded = want.get("request") if want["method"] == "POST" else want.get("query")
+        sent = {k: v for k, v in params(request).items() if k != "key"}
+        assert sent == {k: v for k, v in (recorded or {}).items() if k != "key"}
+        return httpx.Response(want["status"], json=want["response"])
+
+    return mock_api(handler), pairs
+
+
+def test_api_reads_as_recorded_on_an_app_without_builds() -> None:
+    api, left = recorded_api("api/read")
+    assert api.schema(APP) == {}  # nothing published yet
+    reads: list[Callable[[], dict[str, Any]]] = [lambda: api.builds(APP, 5), lambda: api.betas(APP)]
+    for read in reads:
+        with pytest.raises(SteamApiError, match=r"HTTP 500.*without any build yet") as exc:
+            read()
+        assert exc.value.status == 500
+    assert api.leaderboards(APP) == [] and left == []
+
+
+def test_leaderboard_calls_as_recorded() -> None:
+    api, left = recorded_api("api/leaderboard_write")
+    board = {"name": "SWMCP_REC_BOARD", "sort_method": "descending", "display_type": "numeric"}
+    made = api.find_or_create_leaderboard(APP, board)
+    assert made["id"] > 0 and made["displaytype"] == "Numeric" and made["sortmethod"] == "Descending"
+    assert api.find_leaderboard(APP, "SWMCP_REC_BOARD") == made
+    assert api.leaderboards(APP) == []  # the cached list does not show the new board yet
+    assert left == []
+
+    api, left = recorded_api("api/leaderboard_delete")
+    assert api.delete_leaderboard(APP, "SWMCP_REC_BOARD") is True
+    assert api.delete_leaderboard(APP, "SWMCP_REC_BOARD") is False  # result 2: no such board
+    assert api.find_leaderboard(APP, "SWMCP_REC_BOARD") is None  # leaderBoardID 0
+    assert api.leaderboards(APP) == [] and left == []
+
+
+def test_display_type_names_as_recorded() -> None:
+    """Steam stores the Web API names; the SDK's (TimeSeconds...) are accepted but leave the display type empty."""
+    stored = {}
+    for e in json.loads((FIX / "api/leaderboard_display_types.json").read_text(encoding="utf-8")):
+        if e["request"].get("createifnotfound") == "true":
+            stored[e["request"]["displaytype"]] = e["response"]["result"]["leaderboard"]["leaderBoardDisplayType"]
+    assert stored == {"Seconds": "Seconds", "MilliSeconds": "MilliSeconds", "TimeSeconds": "", "TimeMilliSeconds": ""}
+    assert set(DISPLAY_TYPES.values()) == {"Numeric", "Seconds", "MilliSeconds"}
+    empty = {"name": "T", "sortmethod": "Ascending", "displaytype": ""}
+    plan = plan_leaderboards([{"name": "T", "sort_method": "ascending", "display_type": "seconds"}], [empty], False)
+    assert plan["settings_differ"][0]["steam"]["display_type"] == "unset"
+
+
+def test_leaderboard_apply_reads_back_past_the_cached_list(tmp_path: Path) -> None:
+    root = tmp_path / "game"
+    root.mkdir()
+    proj.init_project(root, "ExampleGame", APP)
+    project = setv(
+        Project.open(root), {"leaderboards": [{"name": "FAST", "sort_method": "ascending", "display_type": "seconds"}]}
+    )
+    boards: dict[str, dict[str, Any]] = {"OLD": {"leaderBoardID": 3, "leaderboardName": "OLD"}}
+    cached = [{"id": 3, "name": "OLD", "sortmethod": "Descending", "displaytype": "Numeric"}]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        p, path = params(request), request.url.path
+        if path.endswith("GetLeaderboardsForGame/v2/"):
+            return httpx.Response(200, json={"response": {"result": 1, "leaderboards": cached}})
+        if path.endswith("DeleteLeaderboard/v1/"):
+            return httpx.Response(200, json={"result": {"result": 1 if boards.pop(p["name"], None) else 2}})
+        if p["createifnotfound"] == "true":
+            boards[p["name"]] = {
+                "leaderBoardID": 9,
+                "leaderboardName": p["name"],
+                "leaderBoardSortMethod": p["sortmethod"],
+                "leaderBoardDisplayType": p["displaytype"],
+                "onlytrustedwrites": False,
+                "onlyfriendsreads": False,
+            }
+        found = boards.get(p["name"], {"leaderBoardID": 0, "leaderboardName": p["name"]})
+        return httpx.Response(200, json={"result": {"result": 1, "leaderboard": found}})
+
+    config = Config(workspace_root=tmp_path, publisher_key=KEY, home_dir=tmp_path / "home")
+    ex = Executor(config, api=mock_api(handler))
+    out = ex.apply_leaderboards(project, "main", dry_run=False, user_confirmed=True, remove_extra=True)
+    assert out["done"] == [{"action": "create", "name": "FAST"}, {"action": "delete", "name": "OLD"}]
+    assert out["still_different"] == {"create": [], "delete": [], "settings_differ": []}
+    assert out["applied_fields"] and "error" not in out
+    # a minute later the cached list still shows OLD and not FAST: FAST is not created twice, OLD is already gone
+    again = ex.apply_leaderboards(project, "main", dry_run=False, user_confirmed=True, remove_extra=True)
+    assert again["done"] == [{"action": "delete", "name": "OLD", "already_gone": True}]
+    assert again["still_different"] == {"create": [], "delete": [], "settings_differ": []}
 
 
 def test_leaderboard_plan() -> None:

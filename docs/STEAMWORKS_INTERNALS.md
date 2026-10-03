@@ -185,19 +185,45 @@ without an executable. Validation has to happen in this tool, before anything is
 
 ## Partner Web API (publisher key)
 
-Not recorded yet: no publisher key was available during the recording session. The scripted steps `api/read`,
-`api/leaderboard_write` and `api/leaderboard_delete` cover `GetSchemaForGame`, `GetAppBuilds`, `GetAppBetas`,
-`GetLeaderboardsForGame`, `FindOrCreateLeaderboard` and `DeleteLeaderboard`. Without a key, `api.steampowered.com`
-answers `GetSchemaForGame` with `400 Required parameter 'key' is missing`. (`api/public_unkeyed`)
+Recorded on an unreleased test app with a key from a group that has only the **General** permission (`api/read`,
+`api/leaderboard_write`, `api/leaderboard_display_types`, `api/leaderboard_delete`). All calls go to
+`partner.steam-api.com`. Without a key, `api.steampowered.com` answers `GetSchemaForGame` with
+`400 Required parameter 'key' is missing`. (`api/public_unkeyed`)
 
-What the code relies on, from Valve's documentation pages only (unverified until a key is available):
+Leaderboards (`ISteamLeaderboards`):
 
-- `FindOrCreateLeaderboard/v2` (POST): `appid`, `name`, `sortmethod` (default Ascending), `displaytype` (default
-  Numeric), `createifnotfound`, `onlytrustedwrites`, `onlyfriendsreads`. The allowed `displaytype` strings are not
-  listed; the tool sends `Numeric`, `TimeSeconds` and `TimeMilliSeconds` (the SDK's
-  `k_ELeaderboardDisplayType*` names). The TypeScript v0.1 used `Seconds` / `MilliSeconds`; one of the two is wrong.
+- `FindOrCreateLeaderboard/v2` (POST) takes `appid`, `name`, `sortmethod`, `displaytype`, `createifnotfound`,
+  `onlytrustedwrites` and `onlyfriendsreads`. The answer is HTTP 200 with
+  `{"result": {"result": 1, "leaderboard": {leaderboardName, leaderBoardID, leaderBoardEntries,
+  leaderBoardSortMethod, leaderBoardDisplayType, onlytrustedwrites, onlyfriendsreads, ...}}}`.
+- The `displaytype` names are `Numeric`, `Seconds` and `MilliSeconds`. The SDK's names (`TimeSeconds`,
+  `TimeMilliSeconds`) and unknown strings are accepted, but the board is stored with an empty display type
+  (`api/leaderboard_display_types`). The tool only sends the three valid names. It reports a board with an empty
+  display type as `unset`.
+- With `createifnotfound=false` the same call is a lookup that never creates anything. A board that does not exist
+  comes back with `result 1` and `leaderBoardID 0`.
+- `DeleteLeaderboard/v1` (POST, `appid`, `name`) answers `{"result": {"result": 1}}`. For a board that does not
+  exist it answers `result 2`, still with HTTP 200.
+- `GetLeaderboardsForGame/v2` answers `{"response": {"result": 1, "leaderboards": [{id, name, entries, sortmethod,
+  displaytype, onlytrustedwrites, onlyfriendsreads, ...}]}}`. The list is cached:
+  - A new board was missing from it, and a deleted board was still listed, for up to about a minute.
+  - So the tool plans and reads back each board it is about to change with the lookup, not with the list.
 - Settings of an existing leaderboard cannot be changed through the Web API without deleting it (and its scores);
   the tool only reports such differences.
+
+Builds and the schema:
+
+- `GetAppBuilds/v1` and `GetAppBetas/v1` answered HTTP 500 on an app whose SteamPipe > Builds page said no builds
+  had been created yet:
+  - `GetAppBuilds`: `{"response": {"result": 2, "message": "Failed to query app builds"}}`
+  - `GetAppBetas`: `{"response": {"result": 42, "message": "Couldn't get app info for app …"}}`
+
+  The answer for an app that has builds is not recorded yet. `GetAppDepotVersions/v1` answered normally on the same
+  app (the tool does not use it).
+- `GetSchemaForGame/v2` returns the published schema only: `{"game": {}}` while nothing is published.
+
+Builds going live (from Valve's documentation, not recorded):
+
 - `SetAppBuildLive/v2` (POST): `betakey` is required, `public` meaning the default branch; a released app then
   also needs `steamid` and answers `201 Created` while the change waits for a Steam Mobile confirmation. The tool
   only sets beta branches live; the default branch stays a manual step (gate rule `build_set_live_default_branch`).

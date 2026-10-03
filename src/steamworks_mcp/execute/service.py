@@ -48,6 +48,26 @@ def appid_of(values: dict[str, Any], app: str) -> int:
     return int(appid)
 
 
+def current_leaderboards(api: PartnerApi, appid: int, names: set[str]) -> list[dict[str, Any]]:
+    """GetLeaderboardsForGame with the named boards read one by one: the list lags about a minute behind changes."""
+    now = {str(b.get("name")): b for b in api.leaderboards(appid)}
+    for name in sorted(names):
+        found = api.find_leaderboard(appid, name)
+        if found is None:
+            now.pop(name, None)
+        else:
+            now[name] = found
+    return list(now.values())
+
+
+def or_error(read: Callable[[], Any]) -> Any:
+    """One API read of several: its error is reported in its place instead of hiding the other reads."""
+    try:
+        return read()
+    except SteamApiError as exc:
+        return {"error": str(exc)}
+
+
 class Executor:
     def __init__(
         self, config: Config, transport_factory: TransportFactory | None = None, api: PartnerApi | None = None
@@ -188,7 +208,8 @@ class Executor:
         values = project.values()
         appid = appid_of(values, app)
         api = self.api()
-        current = api.leaderboards(appid)
+        desired = list(values.get("leaderboards") or [])
+        current = current_leaderboards(api, appid, {d["name"] for d in desired})
         sid = A.save_snapshot(project.files, app, appid, "leaderboards", {"leaderboards": current})
         pending = sync.not_approved(values, project.state, "leaderboards", app)
         if pending:
@@ -197,7 +218,6 @@ class Executor:
                 "refused": A.NOT_APPROVED,
                 "not_approved": pending,
             }
-        desired = list(values.get("leaderboards") or [])
         plan = plan_leaderboards(desired, current, remove_extra)
         note = "Settings of existing leaderboards are not changed (only possible by deleting them with their scores)."
         if dry_run:
@@ -218,14 +238,20 @@ class Executor:
                 api.find_or_create_leaderboard(appid, board)
                 done.append({"action": "create", "name": board["name"]})
             for name in plan["delete"]:
-                api.delete_leaderboard(appid, name)
-                done.append({"action": "delete", "name": name})
+                gone = api.delete_leaderboard(appid, name)
+                done.append({"action": "delete", "name": name, **({} if gone else {"already_gone": True})})
         except SteamApiError as exc:
             error = str(exc)
-        after = plan_leaderboards(desired, api.leaderboards(appid), remove_extra)
-        not_there = {b["name"] for b in after["create"]} | {b["name"] for b in after["settings_differ"]}
-        ok = {f"leaderboards.{d['name']}." for d in desired if d["name"] not in not_there}
-        applied = A.mark_applied_fields(values, project.state, lambda p: any(p.startswith(x) for x in ok))
+        applied: list[str] = []
+        try:
+            now = current_leaderboards(api, appid, {d["name"] for d in desired} | set(plan["delete"]))
+            after: dict[str, Any] = plan_leaderboards(desired, now, remove_extra)
+            not_there = {b["name"] for b in after["create"]} | {b["name"] for b in after["settings_differ"]}
+            ok = {f"leaderboards.{d['name']}." for d in desired if d["name"] not in not_there}
+            applied = A.mark_applied_fields(values, project.state, lambda p: any(p.startswith(x) for x in ok))
+        except SteamApiError as exc:
+            after = {"error": f"read back failed: {exc}"}
+            error = error or str(exc)
         A.audit(
             project.files,
             {
@@ -352,8 +378,8 @@ class Executor:
                 "build_id": build_id,
                 "branch": branch,
                 "warning": warning,
-                "recent_builds": api.builds(appid, 5),
-                "branches": api.betas(appid),
+                "recent_builds": or_error(lambda: api.builds(appid, 5)),
+                "branches": or_error(lambda: api.betas(appid)),
                 "next": A.CONFIRM_NEXT,
             }
         if not user_confirmed:
@@ -386,9 +412,18 @@ class Executor:
         appid = appid_of(project.values(), app)
         if what == "builds":
             api = self.api()
-            return {"appid": appid, "builds": api.builds(appid), "branches": api.betas(appid)}
+            return {
+                "appid": appid,
+                "builds": or_error(lambda: api.builds(appid)),
+                "branches": or_error(lambda: api.betas(appid)),
+            }
         if what == "leaderboards":
-            return {"appid": appid, "leaderboards": self.api().leaderboards(appid)}
+            return {
+                "appid": appid,
+                "leaderboards": self.api().leaderboards(appid),
+                "note": "Steam caches this list: a board created or deleted in the last minute or so may be missing "
+                "or still listed.",
+            }
         if what == "achievement_schema":
             stats = self.api().schema(appid).get("availableGameStats") or {}
             return {"appid": appid, "achievements": stats.get("achievements") or [], "stats": stats.get("stats") or []}

@@ -1,0 +1,61 @@
+[
+  {
+    "method": "GET",
+    "url": "https://partner.steam-api.com/ISteamUserStats/GetSchemaForGame/v2/",
+    "query": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "l": "english"
+    },
+    "status": 200,
+    "response": {
+      "game": {}
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://partner.steam-api.com/ISteamApps/GetAppBuilds/v1/",
+    "query": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "count": "5"
+    },
+    "status": 500,
+    "response": {
+      "response": {
+        "result": 2,
+        "message": "Failed to query app builds"
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://partner.steam-api.com/ISteamApps/GetAppBetas/v1/",
+    "query": {
+      "key": "<redacted>",
+      "appid": "1000000"
+    },
+    "status": 500,
+    "response": {
+      "response": {
+        "result": 42,
+        "message": "Couldn't get app info for app 1000000"
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/GetLeaderboardsForGame/v2/",
+    "query": {
+      "key": "<redacted>",
+      "appid": "1000000"
+    },
+    "status": 200,
+    "response": {
+      "response": {
+        "result": 1,
+        "leaderboards": []
+      }
+    }
+  }
+]

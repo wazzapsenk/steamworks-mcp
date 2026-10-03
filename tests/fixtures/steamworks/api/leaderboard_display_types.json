@@ -1,0 +1,306 @@
+[
+  {
+    "method": "POST",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/FindOrCreateLeaderboard/v2/",
+    "query": {},
+    "status": 200,
+    "request": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "name": "SWMCP_REC_DT_Seconds",
+      "sortmethod": "Ascending",
+      "displaytype": "Seconds",
+      "createifnotfound": "true"
+    },
+    "response": {
+      "result": {
+        "result": 1,
+        "leaderboard": {
+          "leaderboardName": "SWMCP_REC_DT_Seconds",
+          "leaderBoardID": 21191791,
+          "leaderBoardEntries": 0,
+          "leaderBoardSortMethod": "Ascending",
+          "leaderBoardDisplayType": "Seconds",
+          "onlytrustedwrites": false,
+          "onlyfriendsreads": false,
+          "onlyusersinsameparty": false,
+          "limitrangearounduser": 0,
+          "limitglobaltopentries": 0
+        }
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/FindOrCreateLeaderboard/v2/",
+    "query": {},
+    "status": 200,
+    "request": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "name": "SWMCP_REC_DT_Seconds",
+      "createifnotfound": "false"
+    },
+    "response": {
+      "result": {
+        "result": 1,
+        "leaderboard": {
+          "leaderboardName": "SWMCP_REC_DT_Seconds",
+          "leaderBoardID": 21191791,
+          "leaderBoardEntries": 0,
+          "leaderBoardSortMethod": "Ascending",
+          "leaderBoardDisplayType": "Seconds",
+          "onlytrustedwrites": false,
+          "onlyfriendsreads": false,
+          "onlyusersinsameparty": false,
+          "limitrangearounduser": 0,
+          "limitglobaltopentries": 0
+        }
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/FindOrCreateLeaderboard/v2/",
+    "query": {},
+    "status": 200,
+    "request": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "name": "SWMCP_REC_DT_MilliSeconds",
+      "sortmethod": "Ascending",
+      "displaytype": "MilliSeconds",
+      "createifnotfound": "true"
+    },
+    "response": {
+      "result": {
+        "result": 1,
+        "leaderboard": {
+          "leaderboardName": "SWMCP_REC_DT_MilliSeconds",
+          "leaderBoardID": 21191792,
+          "leaderBoardEntries": 0,
+          "leaderBoardSortMethod": "Ascending",
+          "leaderBoardDisplayType": "MilliSeconds",
+          "onlytrustedwrites": false,
+          "onlyfriendsreads": false,
+          "onlyusersinsameparty": false,
+          "limitrangearounduser": 0,
+          "limitglobaltopentries": 0
+        }
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/FindOrCreateLeaderboard/v2/",
+    "query": {},
+    "status": 200,
+    "request": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "name": "SWMCP_REC_DT_MilliSeconds",
+      "createifnotfound": "false"
+    },
+    "response": {
+      "result": {
+        "result": 1,
+        "leaderboard": {
+          "leaderboardName": "SWMCP_REC_DT_MilliSeconds",
+          "leaderBoardID": 21191792,
+          "leaderBoardEntries": 0,
+          "leaderBoardSortMethod": "Ascending",
+          "leaderBoardDisplayType": "MilliSeconds",
+          "onlytrustedwrites": false,
+          "onlyfriendsreads": false,
+          "onlyusersinsameparty": false,
+          "limitrangearounduser": 0,
+          "limitglobaltopentries": 0
+        }
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/FindOrCreateLeaderboard/v2/",
+    "query": {},
+    "status": 200,
+    "request": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "name": "SWMCP_REC_DT_TimeSeconds",
+      "sortmethod": "Ascending",
+      "displaytype": "TimeSeconds",
+      "createifnotfound": "true"
+    },
+    "response": {
+      "result": {
+        "result": 1,
+        "leaderboard": {
+          "leaderboardName": "SWMCP_REC_DT_TimeSeconds",
+          "leaderBoardID": 21191793,
+          "leaderBoardEntries": 0,
+          "leaderBoardSortMethod": "Ascending",
+          "leaderBoardDisplayType": "",
+          "onlytrustedwrites": false,
+          "onlyfriendsreads": false,
+          "onlyusersinsameparty": false,
+          "limitrangearounduser": 0,
+          "limitglobaltopentries": 0
+        }
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/FindOrCreateLeaderboard/v2/",
+    "query": {},
+    "status": 200,
+    "request": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "name": "SWMCP_REC_DT_TimeSeconds",
+      "createifnotfound": "false"
+    },
+    "response": {
+      "result": {
+        "result": 1,
+        "leaderboard": {
+          "leaderboardName": "SWMCP_REC_DT_TimeSeconds",
+          "leaderBoardID": 21191793,
+          "leaderBoardEntries": 0,
+          "leaderBoardSortMethod": "Ascending",
+          "leaderBoardDisplayType": "",
+          "onlytrustedwrites": false,
+          "onlyfriendsreads": false,
+          "onlyusersinsameparty": false,
+          "limitrangearounduser": 0,
+          "limitglobaltopentries": 0
+        }
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/FindOrCreateLeaderboard/v2/",
+    "query": {},
+    "status": 200,
+    "request": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "name": "SWMCP_REC_DT_TimeMilliSeconds",
+      "sortmethod": "Ascending",
+      "displaytype": "TimeMilliSeconds",
+      "createifnotfound": "true"
+    },
+    "response": {
+      "result": {
+        "result": 1,
+        "leaderboard": {
+          "leaderboardName": "SWMCP_REC_DT_TimeMilliSeconds",
+          "leaderBoardID": 21191794,
+          "leaderBoardEntries": 0,
+          "leaderBoardSortMethod": "Ascending",
+          "leaderBoardDisplayType": "",
+          "onlytrustedwrites": false,
+          "onlyfriendsreads": false,
+          "onlyusersinsameparty": false,
+          "limitrangearounduser": 0,
+          "limitglobaltopentries": 0
+        }
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/FindOrCreateLeaderboard/v2/",
+    "query": {},
+    "status": 200,
+    "request": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "name": "SWMCP_REC_DT_TimeMilliSeconds",
+      "createifnotfound": "false"
+    },
+    "response": {
+      "result": {
+        "result": 1,
+        "leaderboard": {
+          "leaderboardName": "SWMCP_REC_DT_TimeMilliSeconds",
+          "leaderBoardID": 21191794,
+          "leaderBoardEntries": 0,
+          "leaderBoardSortMethod": "Ascending",
+          "leaderBoardDisplayType": "",
+          "onlytrustedwrites": false,
+          "onlyfriendsreads": false,
+          "onlyusersinsameparty": false,
+          "limitrangearounduser": 0,
+          "limitglobaltopentries": 0
+        }
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/DeleteLeaderboard/v1/",
+    "query": {},
+    "status": 200,
+    "request": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "name": "SWMCP_REC_DT_Seconds"
+    },
+    "response": {
+      "result": {
+        "result": 1
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/DeleteLeaderboard/v1/",
+    "query": {},
+    "status": 200,
+    "request": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "name": "SWMCP_REC_DT_MilliSeconds"
+    },
+    "response": {
+      "result": {
+        "result": 1
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/DeleteLeaderboard/v1/",
+    "query": {},
+    "status": 200,
+    "request": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "name": "SWMCP_REC_DT_TimeSeconds"
+    },
+    "response": {
+      "result": {
+        "result": 1
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/DeleteLeaderboard/v1/",
+    "query": {},
+    "status": 200,
+    "request": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "name": "SWMCP_REC_DT_TimeMilliSeconds"
+    },
+    "response": {
+      "result": {
+        "result": 1
+      }
+    }
+  }
+]

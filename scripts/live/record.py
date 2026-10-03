@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from har import HarRecorder, httpx_entry
 
 from steamworks_mcp.config import load_config
-from steamworks_mcp.execute.api import PartnerApi
+from steamworks_mcp.execute.api import PartnerApi, SteamApiError
 from steamworks_mcp.execute.browser import partner as P
 from steamworks_mcp.execute.browser.session import BrowserSession
 from steamworks_mcp.execute.browser.transport import PlaywrightTransport
@@ -164,13 +164,22 @@ async def installation_read(c: Ctx) -> str:
     return f"folder {st['install_folder']!r}, {len(st['launch_options'])} launch options"
 
 
-@step("api/read", "Partner Web API reads with the publisher key")
+@step("api/read", "Partner Web API reads with the publisher key (each one recorded even if another fails)")
 async def api_read(c: Ctx) -> str:
     api = c.api()
-    api.schema(c.appid)
-    api.builds(c.appid, 5)
-    api.betas(c.appid)
-    return f"{len(api.leaderboards(c.appid))} leaderboards"
+    reads: dict[str, Callable[[], Any]] = {
+        "schema": lambda: f"{len(api.schema(c.appid))} keys",
+        "builds": lambda: f"{len(api.builds(c.appid, 5))} keys",
+        "betas": lambda: f"{len(api.betas(c.appid))} keys",
+        "leaderboards": lambda: f"{len(api.leaderboards(c.appid))} boards",
+    }
+    out = []
+    for name, read in reads.items():
+        try:
+            out.append(f"{name}: {read()}")
+        except SteamApiError as exc:
+            out.append(f"{name}: {exc}")
+    return " | ".join(out)
 
 
 @step("api/public_unkeyed", "Public endpoints without any key (what anyone can see)")
@@ -311,13 +320,39 @@ async def store_readback(c: Ctx) -> str:
     return f"english short ends with: {str(loc['languages']['english'].get(SHORT, ''))[-30:]!r}"
 
 
-@step("api/leaderboard_write", "FindOrCreateLeaderboard (test board) + GetLeaderboardsForGame readback")
+@step("api/leaderboard_write", "FindOrCreateLeaderboard (test board), find-only readback, the (cached) list")
 async def leaderboard_write(c: Ctx) -> str:
     api = c.api()
     api.find_or_create_leaderboard(
         c.appid, {"name": "SWMCP_REC_BOARD", "sort_method": "descending", "display_type": "numeric"}
     )
-    return f"{[b.get('name') for b in api.leaderboards(c.appid)]}"
+    found = api.find_leaderboard(c.appid, "SWMCP_REC_BOARD")
+    return f"found {found and found['displaytype']}, listed {[b.get('name') for b in api.leaderboards(c.appid)]}"
+
+
+@step("api/leaderboard_display_types", "Boards with the Web API's and the SDK's display-type names, then deleted")
+async def leaderboard_display_types(c: Ctx) -> str:
+    api = c.api()
+    names = [f"SWMCP_REC_DT_{n}" for n in ("Seconds", "MilliSeconds", "TimeSeconds", "TimeMilliSeconds")]
+    stored = {}
+    try:
+        for name in names:
+            api._write(  # raw names on purpose: the SDK's ones are not in DISPLAY_TYPES
+                "/ISteamLeaderboards/FindOrCreateLeaderboard/v2/",
+                {
+                    "appid": c.appid,
+                    "name": name,
+                    "sortmethod": "Ascending",
+                    "displaytype": name.removeprefix("SWMCP_REC_DT_"),
+                    "createifnotfound": True,
+                },
+            )
+            found = api.find_leaderboard(c.appid, name)
+            stored[name] = found and found["displaytype"]
+    finally:
+        for name in names:
+            api.delete_leaderboard(c.appid, name)
+    return f"stored display types {stored}"
 
 
 # ---------------------------------------------------------------------------------------------- what Steamworks accepts
@@ -474,11 +509,17 @@ async def cleanup_store(c: Ctx) -> str:
     return f"restored {sorted(changed)}"
 
 
-@step("api/leaderboard_delete", "DeleteLeaderboard (test board) + GetLeaderboardsForGame readback")
+@step("api/leaderboard_delete", "DeleteLeaderboard (test board) twice, find-only readback, the (cached) list")
 async def leaderboard_delete(c: Ctx) -> str:
     api = c.api()
-    api.delete_leaderboard(c.appid, "SWMCP_REC_BOARD")
-    return f"{[b.get('name') for b in api.leaderboards(c.appid)]}"
+    first, second = (
+        api.delete_leaderboard(c.appid, "SWMCP_REC_BOARD"),
+        api.delete_leaderboard(c.appid, "SWMCP_REC_BOARD"),
+    )
+    found = api.find_leaderboard(c.appid, "SWMCP_REC_BOARD")
+    return (
+        f"deleted {first}, again {second}, found {found}, listed {[b.get('name') for b in api.leaderboards(c.appid)]}"
+    )
 
 
 @step("cleanup/verify", "Read everything again and compare with the baseline")
@@ -524,6 +565,7 @@ SPRINT = [
     "store/write",
     "store/readback",
     "api/leaderboard_write",
+    "api/leaderboard_display_types",
     "errors/cloud_quota_too_big",
     "errors/cloud_invalid_root",
     "errors/cloud_missing_pattern",

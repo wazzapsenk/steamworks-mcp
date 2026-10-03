@@ -14,9 +14,9 @@ Last reviewed: 2026-10-03.
 |---|---|---|---|---|
 | Build upload (depots, app_build VDF) | ❔ unverified: steamcmd / SteamPipe with the builder account | — | API | Without steamcmd configured, the tool writes the app_build / depot_build VDFs and the command to run. |
 | Set a build live on a branch | ❔ unverified: ISteamApps/SetAppBuildLive (beta branches) | — | MANUAL | set_build_live sets beta branches live through the Web API after the user confirms. The default branch is always set live by hand in App Admin (Valve: build scripts cannot target it); on a released app the account also has to confirm on its phone / Steam Mobile app. |
-| List builds and branches | ❔ unverified: ISteamApps/GetAppBuilds, GetAppBetas | — | API |  |
-| Leaderboards | ❔ unverified: ISteamLeaderboards/FindOrCreateLeaderboard, GetLeaderboardsForGame, DeleteLeaderboard | — | API |  |
-| Read the achievement and stat schema | ❔ unverified: ISteamUserStats/GetSchemaForGame (publisher key) | ✅ verified: apps/fetchachievements | API |  |
+| List builds and branches | ⚠️ partial: ISteamApps/GetAppBuilds, GetAppBetas | — | API | Recorded on an app without builds only: both calls then answer HTTP 500. The answer for an app with builds is not recorded yet. |
+| Leaderboards | ✅ verified: ISteamLeaderboards/FindOrCreateLeaderboard, GetLeaderboardsForGame, DeleteLeaderboard | — | API | GetLeaderboardsForGame is cached for about a minute, so the tool reads the boards it changes one by one (FindOrCreateLeaderboard without creating). Settings of an existing board are only reported, never changed. |
+| Read the achievement and stat schema | ⚠️ partial: ISteamUserStats/GetSchemaForGame (publisher key) | ✅ verified: apps/fetchachievements | API | The API returns the published schema only; recorded on an app with nothing published yet (empty answer). |
 | Achievement definitions, localized names, icons | — (no Web API writes achievement definitions) | ✅ verified: apps/newachievement, saveachievement, images/uploadachievement, deleteachievement | ARTIFACT → BROWSER | Steamworks accepts duplicate API names; the tool validates before writing. |
 | Achievement localization file (KeyValues) | — | ⚠️ partial: apps/uploadachievementloc | ARTIFACT | Upload is accepted but the token names that apply to page-created achievements are unknown, and the export is empty before publishing. Localized names are written through saveachievement instead. |
 | Stat definitions | — | ❔ unverified | MANUAL |  |

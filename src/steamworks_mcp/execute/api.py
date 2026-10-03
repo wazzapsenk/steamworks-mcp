@@ -4,8 +4,9 @@ The key comes from the environment and never appears in results, errors or logs.
 account's name only: its password and Steam Guard code are never handled here (log in once interactively; steamcmd
 keeps the session).
 
-Parameters follow partner.steamgames.com/doc/webapi/ISteamLeaderboards and /ISteamApps. Not verified against a real
-key yet (see docs/STEAMWORKS_INTERNALS.md): the display-type strings and the exact response shapes.
+Parameters follow partner.steamgames.com/doc/webapi/ISteamLeaderboards and /ISteamApps. The leaderboard calls were
+checked against a real key on a test app (docs/STEAMWORKS_INTERNALS.md); the response shapes of GetAppBuilds and
+GetAppBetas were not (that app had no builds yet).
 """
 
 from __future__ import annotations
@@ -18,12 +19,16 @@ from typing import Any
 import httpx
 
 PARTNER_API = "https://partner.steam-api.com"
-DISPLAY_TYPES = {"numeric": "Numeric", "seconds": "TimeSeconds", "milliseconds": "TimeMilliSeconds"}
-"""steamworks.yaml display types -> the names the SDK uses (k_ELeaderboardDisplayType*); unverified for the Web API."""
+DISPLAY_TYPES = {"numeric": "Numeric", "seconds": "Seconds", "milliseconds": "MilliSeconds"}
+"""steamworks.yaml display types -> the Web API's names. Not the SDK's (TimeSeconds, TimeMilliSeconds): Steam accepts
+those too, but stores an empty display type."""
+NO_BUILDS = "Steam answers this way for an app without any build yet (SteamPipe > Builds is empty)."
 
 
 class SteamApiError(RuntimeError):
-    pass
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
 
 
 class PartnerApi:
@@ -52,10 +57,11 @@ class PartnerApi:
             raise SteamApiError(self._scrub(f"{path}: {exc}")) from None
         if res.status_code in (401, 403):
             raise SteamApiError(
-                f"{path}: HTTP {res.status_code} - the publisher key was rejected or has no access to this app."
+                f"{path}: HTTP {res.status_code} - the publisher key was rejected or has no access to this app.",
+                res.status_code,
             )
         if res.status_code >= 400:
-            raise SteamApiError(self._scrub(f"{path}: HTTP {res.status_code} {res.text[:200]}"))
+            raise SteamApiError(self._scrub(f"{path}: HTTP {res.status_code} {res.text[:200]}"), res.status_code)
         if not res.content:
             return res.status_code, {}
         try:
@@ -67,31 +73,56 @@ class PartnerApi:
         data = self._request(method, path, params)[1]
         return data if isinstance(data, dict) else {}
 
+    def _write(self, path: str, params: dict[str, Any], ok: tuple[int, ...] = (1,)) -> dict[str, Any]:
+        """ISteamLeaderboards writes answer HTTP 200 with {"result": {"result": <EResult>, ...}}; 1 is success."""
+        out = self._call("POST", path, params).get("result") or {}
+        if out.get("result") not in ok:
+            raise SteamApiError(f"{path}: Steam answered result {out.get('result')} (1 = OK) for {params.get('name')}.")
+        return dict(out)
+
+    def _builds_call(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return dict(self._call("GET", path, params).get("response") or {})
+        except SteamApiError as exc:
+            if exc.status == 500:
+                raise SteamApiError(f"{exc} - {NO_BUILDS}", exc.status) from None
+            raise
+
     # reads
     def schema(self, appid: int) -> dict[str, Any]:
+        """The published schema only: {} until stats and achievements are published."""
         return dict(
             self._call("GET", "/ISteamUserStats/GetSchemaForGame/v2/", {"appid": appid, "l": "english"}).get("game")
             or {}
         )
 
     def builds(self, appid: int, count: int = 10) -> dict[str, Any]:
-        return dict(
-            self._call("GET", "/ISteamApps/GetAppBuilds/v1/", {"appid": appid, "count": count}).get("response") or {}
-        )
+        return self._builds_call("/ISteamApps/GetAppBuilds/v1/", {"appid": appid, "count": count})
 
     def betas(self, appid: int) -> dict[str, Any]:
-        return dict(self._call("GET", "/ISteamApps/GetAppBetas/v1/", {"appid": appid}).get("response") or {})
+        return self._builds_call("/ISteamApps/GetAppBetas/v1/", {"appid": appid})
 
     def leaderboards(self, appid: int) -> list[dict[str, Any]]:
+        """Every board of the app. Cached by Steam: a board created or deleted a moment ago can be missing or still
+        listed for about a minute; find_leaderboard is current."""
         res = (
             self._call("GET", "/ISteamLeaderboards/GetLeaderboardsForGame/v2/", {"appid": appid}).get("response") or {}
         )
         return list(res.get("leaderboards") or [])
 
+    def find_leaderboard(self, appid: int, name: str) -> dict[str, Any] | None:
+        """One board as Steam has it right now (FindOrCreateLeaderboard without creating), in the shape of
+        leaderboards(); None when there is no such board (Steam answers with leaderBoardID 0)."""
+        out = self._write(
+            "/ISteamLeaderboards/FindOrCreateLeaderboard/v2/", {"appid": appid, "name": name, "createifnotfound": False}
+        )
+        return _listed(out.get("leaderboard") or {})
+
     # writes
     def find_or_create_leaderboard(self, appid: int, board: dict[str, Any]) -> dict[str, Any]:
-        return self._call(
-            "POST",
+        """Returns the board as Steam stored it, in the shape of leaderboards(). An existing board with the same name
+        is returned unchanged."""
+        out = self._write(
             "/ISteamLeaderboards/FindOrCreateLeaderboard/v2/",
             {
                 "appid": appid,
@@ -103,9 +134,15 @@ class PartnerApi:
                 "onlyfriendsreads": bool(board.get("only_friends_reads")),
             },
         )
+        made = _listed(out.get("leaderboard") or {})
+        if made is None:
+            raise SteamApiError(f"FindOrCreateLeaderboard: Steam created no board named {board['name']}.")
+        return made
 
-    def delete_leaderboard(self, appid: int, name: str) -> dict[str, Any]:
-        return self._call("POST", "/ISteamLeaderboards/DeleteLeaderboard/v1/", {"appid": appid, "name": name})
+    def delete_leaderboard(self, appid: int, name: str) -> bool:
+        """False when there was no board by that name (result 2)."""
+        out = self._write("/ISteamLeaderboards/DeleteLeaderboard/v1/", {"appid": appid, "name": name}, ok=(1, 2))
+        return out.get("result") == 1
 
     def set_build_live(self, appid: int, build_id: int, beta_key: str, description: str = "") -> dict[str, Any]:
         """Beta branches only: "public" (the default branch, what every player gets) is refused here; the user sets
@@ -122,14 +159,36 @@ class PartnerApi:
         }
 
 
+def _listed(board: dict[str, Any]) -> dict[str, Any] | None:
+    """A FindOrCreateLeaderboard board in GetLeaderboardsForGame's field names; None for leaderBoardID 0."""
+    if not board.get("leaderBoardID"):
+        return None
+    return {
+        "id": board["leaderBoardID"],
+        "name": board.get("leaderboardName"),
+        "entries": board.get("leaderBoardEntries"),
+        "sortmethod": board.get("leaderBoardSortMethod"),
+        "displaytype": board.get("leaderBoardDisplayType"),
+        "onlytrustedwrites": board.get("onlytrustedwrites"),
+        "onlyfriendsreads": board.get("onlyfriendsreads"),
+    }
+
+
 def _board_settings(b: dict[str, Any]) -> dict[str, Any]:
-    """Settings of a leaderboard as GetLeaderboardsForGame reports them, in steamworks.yaml vocabulary."""
-    display = str(b.get("displaytype") or b.get("display_type") or "Numeric").lower()
+    """Settings of a leaderboard as GetLeaderboardsForGame reports them, in steamworks.yaml vocabulary. An empty
+    displaytype (a board created with a name Steam does not know) is reported as "unset"."""
+    display = str(b.get("displaytype", b.get("display_type", "Numeric")) or "").lower()
     return {
         "sort_method": "ascending"
         if str(b.get("sortmethod") or b.get("sort_method") or "").lower().startswith("asc")
         else "descending",
-        "display_type": "milliseconds" if "milli" in display else "seconds" if "second" in display else "numeric",
+        "display_type": "milliseconds"
+        if "milli" in display
+        else "seconds"
+        if "second" in display
+        else "numeric"
+        if display == "numeric"
+        else "unset",
         "only_trusted_writes": bool(b.get("onlytrustedwrites") or b.get("only_trusted_writes")),
         "only_friends_reads": bool(b.get("onlyfriendsreads") or b.get("only_friends_reads")),
     }

@@ -1,0 +1,79 @@
+[
+  {
+    "method": "POST",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/FindOrCreateLeaderboard/v2/",
+    "query": {},
+    "status": 200,
+    "request": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "name": "SWMCP_REC_BOARD",
+      "sortmethod": "Descending",
+      "displaytype": "Numeric",
+      "createifnotfound": "true",
+      "onlytrustedwrites": "false",
+      "onlyfriendsreads": "false"
+    },
+    "response": {
+      "result": {
+        "result": 1,
+        "leaderboard": {
+          "leaderboardName": "SWMCP_REC_BOARD",
+          "leaderBoardID": 21191790,
+          "leaderBoardEntries": 0,
+          "leaderBoardSortMethod": "Descending",
+          "leaderBoardDisplayType": "Numeric",
+          "onlytrustedwrites": false,
+          "onlyfriendsreads": false,
+          "onlyusersinsameparty": false,
+          "limitrangearounduser": 0,
+          "limitglobaltopentries": 0
+        }
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/FindOrCreateLeaderboard/v2/",
+    "query": {},
+    "status": 200,
+    "request": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "name": "SWMCP_REC_BOARD",
+      "createifnotfound": "false"
+    },
+    "response": {
+      "result": {
+        "result": 1,
+        "leaderboard": {
+          "leaderboardName": "SWMCP_REC_BOARD",
+          "leaderBoardID": 21191790,
+          "leaderBoardEntries": 0,
+          "leaderBoardSortMethod": "Descending",
+          "leaderBoardDisplayType": "Numeric",
+          "onlytrustedwrites": false,
+          "onlyfriendsreads": false,
+          "onlyusersinsameparty": false,
+          "limitrangearounduser": 0,
+          "limitglobaltopentries": 0
+        }
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://partner.steam-api.com/ISteamLeaderboards/GetLeaderboardsForGame/v2/",
+    "query": {
+      "key": "<redacted>",
+      "appid": "1000000"
+    },
+    "status": 200,
+    "response": {
+      "response": {
+        "result": 1,
+        "leaderboards": []
+      }
+    }
+  }
+]
