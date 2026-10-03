@@ -23,7 +23,7 @@ client.
 | Answer short batches of questions (shown as a form when your client supports it) | `start_interview`, `set_field`, `approve_fields` |
 | Draft store text, achievements, Steam Cloud, depots, system requirements | `generate`, `save_draft`, `preview_store` |
 | Check everything against Valve's rules, a store-text rubric and an anti-copy check | `validate` |
-| Translate with your assistant (no paid translation API), keep translations in sync | `localization_status`, `localization_pending`, `localization_set` |
+| Write every text once in your language; your assistant translates it into every target language (no paid translation API), and translations of a changed text go back to review | `localization_status`, `localization_pending`, `localization_set` |
 | Cut every capsule, library image and icon from one key art and one logo | `prepare_images` |
 | Learn from successful games without copying them (derived measurements only) | `fetch_reference` |
 | Get every file plus a checklist that says which Steamworks page and field it goes to | `export_package` |
@@ -36,7 +36,7 @@ stores the result as a draft until you approve it. Every value in `steamworks.ya
 
 Resources: `steam://capabilities`, `steam://gates/{n}`, `steam://style-guide/{genre}`, `steam://references/{appid}`,
 `steam://manifest/{project}` (and `get_spec_info` returns the same for clients that only use tools). Prompts:
-`release_assistant`, `write_store_page`, `design_achievements`, `review_gate`.
+`release_assistant`, `write_store_page`, `localize_everything`, `design_achievements`, `review_gate`.
 
 ## How things get done in Steamworks
 
@@ -236,7 +236,8 @@ a narrow root folder, and stop the tunnel when you're done. The BROWSER mode sta
 2. `gap_report` shows what gate 1 still needs; `start_interview` asks for the rest, three questions at a time.
 3. `generate("store_short")`: the assistant writes three variants, the server checks them, you pick one.
    The same for the long description (outline first), achievements, Steam Cloud and depots.
-4. `validate`, then `localization_pending` / `localization_set` for every language, then `prepare_images`.
+4. `validate`, then `localization_pending` / `localization_set` for every language (the `localize_everything`
+   prompt walks through all of them), then `prepare_images`.
 5. `export_package(1)` writes `.steam-mcp/exports/gate_1/` with the files and a `CHECKLIST.md`.
 6. With the BROWSER mode: `steamworks_open`, then `apply(..., dry_run=true)` per section, and the write only after
    you agreed. Without it, follow the checklist.

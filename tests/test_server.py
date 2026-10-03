@@ -200,9 +200,17 @@ async def test_resources_and_prompts(workspace: Path) -> None:
         manifest = await client.read_resource("steam://manifest/game")
         assert '"values"' in manifest.contents[0].text  # type: ignore[union-attr]
         prompts = {p.name for p in (await client.list_prompts()).prompts}
-        assert {"release_assistant", "write_store_page", "design_achievements", "review_gate"} <= prompts
+        assert {
+            "release_assistant",
+            "write_store_page",
+            "design_achievements",
+            "review_gate",
+            "localize_everything",
+        } <= prompts
         msg = await client.get_prompt("review_gate", {"path": "game", "gate": "2"})
         assert "gap_report(gate=2)" in msg.messages[0].content.text  # type: ignore[union-attr]
+        loc = (await client.get_prompt("localize_everything", {"path": "game"})).messages[0].content.text  # type: ignore[union-attr]
+        assert "localization_pending" in loc and "localization_set" in loc and "approve_fields" in loc
 
 
 async def test_tool_annotations_tell_clients_what_is_safe(tmp_path: Path) -> None:

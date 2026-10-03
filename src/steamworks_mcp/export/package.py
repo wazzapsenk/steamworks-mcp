@@ -21,6 +21,7 @@ from steamworks_mcp.languages import find_language
 from steamworks_mcp.localization.store import Localization
 from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.io import ProjectFiles, atomic_write, load_drafts
+from steamworks_mcp.manifest.models import EarlyAccessAnswers
 from steamworks_mcp.manifest.state import State
 from steamworks_mcp.media.images import prepare_achievement_icons, prepare_store_images
 
@@ -48,6 +49,23 @@ def store_texts(values: dict[str, Any], root: Path) -> dict[str, dict[str, str]]
         fields = {f: data[f] for f in STORE_FIELDS if data.get(f)}
         if fields:
             out[lang] = fields
+    return {k: v for k, v in out.items() if v}
+
+
+def early_access_texts(values: dict[str, Any], root: Path) -> dict[str, dict[str, str]]:
+    """``{language: {question: answer}}``: the Early Access answers in the source and every translated language."""
+    if fp.get(values, "release.early_access") is False:
+        return {}
+    questions = {
+        f"release.early_access_answers.{k}": str(info.description)
+        for k, info in EarlyAccessAnswers.model_fields.items()
+    }
+    source = str(values.get("source_language") or "english")
+    out = {source: {q: str(fp.get(values, k)) for k, q in questions.items() if fp.get(values, k)}}
+    loc = Localization(root)
+    for lang in values.get("target_languages") or []:
+        data = loc.read(lang)
+        out[lang] = {q: data[k] for k, q in questions.items() if data.get(k)}
     return {k: v for k, v in out.items() if v}
 
 
@@ -141,7 +159,10 @@ def _details(rule_id: str, values: dict[str, Any], files: dict[str, str]) -> lis
         ]
     if rule_id == "early_access_questionnaire":
         answers = g("release.early_access_answers") or {}
-        return [f"- {k.replace('_', ' ')}: {v}" for k, v in answers.items() if v]
+        lines = [f"- {k.replace('_', ' ')}: {v}" for k, v in answers.items() if v]
+        if any(f.endswith("/early_access.md") for f in files):
+            lines.append("Every language: `store/<language>/early_access.md` (pick the language in the editor).")
+        return lines
     if rule_id == "launch_option_defined":
         options: list[list[Any]] = [
             [i, o["executable"], o.get("arguments"), o.get("os"), o.get("arch"), o.get("type"), o.get("description")]
@@ -347,6 +368,13 @@ def export_package(
             notes.append(
                 "store_localization.json has an empty itemid: Steam's own export fills it in; "
                 "importing works without it (unverified)."
+            )
+        for lang, answers in early_access_texts(values, root).items():
+            write(
+                f"store/{lang}/early_access.md",
+                f"# Early Access answers: {_lang_name(lang)}\n\n"
+                + "\n\n".join(f"## {question}\n\n{answer}" for question, answer in answers.items())
+                + "\n",
             )
         _images(values, root, out, written, groups=("store",))
         for d in load_drafts(files_, "store.about"):

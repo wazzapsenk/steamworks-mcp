@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from steamworks_mcp.localization.store import reconcile as reconcile_translations
 from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.io import (
     ROOT_GITIGNORE_SUGGESTIONS,
@@ -43,6 +44,7 @@ class Project:
         manifest = ManifestFile.load(files.manifest)
         state = load_state(files)
         state.reconcile(manifest.values())
+        reconcile_translations(manifest.values(), files.root, state)
         return cls(files, manifest, state)
 
     def values(self) -> dict[str, Any]:

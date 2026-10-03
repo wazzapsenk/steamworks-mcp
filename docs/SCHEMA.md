@@ -64,7 +64,7 @@ Every tracked value has a dotted path:
 | `apps.main.installation.launch_options.0.executable` | an item of any other list, by index |
 | `store.system_requirements.windows.minimum` | a *unit*: small objects tracked as one field (requirements block, language row, player counts, progress) |
 | `store.tags` | a list of plain values is one field |
-| `localization.german.store.about` | a translation (stored in `localization/german.yaml`) |
+| `localization.german.store.about` | a translation (stored in `localization/german.yaml`). Translated from the source language: `store.short_description`, `store.about`, `release.early_access_answers.*` (unless the game is not in Early Access), `achievements.*.name` and `.description`, `apps.*.installation.launch_options.*.description` |
 | `checklist.<rule id>` | a manual gate step the user confirmed |
 
 Patterns use `*` for one segment: `achievements.*.icon`. Gate files may only reference paths that exist in the
@@ -108,6 +108,9 @@ schema; a test enforces it.
 - Each time the files are loaded, the state is reconciled with the values. A changed value drops to `needs_review`.
   A value that was removed becomes `missing`. **A value with no state entry was typed by the user and counts as
   `approved`.**
+- Translations are reconciled too: `localization/.lock.json` keeps the hash of the source text each translation was
+  made from, and when the source changes, its translations drop to `needs_review`. Approving such a translation
+  again records that it fits the new source.
 
 ## Drafts
 

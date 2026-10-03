@@ -1,9 +1,14 @@
 """Translations of player-facing texts: ``localization/<lang>.yaml`` (flat ``field path: text``).
 
+Every text is written once, in the source language, and translated into each target language: the short
+description, About This Game, the Early Access answers, achievement names and descriptions, and launch option
+descriptions (see :func:`entries`).
+
 The host model translates: ``localization_pending`` gives it the texts with context and glossary terms,
 ``localization_set`` checks and stores them. A lock file (``localization/.lock.json``) remembers the hash of the
 source text each translation was made from, so a changed source marks the translation stale. Translation state is
-also tracked as ``localization.<lang>.<field>`` in state.json (drafts until the user approves them).
+also tracked as ``localization.<lang>.<field>`` in state.json (drafts until the user approves them); whenever a
+project is loaded, translations of a changed source drop to ``needs_review`` (:func:`reconcile`).
 
 ``localization/glossary.yaml`` (optional)::
 
@@ -22,10 +27,12 @@ from pathlib import Path
 from typing import Any, Literal
 
 from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
-from steamworks_mcp.languages import is_api_code
+from steamworks_mcp.languages import find_language, is_api_code
 from steamworks_mcp.manifest.io import atomic_write
-from steamworks_mcp.manifest.state import State
+from steamworks_mcp.manifest.models import EarlyAccessAnswers
+from steamworks_mcp.manifest.state import State, now
 from steamworks_mcp.validate.store_text import check_store_text
 
 SHORT_DESCRIPTION_MAX = 300
@@ -76,6 +83,19 @@ def entries(values: dict[str, Any]) -> list[Entry]:
             "as they are.",
         )
     )
+    release = values.get("release") or {}
+    if release.get("early_access") is not False:
+        answers = release.get("early_access_answers") or {}
+        for key, info in EarlyAccessAnswers.model_fields.items():
+            push(
+                Entry(
+                    f"release.early_access_answers.{key}",
+                    answers.get(key) or "",
+                    "plain",
+                    f'Answer to the Early Access question "{info.description}" on the Steam store page of "{name}". '
+                    "Plain text.",
+                )
+            )
     for a in values.get("achievements") or []:
         hidden = " It is a hidden achievement." if a.get("hidden") else ""
         push(
@@ -194,6 +214,66 @@ def status(values: dict[str, Any], root: Path, languages: list[str] | None = Non
                 stale,
                 [k for k in data if k not in known],
             )
+        )
+    return out
+
+
+def reconcile(values: dict[str, Any], root: Path, state: State) -> list[str]:
+    """Translations whose source text changed since they were made drop to ``needs_review``, like edited values.
+
+    Called whenever a project is loaded; returns the paths whose status changed. Unreadable language files are left
+    to the localization tools to report.
+    """
+    if not (root / "localization").is_dir():
+        return []
+    try:
+        statuses = status(values, root)
+    except (ValueError, YAMLError):
+        return []
+    changed = []
+    for st in statuses:
+        for key in st.stale:
+            fs = state.fields.get(f"localization.{st.language}.{key}")
+            if fs is not None and fs.status not in ("needs_review", "missing"):
+                fs.status, fs.updated_at = "needs_review", now()
+                changed.append(f"localization.{st.language}.{key}")
+    return changed
+
+
+def accept_sources(values: dict[str, Any], root: Path, paths: list[str]) -> None:
+    """The user approved these translations (``localization.<lang>.<key>``) as they are: from now on they count as
+    made from the current source text, so they are not stale any more."""
+    known = {e.key: e for e in entries(values)}
+    loc = Localization(root)
+    lock = loc.lock()
+    changed = False
+    for path in paths:
+        _, lang, key = path.split(".", 2)
+        if key in known and lock.get(lang, {}).get(key) != text_hash(known[key].text):
+            lock.setdefault(lang, {})[key] = text_hash(known[key].text)
+            changed = True
+    if changed:
+        loc.write_lock(lock)
+
+
+def report(values: dict[str, Any], root: Path) -> dict[str, Any]:
+    """``localization_status``: every target language's progress, and which language to translate next."""
+    statuses = status(values, root)
+    source = str(values.get("source_language") or "english")
+    out: dict[str, Any] = {
+        "source_language": source,
+        "texts": len(entries(values)),
+        "languages": [s.__dict__ for s in statuses],
+        "to_translate": sum(len(s.missing) + len(s.stale) for s in statuses),
+    }
+    todo = next((s.language for s in statuses if s.missing or s.stale), None)
+    if todo:
+        out["next"] = f"localization_pending(path, language='{todo}')"
+    elif not statuses:
+        lang = find_language(source)
+        out["next"] = (
+            f"No target languages: every text stays in {lang.name if lang else source}. "
+            "Add languages with set_field(field='target_languages', value=[...])."
         )
     return out
 

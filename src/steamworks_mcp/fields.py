@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from steamworks_mcp.interview.questions import coerce, unit_ancestor
-from steamworks_mcp.localization.store import Localization
+from steamworks_mcp.localization.store import Localization, accept_sources
 from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.io import ManifestError, load_drafts, save_draft
 from steamworks_mcp.manifest.state import Source, TransitionError, is_empty
@@ -157,6 +157,9 @@ def approve_fields(project: Project, patterns: list[str]) -> dict[str, Any]:
             continue
         project.state.approve(path, value)
         approved.append(path)
+    if translations_ok := [p for p in approved if p.startswith("localization.")]:
+        # Approving a translation whose source changed means it still fits: it is no longer stale.
+        accept_sources(project.values(), project.files.root, translations_ok)
     return {"approved": approved, "skipped": skipped}
 
 

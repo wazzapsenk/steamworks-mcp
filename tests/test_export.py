@@ -56,6 +56,35 @@ def test_gate_1_package(project: Project) -> None:
     assert "mark_applied(['checklist.store_presence_checklist_complete'])" in checklist
 
 
+def test_early_access_answers_in_every_language(project: Project) -> None:
+    answers = {
+        "why": "Groups shape the raid modes with us.",
+        "duration": "About six months.",
+        "full_version_plans": "Two more houses and a raid editor.",
+        "current_state": "Three houses, all raid modes playable.",
+        "pricing_plans": "The price rises a little at release.",
+    }  # one answer still missing: the checklist item stays open and says where the files are
+    set_fields(
+        project,
+        {"release.early_access": True, **{f"release.early_access_answers.{k}": v for k, v in answers.items()}},
+    )
+    set_translations(
+        project.values(),
+        project.files.root,
+        project.state,
+        "german",
+        {"release.early_access_answers.why": "Gruppen gestalten die Überfall-Modi mit uns."},
+    )
+    out = export_package(project.values(), project.state, project.files, 1)
+    folder = project.files.root / out["folder"]
+    english = (folder / "store" / "english" / "early_access.md").read_text("utf-8")
+    assert "## Why Early Access?" in english and "About six months." in english
+    german = (folder / "store" / "german" / "early_access.md").read_text("utf-8")
+    assert "Gruppen gestalten" in german and "Approximately" not in german  # only translated answers
+    assert not (folder / "store" / "french" / "early_access.md").exists()
+    assert "store/<language>/early_access.md" in (folder / "CHECKLIST.md").read_text("utf-8")
+
+
 def test_done_items_are_ticked(project: Project) -> None:
     mark_applied(project, ["checklist.store_presence_checklist_complete"])
     checklist = (

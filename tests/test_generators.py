@@ -17,12 +17,14 @@ from PIL import Image
 from steamworks_mcp.config import Config
 from steamworks_mcp.export.preview import bbcode_to_html, store_preview
 from steamworks_mcp.export.vdf import build_scripts
+from steamworks_mcp.fields import approve_fields, set_fields
 from steamworks_mcp.generate import deterministic as det
 from steamworks_mcp.localization import store as loc
 from steamworks_mcp.manifest.io import ManifestFile, ProjectFiles, load_drafts, load_state
 from steamworks_mcp.manifest.models import Manifest
 from steamworks_mcp.manifest.state import State
 from steamworks_mcp.media.images import prepare_achievement_icons, prepare_store_images, screenshot_report
+from steamworks_mcp.project import Project
 from steamworks_mcp.server import create_server
 from steamworks_mcp.style_guides import guide
 from steamworks_mcp.validate import rubric
@@ -140,6 +142,48 @@ def test_translation_loop(tmp_path: Path) -> None:
     v["achievements"][0]["name"] = "Blanket Engineer"  # source changed -> translation stale
     st = loc.status(v, tmp_path, ["german"])[0]
     assert "achievements.ACH_FIRST_FORT.name" in st.stale
+
+
+def test_early_access_answers_are_translated_too(tmp_path: Path) -> None:
+    v = values()
+    v["release"]["early_access"] = None
+    v["release"]["early_access_answers"]["why"] = "We want groups to shape the raid modes with us."
+    pending = {p["key"]: p for p in loc.pending(v, tmp_path, "german", limit=100)}
+    why = pending["release.early_access_answers.why"]
+    assert "Why Early Access?" in why["context"] and why["format"] == "plain"
+    assert not any(k.startswith("release.") and k != "release.early_access_answers.why" for k in pending)
+    v["release"]["early_access"] = False  # answers of a game that is not in Early Access are not translated
+    assert "release.early_access_answers.why" not in {p["key"] for p in loc.pending(v, tmp_path, "german", 100)}
+
+
+def test_a_changed_source_sends_its_translations_back_to_review(tmp_path: Path) -> None:
+    shutil.copytree(EXAMPLE, tmp_path / "game")
+    project = Project.open(tmp_path / "game")
+    key = "achievements.ACH_FIRST_FORT.name"
+    loc.set_translations(project.values(), project.files.root, project.state, "german", {key: "Deckenarchitekt"})
+    approve_fields(project, [f"localization.german.{key}"])
+    project.save()
+    assert Project.open(tmp_path / "game").state.get(f"localization.german.{key}").status == "approved"
+
+    set_fields(project, {key: "Blanket Engineer"})  # the source text changes
+    project.save()
+    project = Project.open(tmp_path / "game")
+    assert project.state.get(f"localization.german.{key}").status == "needs_review"
+
+    approve_fields(project, [f"localization.german.{key}"])  # the user says the translation still fits
+    project.save()
+    project = Project.open(tmp_path / "game")
+    assert project.state.get(f"localization.german.{key}").status == "approved"
+    assert key not in loc.status(project.values(), project.files.root, ["german"])[0].stale
+
+
+def test_status_report_names_the_next_language(tmp_path: Path) -> None:
+    v = values()
+    out = loc.report(v, tmp_path)
+    assert out["source_language"] == "english" and out["next"] == "localization_pending(path, language='german')"
+    assert out["to_translate"] == 3 * out["texts"]
+    v["target_languages"] = []
+    assert "No target languages" in loc.report(v, tmp_path)["next"]
 
 
 def test_glossary_warnings(tmp_path: Path) -> None:
@@ -512,5 +556,6 @@ async def test_deterministic_generate_and_localization_tools(project: tuple[Conf
     assert ok["approved"] == ["localization.german.achievements.ACH_FIRST_FORT.name"]
     status = await call(config, "localization_status", path="game")
     assert {s["language"] for s in status["languages"]} == {"german", "french", "schinese"}
+    assert status["next"] == "localization_pending(path, language='german')"
     preview = await call(config, "preview_store", path="game")
     assert (game / preview["file"]).exists() and preview["fold_verified"] is False
