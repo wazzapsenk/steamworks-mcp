@@ -20,6 +20,12 @@ import { diffAchievements } from "./steam/diff.js";
 import { fetchAchievementLocalization, fetchStoreLocalization, storeItemId, uploadStoreLocalization } from "./browser/steamworks.js";
 import { buildStoreLocalization, diffStoreLocalization, normalizeStoreText } from "./export/storeLocalization.js";
 import path from "node:path";
+import { createAchievement, openAchievements, saveAchievement, uploadAchievementIcon } from "./browser/achievements.js";
+import { desiredAchievements, planAchievements } from "./sync/achievements.js";
+import { deleteOverride, deleteRoot, readCloud, setOverride, setRoot, setUfs } from "./browser/cloud.js";
+import { planCloud, planIsEmpty } from "./sync/cloud.js";
+import { readInstallation, setInstallFolder, setLaunchOption } from "./browser/installation.js";
+import { installationPlanIsEmpty, planInstallation } from "./sync/installation.js";
 
 const VERSION = "0.1.0";
 
@@ -32,9 +38,11 @@ Typical flow:
    Keep Steam BBCode tags identical to the source; respect maxLength. Repeat per language until nothing is pending.
 3. assets_generate, achievement_icons_prepare, screenshots_check.
 4. export_bundle writes per-language store text, an achievement localization CSV and STEAMWORKS_CHECKLIST.md.
-5. Steamworks has no API for store text, achievements or cloud settings. To apply them, use the browser tools:
-   steamworks_open → (user logs in themselves) → steamworks_inspect → steamworks_fill (dryRun first, show the user the diff) →
-   steamworks_upload for images → ask the user before steamworks_click on Save/Publish.
+5. Steamworks has no API for store text, achievements, cloud or launch options. After steamworks_open (the user logs in
+   in the browser window themselves), use the sync tools: steamworks_store_text_sync, steamworks_achievements_sync,
+   steamworks_cloud_sync, steamworks_installation_sync. Always run them with dryRun first, show the user the plan, and
+   only then call again with dryRun=false and userConfirmed=true. They save drafts; never publish for the user.
+   For anything else: steamworks_inspect → steamworks_fill (dryRun first) → steamworks_upload → ask before steamworks_click.
 Never type passwords or Steam Guard codes; the user logs in in the browser window.`;
 
 const projectDir = z.string().describe("Project folder containing steamworks.yaml, relative to the server's workspace root (or absolute inside it).");
@@ -449,6 +457,179 @@ export function createServer(config: Config): McpServer {
       await fs.mkdir(p.outputDir, { recursive: true });
       await fs.writeFile(file, vdf, "utf8");
       return ok({ file, content: vdf.length > 20000 ? `${vdf.slice(0, 20000)}\n… (truncated)` : vdf });
+    }),
+  );
+
+  server.registerTool(
+    "steamworks_achievements_sync",
+    {
+      title: "Sync achievements",
+      description:
+        "Creates/updates achievements in Steamworks from steamworks.yaml: API name, name and description in every language " +
+        "(source + localization/*.yaml), hidden flag, and unlocked/locked icons (from achievement_icons_prepare). " +
+        "dryRun=true (default) returns the plan. Achievements that exist only in Steam are reported, never deleted. " +
+        "Changes stay unpublished until the user publishes in Steamworks.",
+      inputSchema: {
+        projectDir,
+        icons: z.enum(["missing", "all", "none"]).default("missing").describe("Upload icons for new achievements and ones without icons (missing), always (all), or never"),
+        dryRun: z.boolean().default(true),
+        userConfirmed: z.boolean().default(false).describe("true only after the user approved the shown plan"),
+      },
+      annotations: { openWorldHint: true },
+    },
+    wrap(async ({ projectDir, icons, dryRun, userConfirmed }) => {
+      const { p, m } = await load(projectDir);
+      if (!m.appId) throw new Error("steamworks.yaml has no appId.");
+      const page = await getPage(config.browserProfileDir, config.browser);
+      const state = await openAchievements(page, m.appId);
+      const plan = planAchievements(await desiredAchievements(m, p), state.achievements, icons);
+      const summary = {
+        create: plan.changes.filter((c) => c.action === "create").map((c) => ({ id: c.id, changes: c.changes, icons: c.uploadIcons })),
+        update: plan.changes.filter((c) => c.action === "update").map((c) => ({ id: c.id, changes: c.changes })),
+        skipped: plan.changes.filter((c) => c.action === "skip").map((c) => ({ id: c.id, reason: c.reason })),
+        unchanged: plan.unchanged,
+        onlyInSteam: plan.onlyInSteam,
+      };
+      const work = plan.changes.filter((c) => c.action !== "skip");
+      if (dryRun || work.length === 0) {
+        return ok({ ...summary, ...(work.length ? { next: "Show the user this plan; on approval call again with dryRun=false, userConfirmed=true." } : { inSync: true }) });
+      }
+      if (!userConfirmed) throw new Error("Show the plan to the user and get their OK, then call again with userConfirmed: true.");
+
+      let iconFiles = new Map<string, { unlocked?: string; locked?: string }>();
+      if (work.some((c) => c.uploadIcons)) {
+        const prepared = await prepareAchievementIcons(m, p);
+        iconFiles = new Map(prepared.map((r) => [r.id, { unlocked: r.unlocked, locked: r.locked }]));
+      }
+      const done: string[] = [];
+      const errors: { id: string; error: string }[] = [];
+      for (const c of work) {
+        try {
+          const target = c.action === "create" ? await createAchievement(page, m.appId, state) : c.steam!;
+          const statId = String(target.stat_id);
+          const bitId = String(target.bit_id);
+          await saveAchievement(page, m.appId, {
+            statId,
+            bitId,
+            apiName: c.id,
+            displayName: c.next.name,
+            description: c.next.description,
+            hidden: c.next.hidden,
+            permission: Number(target.permission ?? 0),
+          });
+          if (c.uploadIcons) {
+            const f = iconFiles.get(c.id);
+            if (f?.unlocked) await uploadAchievementIcon(page, m.appId, statId, bitId, f.unlocked, false);
+            if (f?.locked) await uploadAchievementIcon(page, m.appId, statId, bitId, f.locked, true);
+          }
+          done.push(`${c.action} ${c.id}`);
+        } catch (err) {
+          errors.push({ id: c.id, error: err instanceof Error ? err.message : String(err) });
+        }
+      }
+      // Verify by reading back.
+      const after = planAchievements(await desiredAchievements(m, p), (await openAchievements(page, m.appId)).achievements, "missing");
+      return ok({
+        done,
+        errors,
+        stillDifferent: after.changes.filter((c) => c.action !== "skip").map((c) => ({ id: c.id, changes: c.changes })),
+        note: "Saved in Steamworks but not published. Publish from Steamworks when ready.",
+      });
+    }),
+  );
+
+  server.registerTool(
+    "steamworks_cloud_sync",
+    {
+      title: "Sync Steam Cloud settings",
+      description:
+        "Applies steamworks.yaml `cloud` to Steamworks: byte/file quotas, shared app id, developers-only and sync-on-suspend flags, " +
+        "Auto-Cloud root paths and root overrides (matched by position). dryRun=true (default) returns the plan. " +
+        "Rows in Steam beyond the manifest's lists are kept unless removeExtra=true. Changes stay unpublished until the user publishes.",
+      inputSchema: {
+        projectDir,
+        removeExtra: z.boolean().default(false),
+        dryRun: z.boolean().default(true),
+        userConfirmed: z.boolean().default(false).describe("true only after the user approved the shown plan"),
+      },
+      annotations: { openWorldHint: true },
+    },
+    wrap(async ({ projectDir, removeExtra, dryRun, userConfirmed }) => {
+      const { m } = await load(projectDir);
+      if (!m.appId) throw new Error("steamworks.yaml has no appId.");
+      if (!m.cloud) throw new Error("steamworks.yaml has no `cloud` section.");
+      const page = await getPage(config.browserProfileDir, config.browser);
+      const cur = await readCloud(page, m.appId);
+      const plan = planCloud(m, cur, removeExtra);
+      if (dryRun || planIsEmpty(plan)) {
+        return ok({ current: cur, plan, ...(planIsEmpty(plan) ? { inSync: true } : { next: "Show the user this plan; on approval call again with dryRun=false, userConfirmed=true." }) });
+      }
+      if (!userConfirmed) throw new Error("Show the plan to the user and get their OK, then call again with userConfirmed: true.");
+      const wantsAutoCloud = plan.setRoots.length + plan.setOverrides.length > 0;
+      const quotas = plan.ufs?.to ?? cur;
+      if (wantsAutoCloud && (!quotas.byteQuota || !quotas.fileQuota)) {
+        throw new Error("Auto-Cloud needs byteQuota and fileQuota > 0; set them in steamworks.yaml.");
+      }
+      if (plan.ufs) await setUfs(page, m.appId, plan.ufs.to);
+      for (const o of plan.deleteOverrides) await deleteOverride(page, m.appId, o.index);
+      for (const r of plan.deleteRoots) await deleteRoot(page, m.appId, r.index);
+      for (const { row } of plan.setRoots) await setRoot(page, m.appId, row);
+      for (const { row } of plan.setOverrides) await setOverride(page, m.appId, row);
+      const after = planCloud(m, await readCloud(page, m.appId), removeExtra);
+      return ok({
+        applied: {
+          quotas: !!plan.ufs,
+          roots: plan.setRoots.length,
+          overrides: plan.setOverrides.length,
+          deleted: plan.deleteRoots.length + plan.deleteOverrides.length,
+        },
+        verified: planIsEmpty(after),
+        ...(planIsEmpty(after) ? {} : { stillDifferent: after }),
+        note: "Saved in Steamworks but not published. Publish from Steamworks when ready.",
+      });
+    }),
+  );
+
+  server.registerTool(
+    "steamworks_installation_sync",
+    {
+      title: "Sync install folder & launch options",
+      description:
+        "Applies steamworks.yaml `app` to Steamworks Installation → General: install folder and launch options (executable, arguments, " +
+        "working dir, type, OS, arch, beta key, DLC requirement, localized description). Launch options are matched by position; " +
+        "extra ones in Steam are reported, not deleted. dryRun=true (default) returns the plan. Changes stay unpublished.",
+      inputSchema: {
+        projectDir,
+        dryRun: z.boolean().default(true),
+        userConfirmed: z.boolean().default(false).describe("true only after the user approved the shown plan"),
+      },
+      annotations: { openWorldHint: true },
+    },
+    wrap(async ({ projectDir, dryRun, userConfirmed }) => {
+      const { p, m } = await load(projectDir);
+      if (!m.appId) throw new Error("steamworks.yaml has no appId.");
+      if (!m.app) throw new Error("steamworks.yaml has no `app` section.");
+      const page = await getPage(config.browserProfileDir, config.browser);
+      const cur = await readInstallation(page, m.appId);
+      const plan = await planInstallation(m, p, cur);
+      const view = {
+        installFolder: plan.installFolder,
+        launchOptions: plan.setLaunchOptions.map((x) => ({ index: x.row.index, changes: x.changes })),
+        extraLaunchOptions: plan.extraLaunchOptions.map((o) => `${o.index}: ${o.executable}`),
+      };
+      if (dryRun || installationPlanIsEmpty(plan)) {
+        return ok({ ...view, ...(installationPlanIsEmpty(plan) ? { inSync: true } : { next: "Show the user this plan; on approval call again with dryRun=false, userConfirmed=true." }) });
+      }
+      if (!userConfirmed) throw new Error("Show the plan to the user and get their OK, then call again with userConfirmed: true.");
+      if (plan.installFolder) await setInstallFolder(page, m.appId, plan.installFolder.to);
+      for (const { row } of plan.setLaunchOptions) await setLaunchOption(page, m.appId, row);
+      const after = await planInstallation(m, p, await readInstallation(page, m.appId));
+      return ok({
+        applied: { installFolder: !!plan.installFolder, launchOptions: plan.setLaunchOptions.length },
+        verified: installationPlanIsEmpty(after),
+        ...(installationPlanIsEmpty(after) ? {} : { stillDifferent: after.setLaunchOptions.map((x) => ({ index: x.row.index, changes: x.changes })) }),
+        note: "Saved in Steamworks but not published. Publish from Steamworks when ready.",
+      });
     }),
   );
 

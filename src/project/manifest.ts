@@ -46,35 +46,81 @@ export const AchievementSchema = z
   })
   .strict();
 
+/** Auto-Cloud root values as Steamworks stores them ("gameinstall" is shown as "App Install Directory"). */
+export const AUTO_CLOUD_ROOTS = [
+  "gameinstall",
+  "SteamCloudDocuments",
+  "WinMyDocuments",
+  "WinAppDataLocal",
+  "WinAppDataLocalLow",
+  "WinAppDataRoaming",
+  "WinSavedGames",
+  "WindowsHome",
+  "MacHome",
+  "MacAppSupport",
+  "MacDocuments",
+  "LinuxHome",
+  "LinuxXdgDataHome",
+  "LinuxXdgConfigHome",
+  "AndroidExternalData",
+  "AndroidInternalData",
+] as const;
+
+const AutoCloudRootName = z.preprocess(
+  (v) => (typeof v === "string" && /^app install directory$/i.test(v.trim()) ? "gameinstall" : v),
+  z.enum(AUTO_CLOUD_ROOTS),
+);
+
 export const AutoCloudRootSchema = z
   .object({
-    root: z.string(),
+    root: AutoCloudRootName,
     subdirectory: z.string().default(""),
     pattern: z.string().default("*"),
-    os: z.enum(["all", "windows", "macos", "linux"]).default("all"),
+    os: z.enum(["all", "windows", "macos", "linux", "android"]).default("all"),
     recursive: z.boolean().default(false),
   })
   .strict();
 
 export const RootOverrideSchema = z
   .object({
-    originalRoot: z.string(),
-    os: z.enum(["windows", "macos", "linux"]),
-    newRoot: z.string(),
+    originalRoot: AutoCloudRootName,
+    os: z.enum(["windows", "macos", "linux", "android"]),
+    newRoot: AutoCloudRootName,
     addOrReplacePath: z.string().default(""),
     replace: z.boolean().default(false),
   })
   .strict();
+
+export const LAUNCH_TYPES = [
+  "default",
+  "config",
+  "vr",
+  "openvroverlay",
+  "openxr",
+  "othervr",
+  "server",
+  "editor",
+  "manual",
+  "benchmark",
+  "safemode",
+  "option1",
+  "option2",
+  "option3",
+] as const;
 
 export const LaunchOptionSchema = z
   .object({
     executable: z.string(),
     arguments: z.string().default(""),
     workingDir: z.string().default(""),
+    /** Shown to players when there is more than one launch option; localized like other texts. */
     description: z.string().default(""),
-    os: z.enum(["all", "windows", "macos", "linux"]).default("windows"),
-    arch: z.enum(["all", "32", "64"]).default("64"),
+    type: z.enum(LAUNCH_TYPES).default("default"),
+    os: z.enum(["all", "windows", "macos", "linux", "android"]).default("windows"),
+    arch: z.enum(["all", "32", "64"]).default("all"),
     betaKey: z.string().default(""),
+    /** Only offer this option to owners of this DLC app id. */
+    ownsDlc: z.string().default(""),
   })
   .strict();
 
@@ -129,8 +175,16 @@ export const ManifestSchema = z
     achievements: z.array(AchievementSchema).default([]),
     cloud: z
       .object({
+        /** Bytes per user, up to 10,000,000,000. */
         byteQuota: z.number().int().nonnegative().optional(),
+        /** Files per user, up to 10,000. */
         fileQuota: z.number().int().nonnegative().optional(),
+        /** Share cloud saves with another app (e.g. demo → full game). 0 disables. */
+        sharedAppId: z.number().int().nonnegative().optional(),
+        /** "Enable cloud support for developers only" (beta testing). */
+        developersOnly: z.boolean().optional(),
+        /** "Enable Steam Cloud sync on system suspend and resume" (Dynamic Cloud Sync). */
+        syncOnSuspend: z.boolean().optional(),
         autoCloud: z
           .object({
             roots: z.array(AutoCloudRootSchema).default([]),

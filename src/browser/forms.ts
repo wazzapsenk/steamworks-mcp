@@ -1,5 +1,5 @@
 import type { Page } from "playwright";
-import { assertEditable } from "./session.js";
+import { assertEditable, ensureNameShim } from "./session.js";
 
 export interface FormControl {
   /** CSS selector that uniquely targets this control; pass it back to fill/upload/click. */
@@ -13,14 +13,6 @@ export interface FormControl {
   checked?: boolean;
   options?: { value: string; text: string; selected: boolean }[];
   visible: boolean;
-}
-
-/**
- * esbuild/tsx (keepNames) rewrites functions passed to page.evaluate to call `__name`, which doesn't exist in the page.
- * Define a no-op once per document; the string form is never transformed.
- */
-async function ensureNameShim(page: Page): Promise<void> {
-  await page.evaluate("globalThis.__name ??= (f) => f");
 }
 
 export interface ButtonInfo {

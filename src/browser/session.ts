@@ -92,3 +92,11 @@ export function wasRedirectedToSignIn(p: Page): boolean {
   const u = new URL(p.url());
   return u.hostname === EDIT_HOST && u.searchParams.has("goto");
 }
+
+/**
+ * esbuild/tsx (keepNames) rewrites functions passed to page.evaluate to call `__name`, which doesn't exist in the page.
+ * Define a no-op once per document; the string form is never transformed.
+ */
+export async function ensureNameShim(page: Page): Promise<void> {
+  await page.evaluate("globalThis.__name ??= (f) => f");
+}

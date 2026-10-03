@@ -56,8 +56,14 @@ cloud:
       - root: WinAppDataLocalLow
         subdirectory: DemoStudio/DemoGame
         pattern: "*.sav"
-        os: windows
+        os: all
         recursive: false
+    rootOverrides:
+      - originalRoot: WinAppDataLocalLow
+        os: macos
+        newRoot: MacAppSupport
+        addOrReplacePath: unity.DemoStudio.DemoGame
+        replace: true
 
 app:
   installFolder: DemoGame
@@ -65,3 +71,4 @@ app:
     - executable: DemoGame.exe
       os: windows
       arch: "64"
+      description: Play Demo Game

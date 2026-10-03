@@ -52,6 +52,15 @@ export function translatableEntries(m: Manifest): TranslatableEntry[] {
       context: `Description of the Steam achievement "${a.name}" in "${m.name}". Tells the player how to unlock it.`,
     });
   }
+  for (const [i, o] of (m.app?.launchOptions ?? []).entries()) {
+    push({
+      key: `app.launchOptions.${i}.description`,
+      text: o.description,
+      format: "plain",
+      maxLength: 64,
+      context: `Label of a launch option for "${m.name}" shown in the Steam client's Play menu (e.g. "Play in DirectX 11"). Short.`,
+    });
+  }
   return out;
 }
 

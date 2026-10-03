@@ -53,11 +53,17 @@ achievements: []
 #   fileQuota: 100
 #   autoCloud:
 #     roots:
-#       - root: WinAppDataLocalLow        # App Install Directory, WinMyDocuments, WinAppDataLocal, WinAppDataLocalLow,
-#         subdirectory: "Company/Game"    # WinAppDataRoaming, WinSavedGames, MacHome, MacAppSupport, MacDocuments,
-#         pattern: "*.sav"                # LinuxHome, LinuxXdgDataHome, SteamCloudDocuments
-#         os: windows
-#         recursive: true
+#       - root: WinAppDataLocalLow        # gameinstall (App Install Directory), SteamCloudDocuments, WinMyDocuments,
+#         subdirectory: "Company/Game"    # WinAppDataLocal, WinAppDataLocalLow, WinAppDataRoaming, WinSavedGames, WindowsHome,
+#         pattern: "*.sav"                # MacHome, MacAppSupport, MacDocuments, LinuxHome, LinuxXdgDataHome,
+#         os: all                         # LinuxXdgConfigHome, AndroidExternalData, AndroidInternalData
+#         recursive: true                 # os: all | windows | macos | linux | android
+#     rootOverrides:                      # only for roots with os: all
+#       - originalRoot: WinAppDataLocalLow
+#         os: macos
+#         newRoot: MacAppSupport
+#         addOrReplacePath: "unity.Company.Game"
+#         replace: true
 
 # app:
 #   installFolder: MyGame

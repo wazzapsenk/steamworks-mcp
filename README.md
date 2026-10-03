@@ -20,7 +20,11 @@ descriptions, translations, capsules, achievements and Steam Cloud settings for 
 | Knowing what to enter where in Steamworks | `export_bundle` → `STEAMWORKS_CHECKLIST.md`, per-language JSON, achievement localization CSV |
 | Is Steam in sync with my file? | `steam_achievements_diff` (Web API) |
 | Builds, branches, leaderboards | `steam_app_builds`, `steam_leaderboards`, `steam_leaderboard_create` (Web API) |
-| Actually filling the Steamworks forms | `steamworks_open` / `inspect` / `fill` / `upload` / `click` (browser, see below) |
+| **Store description + About in every language → Steamworks** | `steamworks_store_text_sync` |
+| **Achievements (create/update, all languages, icons) → Steamworks** | `steamworks_achievements_sync` |
+| **Steam Cloud quotas, Auto-Cloud paths, root overrides → Steamworks** | `steamworks_cloud_sync` |
+| **Install folder + launch options (localized) → Steamworks** | `steamworks_installation_sync` |
+| Anything else on a Steamworks page | `steamworks_open` / `inspect` / `fill` / `upload` / `click` (generic browser tools) |
 
 ### Translations are done by your assistant, not by a paid API
 
@@ -48,17 +52,21 @@ See [`examples/demo-game/steamworks.yaml`](examples/demo-game/steamworks.yaml) f
 
 Valve's partner Web API can read the achievement schema and manage builds and leaderboards, but it **cannot** edit the
 store page, create achievements, or change Steam Cloud and installation settings. Those exist only in the Steamworks
-web UI. So this server has two halves:
+web UI. So this server drives that UI for you:
 
-1. **Files + Web API.** Deterministic, fully tested. Generates everything you need and checks it against Steam's rules.
-2. **Browser tools.** Opens a real, visible Chromium window with a persistent profile. **You log in yourself**
-   (password and Steam Guard); the server never sees your credentials. The assistant then reads the page
-   (`steamworks_inspect` lists every field with a selector and label), previews changes (`steamworks_fill` with
-   `dryRun: true` shows a before/after diff), fills the form, and uploads images. `steamworks_click` refuses to run
-   until you've confirmed the click in chat. Nothing is saved or published without your OK.
+- It opens a real, visible **Chrome or Edge** window with its own profile (not your everyday browser profile).
+  **You log in yourself** (password + Steam Guard); the server never sees your credentials and only checks that the
+  login cookie exists.
+- The `steamworks_*_sync` tools don't type into fields one by one. They use what the Steamworks page itself uses:
+  the store page's **Localization import/export**, and the page's own requests for achievements, Steam Cloud and
+  launch options. That makes them fast (seconds, not minutes) and resistant to UI redesigns.
+- Every sync tool works the same way: **`dryRun: true` (default) shows a diff** → you approve in chat → it applies
+  with `userConfirmed: true` → it **reads Steamworks back and verifies** the result.
+- Nothing is ever **published**. Changes land as unpublished drafts; you review and press Publish in Steamworks.
+  Achievements or cloud paths that exist only in Steam are reported, not deleted.
 
-The browser tools don't hard-code Steamworks selectors, so they keep working when Valve tweaks the UI. The trade-off is
-that the assistant has to read each page first.
+Verified against the live Steamworks site in October 2026. If Valve changes something, `steamworks_inspect` and the
+generic `steamworks_fill` / `steamworks_click` tools still let the assistant work through the page manually.
 
 ## Install
 
@@ -69,9 +77,10 @@ git clone https://github.com/wazzapsenk/steamworks-mcp.git
 cd steamworks-mcp
 npm install
 npm run build
-# Optional, for the browser tools:
-npx playwright install chromium
 ```
+
+The browser tools use your installed Google Chrome or Microsoft Edge. If you have neither, run
+`npx playwright install chromium`.
 
 ### Environment
 
@@ -81,6 +90,7 @@ npx playwright install chromium
 | `STEAMWORKS_PUBLISHER_KEY` | Steamworks **publisher** Web API key (Users & Permissions → Manage Groups → Web API key). Optional; only `steam_*` tools need it. |
 | `STEAMWORKS_MCP_TOKEN` | Required token for HTTP mode. |
 | `STEAMWORKS_MCP_BROWSER_PROFILE` | Where the Steamworks login is stored (default `~/.steamworks-mcp/browser-profile`). |
+| `STEAMWORKS_MCP_BROWSER` | `auto` (default: Chrome → Edge → Playwright Chromium), `chrome`, `msedge` or `chromium`. |
 
 The publisher key is a secret: keep it in your MCP client's `env` block or a local `.env` file, and never commit it.
 
@@ -140,9 +150,11 @@ Steamworks browser. Use a long random token, a narrow root folder, and stop the 
 3. For each language: `localization_pending` → translate → `localization_set`, until `localization_status` is all green.
 4. `assets_generate`, `achievement_icons_prepare`, `screenshots_check`.
 5. `export_bundle` → open `steamworks-out/STEAMWORKS_CHECKLIST.md`.
-6. Either enter values by hand, or: `steamworks_open { page: "storePage" }` → log in → let the assistant inspect, fill
-   (dry run first), upload, and save with your OK.
-7. After publishing achievements: `steam_achievements_diff` to confirm Steam matches your file.
+6. `steamworks_open` → log in in the window that opens. Then let the assistant run, one by one,
+   `steamworks_store_text_sync`, `steamworks_achievements_sync`, `steamworks_cloud_sync` and
+   `steamworks_installation_sync`: each shows you a diff first and applies only after your OK.
+7. Upload capsules/screenshots from `steamworks-out/assets/` (or let the assistant use `steamworks_upload`), review
+   everything in Steamworks, and **Publish** yourself.
 
 ## Development
 
@@ -153,15 +165,23 @@ npm test             # unit + in-memory MCP end-to-end tests
 node scripts/smoke-http.mjs   # after npm run build: HTTP transport + auth smoke test
 ```
 
+### Live checks
+
+`scripts/live/` contains helpers for testing against a real Steamworks account (use an unreleased app):
+
+```bash
+npx tsx scripts/live/login.ts                       # open the browser, wait for you to log in, list your apps
+npx tsx scripts/live/inspect.ts <appId>             # read-only: dump every form on the main Steamworks pages
+npx tsx scripts/live/mcp-call.ts <tool> '<json>'    # call any tool exactly as an MCP client would
+npx tsx scripts/live/webapi.ts <appId>              # check the publisher Web API key (reads .env)
+```
+
 ## Roadmap
 
-- Page recipes verified against the live Steamworks UI: store description per language, achievements (create +
-  icons), achievement localization, Steam Cloud, launch options. Contributions from people with Steamworks access are
-  very welcome.
-- Read and write the store page **Localization** tab's import/export file directly. Its format isn't documented; if
-  you can share an export with the text removed, please open an issue.
+- Graphical assets upload (capsules, library art, screenshots) through a dedicated sync tool.
+- Stats definitions, and achievements bound to progress stats.
+- Store page tags, supported languages table and system requirements sync.
 - Localized capsules and screenshots per language.
-- Stats definitions (progress stats for achievements).
 
 ## License
 

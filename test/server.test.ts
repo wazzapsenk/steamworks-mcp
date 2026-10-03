@@ -46,15 +46,15 @@ describe("steamworks-mcp over MCP", () => {
 
   it("runs the translate loop", async () => {
     const pending = await call("localization_pending", { projectDir: "demo", language: "turkish" });
-    expect(pending.count).toBe(6);
+    expect(pending.count).toBe(7);
     const res = await call("localization_set", {
       projectDir: "demo",
       language: "turkish",
       translations: pending.entries.map((e: { key: string; text: string }) => ({ key: e.key, text: `TR ${e.text}` })),
     });
-    expect(res.saved).toHaveLength(6);
+    expect(res.saved).toHaveLength(7);
     const status = await call("localization_status", { projectDir: "demo", languages: ["turkish"] });
-    expect(status[0]).toMatchObject({ translated: 6, missing: 0, stale: 0 });
+    expect(status[0]).toMatchObject({ translated: 7, missing: 0, stale: 0 });
   });
 
   it("generates every asset at the exact size", async () => {

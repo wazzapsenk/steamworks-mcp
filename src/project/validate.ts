@@ -6,21 +6,6 @@ import { isApiLanguage } from "../steam/languages.js";
 import type { Manifest } from "./manifest.js";
 import type { ProjectPaths } from "./paths.js";
 
-export const AUTO_CLOUD_ROOTS = [
-  "App Install Directory",
-  "SteamCloudDocuments",
-  "WinMyDocuments",
-  "WinAppDataLocal",
-  "WinAppDataLocalLow",
-  "WinAppDataRoaming",
-  "WinSavedGames",
-  "MacHome",
-  "MacAppSupport",
-  "MacDocuments",
-  "LinuxHome",
-  "LinuxXdgDataHome",
-] as const;
-
 export interface Finding {
   level: "error" | "warning";
   area: string;
@@ -82,11 +67,6 @@ export async function validateProject(m: Manifest, paths: ProjectPaths): Promise
     if (fileQuota !== undefined && fileQuota > LIMITS.cloudFileQuotaMax) err("cloud", `fileQuota ${fileQuota} exceeds Steam's maximum of ${LIMITS.cloudFileQuotaMax}.`);
     if ((m.cloud.autoCloud?.roots.length ?? 0) > 0 && (!byteQuota || !fileQuota)) {
       err("cloud", "Steamworks only shows Auto-Cloud settings after byteQuota and fileQuota are set and saved.");
-    }
-  }
-  for (const r of m.cloud?.autoCloud?.roots ?? []) {
-    if (!(AUTO_CLOUD_ROOTS as readonly string[]).includes(r.root)) {
-      err("cloud", `Auto-Cloud root "${r.root}" is not one of: ${AUTO_CLOUD_ROOTS.join(", ")}.`);
     }
   }
   if ((m.cloud?.autoCloud?.rootOverrides.length ?? 0) > 0 && m.cloud?.autoCloud?.roots.some((r) => r.os !== "all")) {
