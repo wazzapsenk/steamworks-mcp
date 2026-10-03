@@ -84,7 +84,12 @@ Clone the repository into Cursor's local plugin folder and reload the window (De
 git clone https://github.com/wazzapsenk/steamworks-mcp ~/.cursor/plugins/local/steamworks
 ```
 
-The plugin brings the server, the skills and the [code rules](#code-rules) as Cursor rules.
+The plugin brings the server, the skills and the [code rules](#code-rules) as Cursor rules. Tell it once where
+your games are:
+
+```bash
+uvx --from git+https://github.com/wazzapsenk/steamworks-mcp steamworks-mcp setup --only-settings
+```
 
 ### ChatGPT and claude.ai (remote)
 

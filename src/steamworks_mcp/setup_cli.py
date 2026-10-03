@@ -212,6 +212,11 @@ def setup(argv: list[str], ask: Ask = input, secret: Ask = getpass.getpass) -> i
         help="an app to connect (repeat for several); default: ask",
     )
     parser.add_argument("--yes", action="store_true", help="accept the defaults without asking")
+    parser.add_argument(
+        "--only-settings",
+        action="store_true",
+        help="save the settings only, connect no app (for the Claude Code and Cursor plugins)",
+    )
     args = parser.parse_args(argv)
     path = settings_path()
     current = parse_dotenv(path.read_text(encoding="utf-8")) if path.is_file() else {}
@@ -245,6 +250,9 @@ def setup(argv: list[str], ask: Ask = input, secret: Ask = getpass.getpass) -> i
     print(f"  Saved to {path}")
 
     # 3. apps
+    if args.only_settings:
+        print("\nDone. Restart the apps that use steamworks-mcp so they read the new settings.")
+        return 0
     available = clients()
     if args.client:
         chosen = [c for c in available if c.id in args.client]

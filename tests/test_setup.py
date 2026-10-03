@@ -90,6 +90,12 @@ def test_setup_without_questions(home: Path, tmp_path: Path, capsys: pytest.Capt
     assert "0 tracked, 1 not tracked yet" in out and "Cursor: added to" in out
 
 
+def test_setup_only_settings_connects_no_app(home: Path, tmp_path: Path) -> None:
+    assert setup_cli.setup(["--root", str(tmp_path), "--only-settings", "--yes"]) == 0
+    assert (home / ".steamworks-mcp" / "settings.env").is_file()
+    assert not (home / ".cursor" / "mcp.json").exists()
+
+
 def test_setup_asks_and_saves_keys(home: Path, tmp_path: Path) -> None:
     answers = iter([str(tmp_path), "y", "n", "n", "n", "n"])
     code = setup_cli.setup([], ask=lambda _: next(answers), secret=lambda _: "KEY0123456789")
