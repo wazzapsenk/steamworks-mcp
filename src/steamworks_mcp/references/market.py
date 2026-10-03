@@ -507,7 +507,7 @@ def save(
     out: dict[str, Any] = {
         "saved": total,
         "file": (_dir(files) / "study.json").relative_to(files.root).as_posix(),
-        "summary": summary(study),
+        "study": summary(study),
         "next": "generate(path, section='store_short') now includes the study and strategies built on it.",
     }
     if missing:

@@ -235,7 +235,7 @@ def test_saved_study_has_labels_and_numbers_but_no_page_text(tmp_path: Path, gam
         ],
         today=TODAY,
     )  # fmt: skip
-    assert out["saved"] == 3 and out["summary"]["most_common_opening"] == "genre_and_players (67%)"
+    assert out["saved"] == 3 and out["study"]["most_common_opening"] == "genre_and_players (67%)"
     study = market.load_study(files)
     assert study is not None
     assert [(s.label, s.share) for s in study.openings] == [("genre_and_players", 0.67), ("player_fantasy", 0.33)]

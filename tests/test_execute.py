@@ -1133,7 +1133,8 @@ async def test_browser_flow_through_the_server(tmp_path: Path) -> None:
         assert refused.is_error and "steamworks_open" in refused.content[0].text
         terms = (await call("steamworks_open")).structured_content
         assert terms["consent_required"] and "never publishes" in terms["text"]
-        assert (await call("steamworks_open", accept_risks=True)).structured_content == {"logged_in": True}
+        opened = (await call("steamworks_open", accept_risks=True)).structured_content
+        assert opened["logged_in"] is True and opened["outcome"] == "ok"
         dry = (await call("apply", path="game", section="cloud")).structured_content
         assert dry["dry_run"] and len(dry["changes"]) == 3
         snaps = (await call("steamworks_inspect", path="game", what="snapshots")).structured_content

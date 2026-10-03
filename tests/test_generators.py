@@ -619,6 +619,6 @@ async def test_deterministic_generate_and_localization_tools(project: tuple[Conf
     assert ok["approved"] == ["localization.german.achievements.ACH_FIRST_FORT.name"]
     status = await call(config, "localization_status", path="game")
     assert {s["language"] for s in status["languages"]} == {"german", "french", "schinese"}
-    assert status["next"] == "localization_pending(path, language='german')"
+    assert status["next"] == ["localization_pending(path, language='german')"]
     preview = await call(config, "preview_store", path="game")
     assert (game / preview["file"]).exists() and preview["fold_verified"] is False

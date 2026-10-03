@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 import socket
 import threading
@@ -48,7 +49,7 @@ async def test_init_project_creates_files_and_scans(workspace: Path) -> None:
     config = Config(workspace_root=workspace)
     out = await call(config, "init_project", path="game", appid=1000000)
     assert set(out["created"]) == {"steamworks.yaml", ".steam-mcp/.gitignore", ".steam-mcp/state.json"}
-    assert out["scan"]["summary"]["applied"] > 5
+    assert out["scan"]["counts"]["applied"] > 5
     game = workspace / "game"
     m = ManifestFile.load(game / "steamworks.yaml").manifest
     assert [a.id for a in m.achievements] == ["ACH_FIRST_FORT", "ACH_TEN_FORTS"]
@@ -82,7 +83,7 @@ async def test_rescan_updates_drafts_but_not_approved(workspace: Path) -> None:
     config = Config(workspace_root=workspace)
     await call(config, "init_project", path="game")
     report = await call(config, "scan_project", path="game")
-    assert report["summary"]["applied"] == 0 and report["summary"]["conflicts"] == 0
+    assert report["counts"]["applied"] == 0 and report["counts"]["conflicts"] == 0
 
 
 async def test_paths_outside_the_workspace_are_refused(workspace: Path) -> None:
@@ -97,6 +98,49 @@ async def test_scan_without_engine_project(tmp_path: Path) -> None:
     config = Config(workspace_root=tmp_path)
     out = await call(config, "init_project", path="empty")
     assert out["scan"]["scanners"] == []
+
+
+async def test_every_result_starts_with_the_same_four_keys(workspace: Path) -> None:
+    config = Config(workspace_root=workspace)
+    calls: list[tuple[str, dict[str, Any]]] = [
+        ("init_project", {"path": "game", "appid": 1000000}),
+        ("scan_project", {"path": "game"}),
+        ("gap_report", {"path": "game"}),
+        ("start_interview", {"path": "game", "use_form": False}),
+        ("set_field", {"path": "game", "values": {"game.name": "Fort Night"}}),
+        ("approve_fields", {"path": "game", "fields": ["game.name"]}),
+        ("mark_applied", {"path": "game", "fields": ["game.name"]}),
+        ("generate", {"path": "game", "section": "cloud"}),
+        ("generate", {"path": "game", "section": "store_short"}),
+        ("validate", {"path": "game"}),
+        ("localization_status", {"path": "game"}),
+        ("export_package", {"path": "game", "gate": 1}),
+        ("get_spec_info", {"kind": "gates"}),
+        ("server_info", {}),
+    ]
+    async with Client(create_server(config)) as client:
+        for tool, args in calls:
+            result = await client.call_tool(tool, args)
+            assert not result.is_error, (tool, getattr(result.content[0], "text", ""))
+            out = dict(result.structured_content or {})
+            assert list(out)[:4] == ["outcome", "summary", "next", "display"], tool
+            assert out["outcome"] in ("ok", "needs_input", "needs_confirmation", "partial", "refused"), tool
+            assert isinstance(out["summary"], str) and out["summary"].endswith("."), (tool, out["summary"])
+            assert isinstance(out["next"], list) and isinstance(out["display"], str), tool
+        failed = await client.call_tool("set_field", {"path": "nowhere", "values": {"game.name": "x"}})
+    assert failed.is_error
+    text = getattr(failed.content[0], "text", "")
+    body = json.loads(text[text.index("{") :])
+    assert body["outcome"] == "error" and "init_project" in body["summary"] and body["next"]
+
+
+async def test_gap_report_display_is_a_table_per_step(workspace: Path) -> None:
+    config = Config(workspace_root=workspace)
+    await call(config, "init_project", path="game", appid=1000000)
+    report = await call(config, "gap_report", path="game", gate=1)
+    assert report["summary"].startswith("Step 1 · Store page review has ")
+    assert "| Status | What | How | Where |" in report["display"]
+    assert report["next"] and all(isinstance(s, str) for s in report["next"])
 
 
 async def test_server_info_has_no_secrets(tmp_path: Path) -> None:

@@ -17,7 +17,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel
 
-from steamworks_mcp import __version__
+from steamworks_mcp import __version__, present
 from steamworks_mcp import fields as fields_ops
 from steamworks_mcp import project as proj
 from steamworks_mcp.config import Config, WorkspaceError, resolve_in_workspace
@@ -64,8 +64,32 @@ USER_ERRORS = (
 )
 
 
+HINTS: tuple[tuple[type[BaseException], str], ...] = (
+    (WorkspaceError, "Use a folder inside the workspace root (server_info shows it)."),
+    (
+        ManifestError,
+        "If there is no steamworks.yaml yet, call init_project; if the file is broken, show the user the line the "
+        "message names.",
+    ),
+    (FieldPathError, 'Field paths look like store.short_description; get_spec_info("schema") lists them all.'),
+    (TransitionError, "Show the value to the user and approve it first; only approved values can be marked done."),
+    (FetchError, "Steam's public store did not answer; try again in a minute. Everything offline still works."),
+    (NotLoggedInError, "Call steamworks_open and let the user sign in to Steamworks, then call again."),
+    (FormatError, "Steamworks changed one of its pages, so nothing was written. Tell the user; do it by hand for now."),
+    (GuardError, "This request is outside what the tool may do in Steamworks; do it by hand."),
+    (SteamApiError, "Check the publisher key and the app id (server_info shows which keys are set)."),
+    (ApplyRefused, "Do what the message asks, then call again."),
+    (FileNotFoundError, "Check the path; paths are relative to the game folder or the workspace root."),
+    (ValueError, "Fix the arguments as the message says and call again."),
+)
+
+
+def hint_for(exc: BaseException) -> str | None:
+    return next((hint for kind, hint in HINTS if isinstance(exc, kind)), None)
+
+
 def user_errors(fn: F) -> F:
-    """Show the message of expected errors to the model (the SDK hides unexpected exceptions' details)."""
+    """Show expected errors to the model in the result shape (the SDK hides unexpected exceptions' details)."""
     if inspect.iscoroutinefunction(fn):
 
         @functools.wraps(fn)
@@ -73,7 +97,7 @@ def user_errors(fn: F) -> F:
             try:
                 return await fn(*args, **kwargs)
             except USER_ERRORS as exc:
-                raise ToolError(str(exc)) from exc
+                raise ToolError(present.error(str(exc), hint_for(exc))) from exc
 
         return async_wrapper  # type: ignore[return-value]
 
@@ -82,7 +106,7 @@ def user_errors(fn: F) -> F:
         try:
             return fn(*args, **kwargs)
         except USER_ERRORS as exc:
-            raise ToolError(str(exc)) from exc
+            raise ToolError(present.error(str(exc), hint_for(exc))) from exc
 
     return wrapper  # type: ignore[return-value]
 
@@ -93,6 +117,11 @@ steamworks-mcp takes a game from "nothing configured" to "released on Steam".
 Typical flow: init_project (creates steamworks.yaml and scans the game project) -> gap_report -> start_interview ->
 generate / set_field -> validate -> export_package -> apply. Values live in steamworks.yaml; per-field status
 (missing, draft, needs_review, approved, applied) lives in .steam-mcp/state.json.
+
+Every result starts with the same four keys: outcome (ok, needs_input, needs_confirmation, partial, refused), summary
+(one sentence for the user), next (what to do next) and display (Markdown). Show `display` to the user as it is; if
+you talk to the user in another language, translate its words and keep its layout. Errors come in the same shape with
+outcome "error".
 
 Never claim something was done in Steamworks unless a tool reported it as applied. Scanned and generated values are
 drafts until the user approves them. Writes to Steam always start as a dry run; write only after the user saw the
@@ -150,7 +179,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         result: dict[str, Any] = {"project": str(root), **proj.init_project(root, name, appid)}
         if scan:
             result["scan"] = _scan(root, project_dir(source_dir) if source_dir else root)
-        return result
+        return present.init_project(result)
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
@@ -164,7 +193,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             source_dir: The engine project folder, when it is not `path` itself.
         """
         root = project_dir(path)
-        return _scan(root, project_dir(source_dir) if source_dir else root)
+        return present.scan(_scan(root, project_dir(source_dir) if source_dir else root))
 
     def _scan(root: Path, source: Path) -> dict[str, Any]:
         project = proj.Project.open(root)
@@ -174,7 +203,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         report = proj.merge_scan(project, results)
         project.save()
         out = report.as_dict()
-        out["summary"] = {
+        out["counts"] = {
             "applied": len(report.applied),
             "conflicts": len(report.conflicts),
             "unchanged": len(report.unchanged),
@@ -205,13 +234,15 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             include_info: Also list the background notes (permissions, timings) that never block.
         """
         project = open_project(path)
-        return gap_report_fn(
-            project.values(),
-            project.state,
-            project.files.root,
-            gate,
-            browser=config.browser_enabled,
-            include_info=include_info,
+        return present.gap_report(
+            gap_report_fn(
+                project.values(),
+                project.state,
+                project.files.root,
+                gate,
+                browser=config.browser_enabled,
+                include_info=include_info,
+            )
         )
 
     def _questions(project: proj.Project, gate: int | None, max_questions: int) -> tuple[list[Question], int]:
@@ -279,7 +310,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             out["message"] = "Nothing left to ask for this gate. Call gap_report for the remaining steps."
         else:
             out["how_to_answer"] = "set_field(path, values={<question id>: <answer>, ...})"
-        return out
+        return present.start_interview(out)
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world_hint=False))
     @user_errors
@@ -311,7 +342,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
                 changes[field] = value
             out = fields_ops.set_fields(project, changes, source, notes=notes)
         project.save()
-        return out
+        return present.set_field(out)
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
@@ -321,7 +352,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         project = open_project(path)
         out = fields_ops.approve_fields(project, fields)
         project.save()
-        return out
+        return present.approve_fields(out)
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
@@ -332,7 +363,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         project = open_project(path)
         out = fields_ops.mark_applied(project, fields, notes)
         project.save()
-        return out
+        return present.mark_applied(out)
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=True))
     @user_errors
@@ -344,7 +375,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         (derived analysis of a reference game), "references" (catalog), "store_patterns" (what the store pages of
         popular new releases look like, per Steam genre; numbers only), "store_patterns:<Steam genre>".
         """
-        return spec_info(kind)
+        return present.result(spec_info(kind), f"Reference data: {kind}.")
 
     # ------------------------------------------------------------------ generators & validators
 
@@ -366,12 +397,12 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         project = open_project(path)
         values, root = project.values(), project.files.root
         if section in ("store_short", "store_long", "achievements"):
-            return gen_text.brief(values, project.files, section, stage)
+            return present.generate(gen_text.brief(values, project.files, section, stage), section, stage)
         if section == "code":
             findings, code_report = gen_det.code_definitions(values, root)
             report = proj.propose(project, findings)
             project.save()
-            return {**report.as_dict(), "code_vs_manifest": code_report}
+            return present.generate({**report.as_dict(), "code_vs_manifest": code_report}, section, stage)
         makers = {"cloud": gen_det.cloud, "builds": gen_det.builds, "requirements": gen_det.requirements}
         if section not in makers:
             raise ValueError("section: store_short, store_long, achievements, cloud, builds, requirements or code.")
@@ -381,7 +412,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         if section == "builds":
             scripts = vdf.build_scripts(project.values(), root, project.files.export_dir(2) / "steam")
             out["scripts"] = scripts if isinstance(scripts, dict) else {"not_yet": scripts}
-        return out
+        return present.generate(out, section, stage)
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
@@ -392,8 +423,10 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         market_common | market_contrast | outline | text | revision | … . The user picks a draft with
         set_field(path, field, from_draft=<id>)."""
         project = open_project(path)
-        return gen_text.save_text_draft(
-            project.values(), project.files, field, value, strategy, config.cache_dir, notes=notes
+        return present.save_draft(
+            gen_text.save_text_draft(
+                project.values(), project.files, field, value, strategy, config.cache_dir, notes=notes
+            )
         )
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=True))
@@ -407,13 +440,15 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         are reported separately. To propose a fix, save a new version with save_draft(strategy="revision").
         """
         project = open_project(path)
-        return validate_project(
-            project.values(),
-            project.state,
-            project.files.root,
-            section,
-            browser=config.browser_enabled,
-            llm_judgements=llm_judgements,
+        return present.validate(
+            validate_project(
+                project.values(),
+                project.state,
+                project.files.root,
+                section,
+                browser=config.browser_enabled,
+                llm_judgements=llm_judgements,
+            )
         )
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
@@ -434,7 +469,9 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
                 short, about = (str(d.value), about) if field == "store.short_description" else (short, str(d.value))
         out = project.files.state_dir / "exports" / "store_preview.html"
         atomic_write(out, preview.store_preview(values["game"].get("name") or "Your game", short, about, fold_px))
-        return {"file": out.relative_to(project.files.root).as_posix(), "fold_px": fold_px, "fold_verified": False}
+        return present.preview_store(
+            {"file": out.relative_to(project.files.root).as_posix(), "fold_px": fold_px, "fold_verified": False}
+        )
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
@@ -455,7 +492,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             ]
         result["screenshots"] = images.screenshot_report(values, root)
         result["preview"] = (out_dir / "preview.html").relative_to(root).as_posix()
-        return result
+        return present.prepare_images(result)
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True))
     @user_errors
@@ -477,7 +514,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             details.fetched_at.date(),
             tags or [],
         )
-        return result.model_dump(mode="json")
+        return present.fetch_reference(result.model_dump(mode="json"))
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True))
     @user_errors
@@ -495,7 +532,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         """
         project = open_project(path)
         fetcher = ReferenceFetcher(config.cache_dir, web_api_key=config.web_api_key)
-        return market.start(fetcher, project.values(), project.files, tags, games)
+        return present.study_market(market.start(fetcher, project.values(), project.files, tags, games))
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
@@ -506,7 +543,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         and numbers, never page text; generate(store_short / store_long) builds on it from then on."""
         project = open_project(path)
         fetcher = ReferenceFetcher(config.cache_dir, web_api_key=config.web_api_key)
-        return market.save(fetcher, project.files, notes)
+        return present.save_market_study(market.save(fetcher, project.files, notes))
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
@@ -516,7 +553,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         marked needs_review). `next` names the language to translate next."""
         project = open_project(path)  # loading marks stale translations needs_review
         project.save()
-        return loc.report(project.values(), project.files.root)
+        return present.localization_status(loc.report(project.values(), project.files.root))
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=True))
     @user_errors
@@ -526,11 +563,13 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         Translate them, then call localization_set; repeat until nothing is pending."""
         project = open_project(path)
         items = loc.pending(project.values(), project.files.root, language, limit)
-        return {
-            "language": language,
-            "entries": items,
-            "submit": "localization_set(path, language, translations={key: text})",
-        }
+        return present.localization_pending(
+            {
+                "language": language,
+                "entries": items,
+                "submit": "localization_set(path, language, translations={key: text})",
+            }
+        )
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
@@ -543,7 +582,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         project = open_project(path)
         out = loc.set_translations(project.values(), project.files.root, project.state, language, translations, source)
         project.save()
-        return out
+        return present.localization_set(out)
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
@@ -553,8 +592,8 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         achievement icons and CSV) and a CHECKLIST.md that says, for every open item, which Steamworks page and
         field it goes to and what to paste. Done items are ticked. Nothing is uploaded or published."""
         project = open_project(path)
-        return package.export_package(
-            project.values(), project.state, project.files, gate, browser=config.browser_enabled
+        return present.export_package(
+            package.export_package(project.values(), project.state, project.files, gate, browser=config.browser_enabled)
         )
 
     # ------------------------------------------------------------------ execution (API, BROWSER, steamcmd)
@@ -608,15 +647,17 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             upload_icons: achievements: also upload the icons (prepared from achievements.*.icon).
             goes_live_now: store_tags: the user agreed that the tags go live on the store at once.
         """
-        return await execu.apply(
-            open_project(path),
-            section,
-            app,
-            dry_run=dry_run,
-            user_confirmed=user_confirmed,
-            remove_extra=remove_extra,
-            upload_icons=upload_icons,
-            goes_live_now=goes_live_now,
+        return present.steam_write(
+            await execu.apply(
+                open_project(path),
+                section,
+                app,
+                dry_run=dry_run,
+                user_confirmed=user_confirmed,
+                remove_extra=remove_extra,
+                upload_icons=upload_icons,
+                goes_live_now=goes_live_now,
+            )
         )
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True))
@@ -647,7 +688,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         the Publish tab would show), and "checklist" (the
         release checklists of the app's Steamworks landing page, each item linked to its gap_report rule).
         "snapshots" lists the snapshots saved before writes (local)."""
-        return await execu.inspect(open_project(path), what, app)
+        return present.steam_read(await execu.inspect(open_project(path), what, app), what)
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True))
     @user_errors
@@ -663,8 +704,9 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         EMPTY fields of steamworks.yaml with it, marked "applied". Never writes to Steamworks and never overwrites a
         value in the file: differences come back as conflicts for the user to settle. Dry run first; save with
         dry_run=false after the user agreed. Leaderboards need the publisher key, the rest the BROWSER mode."""
-        return await execu.import_from_steamworks(
-            open_project(path), app, list(sections or []) or None, dry_run=dry_run
+        return present.import_from_steamworks(
+            await execu.import_from_steamworks(open_project(path), app, list(sections or []) or None, dry_run=dry_run),
+            dry_run,
         )
 
     @server.tool(annotations=ToolAnnotations(destructive_hint=True, open_world_hint=True))
@@ -681,14 +723,16 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         """Set an uploaded build live on a beta branch (Web API, publisher key). Dry run first; set live only after
         the user explicitly agreed. The default branch (what every player gets) is never set live by this tool: the
         user does that in Steamworks Settings > SteamPipe > Builds."""
-        return execu.set_build_live(
-            open_project(path),
-            app,
-            build_id,
-            branch,
-            description=description,
-            dry_run=dry_run,
-            user_confirmed=user_confirmed,
+        return present.steam_write(
+            execu.set_build_live(
+                open_project(path),
+                app,
+                build_id,
+                branch,
+                description=description,
+                dry_run=dry_run,
+                user_confirmed=user_confirmed,
+            )
         )
 
     if config.browser_enabled:
@@ -699,7 +743,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             """Open the Steamworks site in a browser window for the BROWSER mode. The first time this returns terms
             the user has to read and accept (then call again with accept_risks=true). The user signs in themselves;
             this tool never types passwords or Steam Guard codes and never reads cookie values."""
-            return await execu.open(accept_risks)
+            return present.steamworks_open(await execu.open(accept_risks))
 
         @server.tool(annotations=ToolAnnotations(destructive_hint=True, open_world_hint=True))
         @user_errors
@@ -710,7 +754,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             the snapshots. The first write on every app has to be a restore of the snapshot just taken: it writes
             every row back unchanged and reads it again, proving this tool reads and writes that app correctly.
             Dry run first; restore only after the user agreed."""
-            return await execu.restore(open_project(path), snapshot, dry_run, user_confirmed)
+            return present.restore_snapshot(await execu.restore(open_project(path), snapshot, dry_run, user_confirmed))
 
     # ------------------------------------------------------------------ resources (get_spec_info is the tool twin)
 
@@ -847,17 +891,19 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
     @server.tool(annotations=ToolAnnotations(read_only_hint=True))
     def server_info() -> dict[str, Any]:
         """Version, workspace root and which optional features are enabled (no secrets)."""
-        return {
-            "version": __version__,
-            "workspace_root": str(config.workspace_root),
-            "browser_mode": config.browser_enabled,
-            "publisher_key_configured": config.publisher_key is not None,
-            "web_api_key_configured": config.web_api_key is not None,
-            "steamcmd_configured": config.steamcmd_path is not None and config.steamcmd_username is not None,
-            "browser_consent_given": execu.consent.accepted() if config.browser_enabled else None,
-            "apply_sections": list(SECTIONS),
-            "inspect": list(INSPECT),
-            "apps": list(APPS),
-        }
+        return present.server_info(
+            {
+                "version": __version__,
+                "workspace_root": str(config.workspace_root),
+                "browser_mode": config.browser_enabled,
+                "publisher_key_configured": config.publisher_key is not None,
+                "web_api_key_configured": config.web_api_key is not None,
+                "steamcmd_configured": config.steamcmd_path is not None and config.steamcmd_username is not None,
+                "browser_consent_given": execu.consent.accepted() if config.browser_enabled else None,
+                "apply_sections": list(SECTIONS),
+                "inspect": list(INSPECT),
+                "apps": list(APPS),
+            }
+        )
 
     return server

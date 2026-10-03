@@ -56,7 +56,7 @@ def gap_report(
         "fields_to_fill": len(to_fill),
         "fields_to_approve": to_approve,
         "fields_changed_after_approval": needs_review,
-        "next_steps": next_steps(results, len(to_fill), to_approve, values),
+        "next": next_steps(results, len(to_fill), to_approve, values),
     }
 
 

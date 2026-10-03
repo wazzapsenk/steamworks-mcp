@@ -369,7 +369,7 @@ async def test_interview_round_trip(game: Path) -> None:
     config = Config(workspace_root=game)
     await tool(config, "init_project", path="game")
     report = await tool(config, "gap_report", path="game")
-    assert report["fields_to_fill"] > 0 and report["next_steps"]
+    assert report["fields_to_fill"] > 0 and report["next"]
     assert {g["gate"] for g in report["gates"]} == {0, 1, 2, 3}
     first = await tool(config, "start_interview", path="game", use_form=False)
     ids = [q["id"] for q in first["questions"]]
