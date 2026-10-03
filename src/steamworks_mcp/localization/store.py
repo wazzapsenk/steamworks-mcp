@@ -136,8 +136,9 @@ def text_hash(text: str) -> str:
 
 
 def tag_signature(text: str) -> str:
-    """Ordered BBCode tag names without attributes, e.g. ``h2,/h2,list,*,/list``."""
-    return ",".join(f"{m.group(1)}{m.group(2).lower()}" for m in TAG.finditer(text))
+    """Ordered BBCode tag names without attributes, e.g. ``h2,/h2,list,*,/list``. Paragraph tags ([p]) are left out:
+    Steamworks' editor adds them in some languages and not in others."""
+    return ",".join(f"{m.group(1)}{m.group(2).lower()}" for m in TAG.finditer(text) if m.group(2).lower() != "p")
 
 
 class Localization:

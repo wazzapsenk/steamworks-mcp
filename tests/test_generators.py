@@ -130,7 +130,7 @@ def test_translation_loop(tmp_path: Path) -> None:
         state,
         "german",
         {
-            "store.about": "[h2]Festungen[/h2]Baue eine Festung.",  # a tag went missing
+            "store.about": "Festungen. Baue eine Festung.",  # the [h2] tags went missing
             "store.short_description": "x" * 301,
             "achievements.ACH_FIRST_FORT.name": "Deckenarchitekt",
             "achievements.ACH_FIRST_FORT.description": "Überstehe deinen ersten Überfall um Mitternacht.",

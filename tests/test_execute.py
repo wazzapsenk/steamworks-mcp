@@ -24,6 +24,7 @@ from steamworks_mcp.execute.browser.html import parse
 from steamworks_mcp.execute.browser.transport import NotLoggedInError, PlaywrightTransport, ReplayTransport, Response
 from steamworks_mcp.execute.service import Executor
 from steamworks_mcp.fields import set_fields
+from steamworks_mcp.localization import store as loc_store
 from steamworks_mcp.localization.store import set_translations
 from steamworks_mcp.project import Project
 from steamworks_mcp.server import create_server
@@ -374,6 +375,8 @@ async def test_saving_keeps_the_unlock_permission() -> None:
 
 def test_store_text_comparison_ignores_paragraph_tags() -> None:
     assert sync.normalize_store_text("[p]One[/p][p]Two[/p]") == sync.normalize_store_text("One\n\nTwo")
+    # a translation without the editor's [p] tags still has the source's tags
+    assert loc_store.tag_signature("[p]One[/p][h2]Two[/h2]") == loc_store.tag_signature("Eins\n[h2]Zwei[/h2]")
 
 
 async def test_store_text_never_sends_an_empty_value() -> None:

@@ -295,6 +295,8 @@ def _mark_translations_applied(values: dict[str, Any], state: State, root: Path,
     out = []
     for lang, texts in sync.approved_translations(values, state, root, prefix).items() if prefix else []:
         for key, text in texts.items():
+            if section == "store_text" and key not in sync.STORE_FIELDS:
+                continue  # only the two descriptions go through the store localization upload
             path = f"localization.{lang}.{key}"
             fs = state.fields.get(path)
             if fs is not None and fs.status == "approved":
