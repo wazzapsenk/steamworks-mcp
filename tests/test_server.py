@@ -208,8 +208,15 @@ async def test_resources_and_prompts(workspace: Path) -> None:
 async def test_tool_annotations_tell_clients_what_is_safe(tmp_path: Path) -> None:
     async with Client(create_server(Config(workspace_root=tmp_path))) as client:
         tools = {t.name: t.annotations for t in (await client.list_tools()).tools}
+
+    def hint(name: str, key: str) -> bool | None:
+        ann = tools[name]
+        assert ann is not None, name
+        value: bool | None = getattr(ann, key)
+        return value
+
     for name in ("server_info", "gap_report", "validate", "get_spec_info", "steamworks_inspect"):
-        assert tools[name] is not None and tools[name].read_only_hint is True, name
+        assert hint(name, "read_only_hint") is True, name
     for name in ("apply", "set_build_live"):
-        assert tools[name] is not None and tools[name].destructive_hint is True, name
-    assert tools["set_field"] is not None and tools["set_field"].read_only_hint is False
+        assert hint(name, "destructive_hint") is True, name
+    assert hint("set_field", "read_only_hint") is False
