@@ -36,8 +36,8 @@ ever written to Steamworks, empty ones are left as they are there.
 
 | Section | What it holds | Usually filled by |
 |---|---|---|
-| `game` | What the game is: name, pitch, genres, players, session length, core loop, USPs, audience, tone, platform features, engine, reference app ids. Input for writing; never uploaded. | scan + interview |
-| `source_language`, `target_languages` | Steam API language codes (`english`, `schinese`, `koreana`, `brazilian`, `latam`, …) | interview |
+| `game` | What the game is: name, pitch, genres, players (solo, co-op, PvP and how many), session length, core loop in player verbs, USPs, audience, tone, the hook (what sets it apart in its genre), the player fantasy, run length, progression, what is in the game at launch, comparable games ("for fans of X and Y": they position the text but are never named on the store page), platform features, engine, reference app ids. Input for writing; never uploaded. | scan + interview |
+| `source_language`, `target_languages` | Steam API language codes (`english`, `schinese`, `koreana`, `brazilian`, `latam`, …): the language every text is written in, and the languages those texts are translated into (store page, Early Access answers, achievements, launch options). Separate from `store.supported_languages`, the languages the game itself supports. | interview |
 | `apps` (`main`, `demo`, `playtest`) | One profile per Steam app: `appid`, `installation` (install folder, launch options), `cloud` (quotas, Auto-Cloud paths, root overrides), `builds` (depots with their language, branches) | scan + interview |
 | `prerequisites` | Gate 0: partner account, Steam Direct fee (+ date), tax, bank, identity, restricted automation account | interview (never scanned) |
 | `store` | Main store page: short description, About This Game (BBCode), developers, publishers, support info (website, e-mail, phone), platforms, primary genre and genres, tags, categories, languages table, system requirements, controller support (the Controller Support wizard), accessibility features (the Accessibility Features wizard), third-party DRM and accounts, links, legal line | generators + interview |

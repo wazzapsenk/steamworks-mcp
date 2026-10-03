@@ -242,6 +242,29 @@ def test_questions_start_with_gate_zero_then_game_inputs() -> None:
     assert all(q.gate == qs[0].gate for q in qs)
 
 
+def test_store_page_inputs_are_asked() -> None:
+    values = Manifest().model_dump(mode="json")
+    s = State()
+    order = [p for p, _, _ in pending_fields(list(results(values, state=s).values()), values, s)]
+    wanted = [
+        "game.genres",
+        "game.comparable_games",
+        "game.hook",
+        "game.fantasy",
+        "game.core_loop",
+        "game.players.min",
+        "game.run_length",
+        "game.progression",
+        "game.launch_content",
+        "game.tone",
+    ]
+    assert [p for p in order if p in wanted] == wanted
+    content = build_question("game.launch_content", 1, values, s, "game")
+    assert content.kind == "list" and "at launch" in content.question
+    assert "solo" in build_question("game.players.min", 1, values, s, "players").question
+    assert "never named" in build_question("game.comparable_games", 1, values, s, "game").help
+
+
 def test_scanned_values_are_offered_for_confirmation() -> None:
     values = Manifest.model_validate({"game": {"name": "Pillow Fort Panic"}}).model_dump(mode="json")
     s = State()

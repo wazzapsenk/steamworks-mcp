@@ -36,9 +36,15 @@ GAME_INPUTS = [
     "game.name",
     "game.pitch",
     "game.genres",
+    "game.comparable_games",
+    "game.hook",
+    "game.fantasy",
+    "game.core_loop",
     "game.players",
     "game.session_length",
-    "game.core_loop",
+    "game.run_length",
+    "game.progression",
+    "game.launch_content",
     "game.usps",
     "game.target_audience",
     "game.tone",
@@ -46,7 +52,7 @@ GAME_INPUTS = [
     "game.platform_features.controller",
     "game.platform_features.steam_deck",
 ]
-"""Inputs for writing the store page; asked first (gate 1)."""
+"""Inputs for writing the store page; asked first (gate 1), in an order that builds the picture of the game."""
 
 NONE_ANSWERS = {"none", "-", "nothing"}
 """Answers that mean "no languages" in a language list."""
@@ -55,16 +61,50 @@ CATALOG: dict[str, dict[str, Any]] = {
     "game.name": {"q": "What is the game's name as it should appear on Steam?"},
     "game.pitch": {"q": "In one sentence: what do players do, and why is it fun?", "kind": "long_text"},
     "game.genres": {"q": "Which genres describe it, in your own words? (comma-separated)", "suggest_from": "genres"},
-    "game.players.min": {"q": "Minimum number of players?"},
+    "game.comparable_games": {
+        "q": "Which two or three games do your players already love? ('For fans of X and Y.')",
+        "help": "Used to position the page and pick the genre's vocabulary; never named on the store page (Valve "
+        "bans references to other products there).",
+        "kind": "list",
+    },
+    "game.hook": {
+        "q": "What is the hook: the one thing that makes it different from other games in its genre?",
+        "kind": "long_text",
+    },
+    "game.fantasy": {
+        "q": "What is the player fantasy: who do players get to be, and what does that feel like?",
+        "kind": "long_text",
+    },
+    "game.players.min": {"q": "Can it be played solo? Minimum number of players (1 means solo works)."},
     "game.players.max": {"q": "Maximum number of players playing together?"},
     "game.players.online_coop": {"q": "Can players team up online (online co-op)?"},
     "game.players.local_coop": {"q": "Can players team up on one screen or one PC (local co-op)?"},
     "game.players.online_pvp": {"q": "Can players play against each other online (PvP)?"},
+    "game.players.local_pvp": {"q": "Can players play against each other on one screen or one PC (local PvP)?"},
+    "game.players.shared_split_screen": {"q": "Is there split-screen play on one screen?"},
     "game.session_length.min_minutes": {"q": "How long is a typical session, at the short end (minutes)?"},
     "game.session_length.max_minutes": {"q": "And at the long end (minutes)?"},
-    "game.core_loop": {"q": "Describe the core loop: what does a player do again and again?", "kind": "long_text"},
+    "game.run_length": {
+        "q": "How long does one run, match, round or level take? (Free text, e.g. '20-40 minute runs'; "
+        "'same as a session' is fine.)"
+    },
+    "game.progression": {
+        "q": "What carries over between sessions and grows: unlocks, upgrades, story, ranks? Say 'none' if every "
+        "session starts fresh.",
+        "kind": "long_text",
+    },
+    "game.launch_content": {
+        "q": "What is in the game at launch? List it with numbers where you can (e.g. '4 maps', '30 weapons', "
+        "'a 6-hour story', 'endless mode').",
+        "kind": "list",
+    },
+    "game.core_loop": {
+        "q": "Describe the core loop in player verbs (e.g. scavenge, build, defend, upgrade): what does a player do "
+        "again and again?",
+        "kind": "long_text",
+    },
     "game.usps": {
-        "q": "What makes it different? List 2-4 unique selling points, most important first.",
+        "q": "Which 2-4 selling points should the page make, most important first? (The hook can be the first.)",
         "kind": "list",
     },
     "game.target_audience": {"q": "Who is it for?"},

@@ -1050,6 +1050,7 @@
             }
           ],
           "default": null,
+          "description": "What a player does again and again, in player verbs, e.g. \"scavenge, build, defend, upgrade\".",
           "title": "Core Loop"
         },
         "usps": {
@@ -1084,6 +1085,74 @@
           "default": null,
           "description": "e.g. \"chaotic and funny\", \"cozy\", \"tense\".",
           "title": "Tone"
+        },
+        "hook": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What makes it different from other games in its genre: the twist, in one sentence.",
+          "title": "Hook"
+        },
+        "fantasy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The player fantasy: who the player gets to be, and what that feels like.",
+          "title": "Fantasy"
+        },
+        "run_length": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How long one run, match, round or level takes when that differs from a session, e.g. \"20-40 minute runs\".",
+          "title": "Run Length"
+        },
+        "progression": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What carries over between sessions and grows (unlocks, upgrades, story, ranks); \"none\" when every session\nstarts fresh.",
+          "title": "Progression"
+        },
+        "launch_content": {
+          "description": "What is in the game at launch, with numbers where possible, e.g. [\"4 houses\", \"30 fort pieces\"].",
+          "items": {
+            "type": "string"
+          },
+          "title": "Launch Content",
+          "type": "array"
+        },
+        "comparable_games": {
+          "description": "Two or three games its players love (\"for fans of X and Y\"). They position the store text and pick its\nvocabulary, but are never named on the store page: Valve bans references to other products there.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Comparable Games",
+          "type": "array"
         },
         "platform_features": {
           "$ref": "#/$defs/PlatformFeatures"

@@ -19,6 +19,7 @@ from steamworks_mcp.export.preview import bbcode_to_html, store_preview
 from steamworks_mcp.export.vdf import build_scripts
 from steamworks_mcp.fields import approve_fields, set_fields
 from steamworks_mcp.generate import deterministic as det
+from steamworks_mcp.generate import text as gen_text
 from steamworks_mcp.localization import store as loc
 from steamworks_mcp.manifest.io import ManifestFile, ProjectFiles, load_drafts, load_state
 from steamworks_mcp.manifest.models import Manifest
@@ -475,6 +476,39 @@ async def test_short_description_three_variants_then_pick(project: tuple[Config,
     assert chosen["status"]["store.short_description"] == "approved"
     drafts = {d.id: d.status for d in load_drafts(ProjectFiles(game), "store.short_description")}
     assert drafts == {"fantasy-1": "candidate", "mechanic-1": "chosen", "situation_humor-1": "candidate"}
+
+
+@pytest.mark.anyio
+async def test_briefs_build_on_the_interview_answers(project: tuple[Config, Path]) -> None:
+    config, _ = project
+    short = await call(config, "generate", path="game", section="store_short")
+    answers = short["use_the_answers"]
+    assert answers["game.players"]["answer"] == "solo, online co-op (1-4 players)"
+    assert answers["game.hook"]["answer"].startswith("The fort is a pile of physics objects")
+    assert "never name" in answers["game.comparable_games"]["use"]
+    assert short["write_in"].startswith("English (english), the source language")
+    assert "missing_recommended" not in short
+    outline = await call(config, "generate", path="game", section="store_long", stage="outline")
+    long = outline["use_the_answers"]
+    assert (
+        long["game.length"]["answer"] == "sessions of 15-30 minutes; runs: One night of three raid waves, 15-30 minutes"
+    )
+    assert "feature list" in long["game.launch_content"]["use"] and "game.progression" in long
+
+
+def test_briefs_ask_for_missing_recommended_answers(tmp_path: Path) -> None:
+    v = values(hook=None, fantasy=None, launch_content=[])
+    b = gen_text.brief(v, ProjectFiles(tmp_path), "store_short")
+    assert b["status"] == "ready" and b["missing_recommended"] == ["game.hook", "game.fantasy", "game.launch_content"]
+    assert "game.hook" not in b["use_the_answers"]
+
+
+def test_player_modes() -> None:
+    assert gen_text.player_modes({"min": 1, "max": 1}) == "solo"
+    assert gen_text.player_modes({"min": 2, "max": 8, "online_pvp": True, "local_pvp": True}) == (
+        "online PvP, local PvP (2-8 players)"
+    )
+    assert gen_text.player_modes({}) is None
 
 
 @pytest.mark.anyio

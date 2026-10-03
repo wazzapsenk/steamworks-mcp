@@ -14,6 +14,12 @@ game:
     - Short rounds that fit a lunch break
   target_audience: Friend groups who play together on Discord
   tone: chaotic and silly, never mean
+  hook: The fort is a pile of physics objects, so one fumbled cushion can bring it down in the middle of a raid.
+  fantasy: You are kids defending a living-room kingdom long after bedtime.
+  run_length: One night of three raid waves, 15-30 minutes
+  progression: New fort pieces and pajama cosmetics unlock between nights; every few wins opens another room.
+  launch_content: [4 houses, 30 fort pieces, 3 raid modes, an endless night mode]
+  comparable_games: [Overcooked! 2, Human Fall Flat]
   platform_features: {remote_play_together: true, steam_deck: unknown, controller: full}
   engine: {name: unity, version: 6000.3.10f1}
 
