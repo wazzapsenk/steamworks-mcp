@@ -19,7 +19,7 @@ from steamworks_mcp.localization.store import Localization
 from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.state import State, is_empty
 
-SECTIONS = ("cloud", "installation", "achievements", "store_text", "store_page")
+SECTIONS = ("cloud", "installation", "achievements", "store_text", "store_page", "store_assets")
 STORE_PAGE_FIELDS = (
     "store.links.",
     "store.support.",
@@ -77,6 +77,8 @@ def written(section: str, app: str, path: str, icons: bool = False) -> bool:
         return path in STORE_FIELDS
     if section == "store_page":
         return path.startswith(STORE_PAGE_FIELDS)
+    if section == "store_assets":  # the images come from prepare_images: key art, logo and per-slot overrides
+        return path in ("assets.key_art", "assets.logo") or path.startswith("assets.overrides.")
     if section == "leaderboards":
         return path.startswith("leaderboards.")
     if section == "build":

@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from steamworks_mcp.execute import store_page, sync
+from steamworks_mcp.execute import store_assets, store_page, sync
 from steamworks_mcp.execute.browser import partner as P
 from steamworks_mcp.execute.browser.transport import Transport
 from steamworks_mcp.manifest import paths as fp
@@ -90,6 +90,8 @@ async def read_section(t: Transport, section: str, appid: int) -> dict[str, Any]
         return {"item_id": item, **await P.read_store_localization(t, item)}
     if section == "store_page":
         return await store_page.read_section(t, appid)
+    if section == "store_assets":
+        return await store_assets.read_section(t, appid)
     raise ValueError(f"section must be one of {', '.join(sync.SECTIONS)}")
 
 
@@ -139,6 +141,8 @@ def _plan(
         return sync.plan_achievements(appid, desired, current, remove_extra, icons, force)
     if section == "store_page":
         return store_page.plan(current["item_id"], desired, current, force)
+    if section == "store_assets":
+        return store_assets.plan(current["item_id"], desired, current)
     return sync.plan_store(appid, current["item_id"], desired, current, force)
 
 
@@ -153,6 +157,8 @@ def desired_from_values(
 ) -> Any:
     if section == "store_page":
         return store_page.desired(values, current, remove_extra)
+    if section == "store_assets":
+        return store_assets.desired(ProjectFiles(root).state_dir / "exports" / "images")
     if section == "cloud":
         return sync.desired_cloud(values, app, current)
     if section == "installation":
@@ -189,7 +195,7 @@ async def apply_section(
     appid = fp.get(values, f"apps.{app}.appid")
     if not appid:
         raise ApplyRefused(f"apps.{app}.appid is not set.")
-    if section in ("achievements", "store_page") and app != "main":
+    if section in ("achievements", "store_page", "store_assets") and app != "main":
         raise ApplyRefused("Achievements and the store page are defined for the main game only.")
     current = await read_section(t, section, int(appid))
     sid = save_snapshot(files, app, int(appid), section, current)
@@ -226,18 +232,24 @@ async def apply_section(
     after = await _read_back(
         t, files, section, int(appid), {"action": "apply", "app": app, "snapshot": sid, "done": done, "error": error}
     )
-    remaining = _plan(
-        section,
-        int(appid),
-        desired_from_values(section, values, state, files.root, app, after, remove_extra),
-        after,
-        remove_extra,
-    )
-    applied = (
-        mark_applied_fields(values, state, lambda p: sync.written(section, app, p, upload_icons))
-        if not remaining and error is None
-        else []
-    )
+    if section == "store_assets":  # an image cannot be compared: a slot uploaded now and filled after counts
+        uploaded = {op["target"] for op in done if op["action"] == "upload"}
+        remaining = [op for op in ops if op.action == "upload" and not after["slots"].get(op.target)]
+        filled = {f"assets.overrides.{s}" for s in uploaded if after["slots"].get(s)}
+        applied = mark_applied_fields(values, state, lambda p: p in filled)
+    else:
+        remaining = _plan(
+            section,
+            int(appid),
+            desired_from_values(section, values, state, files.root, app, after, remove_extra),
+            after,
+            remove_extra,
+        )
+        applied = (
+            mark_applied_fields(values, state, lambda p: sync.written(section, app, p, upload_icons))
+            if not remaining and error is None
+            else []
+        )
     if applied:
         applied += _mark_translations_applied(values, state, files.root, section, app)
     audit(
@@ -335,6 +347,11 @@ async def restore_snapshot(
 ) -> dict[str, Any]:
     snap = load_snapshot(files, sid)
     section, appid = snap["section"], int(snap["appid"])
+    if section == "store_assets":
+        raise ApplyRefused(
+            "Uploaded images cannot be restored by this tool (it only fills empty slots and cannot remove an image): "
+            "delete them on the Graphical Assets tab of the store page."
+        )
     current = await read_section(t, section, appid)
     target = snap["data"]
     if section == "achievements":

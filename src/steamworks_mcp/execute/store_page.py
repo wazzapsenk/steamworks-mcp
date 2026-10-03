@@ -64,6 +64,8 @@ CATEGORIES = {
 """Steam category ids and their store names. Controller support (18, 28, 55-60) and accessibility (64-82) are set
 by Steamworks' wizards, which also record that the wizard was completed; they stay with the user."""
 WIZARD_ONLY = {"partial controller support", "full controller support"}
+SHOWN = 60
+"""Changes listed one by one in a plan; more are summarized."""
 
 
 def ticked(value: Any) -> bool:
@@ -223,7 +225,10 @@ def plan(item_id: str, want: dict[str, Any], current: dict[str, Any], force: boo
         async def save(t: Transport, c: dict[str, str] = diff) -> None:
             await P.save_store_page(t, item_id, c)
 
-        before = {k: current["form"].get(k, "") for k in diff}
-        ops.append(sync.Op(SECTION, "save", f"{len(diff)} input(s) of the store page form", before, diff, save))
+        before: Any = {k: current["form"].get(k, "") for k in diff}
+        after: Any = diff
+        if len(diff) > SHOWN:  # a restore round trip rewrites every input: show how many, not all of them
+            before, after = {"inputs": len(diff)}, {"inputs": len(diff), "same_values": not changes(diff, current)}
+        ops.append(sync.Op(SECTION, "save", f"{len(diff)} input(s) of the store page form", before, after, save))
     ops += [sync.Op(SECTION, "skip", p, None, "not written", sync._nothing) for p in want["problems"]]
     return ops

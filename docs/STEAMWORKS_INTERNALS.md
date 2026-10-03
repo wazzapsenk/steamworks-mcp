@@ -141,6 +141,18 @@ What it showed beyond the recordings:
   - Developer and publisher names are autocomplete widgets.
   - The Controller and Accessibility wizards set categories and also record that the wizard was finished.
   - The release date has its own endpoint (`/apprelease/ajaxupdatereleaserequest/{appid}`).
+- **Graphical assets.** The Graphical Assets tab uploads each image as one multipart part to
+  `POST /admin/game/save/{storeItemId}?activetab=tab_graphicalassets&json=1`, together with `sessionid`.
+  - The part's name says the slot. For localized slots the language follows:
+    - `header_image|header|assets|header_image|image|english`
+    - `small_capsule|capsule|…`, `main_capsule|capsule_616x353|…`, `hero_capsule|hero_capsule|…` (the vertical
+      capsule), `library_capsule|…`, `library_header|…`, `library_hero|…`, `library_logo|logo|…`
+    - The page background is not localized: `page_background|page_bg_raw|assets|page_background_raw`.
+  - The image rules dialog is only in the page; the server never sees it.
+  - The images then show up in `serialized_app_data.assets` (`<slot>.image.<lang>`, `page_background_raw`).
+  - Recorded live: nine empty slots of a game filled this way, into the store draft.
+- **Library logo position.** After the library images, the Library Assets checklist item stayed incomplete;
+  setting the library logo's position in Steamworks is probably what it waits for.
 - **Live at once although the name does not say so.** These are on the guard's forbidden list:
   - Store tags (`/tagdata/forcetagranking`; the page says the changes "have been successfully published").
   - Package names and contents (`/store/ajaxpackagesave/{packageId}`; renaming publishes right away).

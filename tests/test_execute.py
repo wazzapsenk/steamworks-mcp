@@ -16,7 +16,7 @@ from mcp import Client
 
 from steamworks_mcp import project as proj
 from steamworks_mcp.config import Config, load_config
-from steamworks_mcp.execute import guard, importer, store_page, sync
+from steamworks_mcp.execute import guard, importer, store_assets, store_page, sync
 from steamworks_mcp.execute.api import DISPLAY_TYPES, PartnerApi, SteamApiError, plan_leaderboards, run_steamcmd
 from steamworks_mcp.execute.apply import ApplyRefused, Consent, apply_section, restore_snapshot, save_snapshot
 from steamworks_mcp.execute.browser import partner as P
@@ -474,12 +474,53 @@ async def test_store_page_save_posts_the_page_form_with_changes() -> None:
         )
     ]
 
-    class Silent(Recorder):
+    class Unchanged(Recorder):  # an identical post: back on the edit page, without "Changes saved"
         async def submit_form(self, *a: Any) -> Response:
-            return Response(200, "https://partner.steamgames.com/admin/game/edit/2000000", "")
+            return Response(200, "https://partner.steamgames.com/admin/game/edit/2000000?activetab=tab_basic", "")
 
-    with pytest.raises(RuntimeError, match="Changes saved"):
-        await P.save_store_page(Silent(), "2000000", {"x": "y"})  # type: ignore[arg-type]
+    await P.save_store_page(Unchanged(), "2000000", {"x": "y"})  # type: ignore[arg-type]
+
+    class Elsewhere(Recorder):
+        async def submit_form(self, *a: Any) -> Response:
+            return Response(200, "https://partner.steamgames.com/dashboard/", "")
+
+    with pytest.raises(RuntimeError, match="unexpected page"):
+        await P.save_store_page(Elsewhere(), "2000000", {"x": "y"})  # type: ignore[arg-type]
+
+
+async def test_store_assets_fill_only_empty_slots(tmp_path: Path) -> None:
+    for slot in ("header_capsule", "library_hero"):
+        (tmp_path / f"{slot}.jpg").write_bytes(b"\xff\xd8 jpg")
+    (tmp_path / "page_background.png").write_bytes(b"\x89PNG")
+    want = store_assets.desired(tmp_path)
+    assert set(want) == {"header_capsule", "library_hero", "page_background"}
+    steam = {
+        "header_image": {"image": {"english": "abc/header.jpg"}},
+        "library_hero": {"image": {}},
+        "page_background_raw": "",
+    }
+    current = {"item_id": "2000000", "slots": {s: store_assets.present(steam, s) for s in store_assets.SLOTS}}
+    ops = store_assets.plan("2000000", want, current)
+    assert [(op.action, op.target) for op in ops] == [
+        ("skip", "header_capsule"),  # Steam has an image there: never replaced
+        ("upload", "page_background"),
+        ("upload", "library_hero"),
+    ]
+    sent: list[tuple[str, dict[str, tuple[str, bytes, str]]]] = []
+
+    class Recorder:
+        async def post_multipart(
+            self, path: str, fields: dict[str, str], files: dict[str, tuple[str, bytes, str]]
+        ) -> Response:
+            sent.append((path, files))
+            return Response(200, "https://partner.steamgames.com" + path, '{"success": 1}')
+
+    for op in ops:
+        await op.run(Recorder())  # type: ignore[arg-type]
+    assert [p for p, _ in sent] == ["/admin/game/save/2000000?activetab=tab_graphicalassets&json=1"] * 2
+    assert list(sent[0][1]) == ["page_background|page_bg_raw|assets|page_background_raw"]  # not localized
+    assert sent[0][1]["page_background|page_bg_raw|assets|page_background_raw"][2] == "image/png"
+    assert list(sent[1][1]) == ["library_hero|library_hero|assets|library_hero|image|english"]
 
 
 async def test_store_text_never_sends_an_empty_value() -> None:

@@ -113,9 +113,12 @@ areas:
   - id: graphical_assets
     name: Capsules, screenshots, trailers, library assets
     api: {status: never}
-    browser: {status: unverified}
+    browser: {status: partial, how: "Graphical Assets upload (admin/game/save ... tab_graphicalassets), apply(section='store_assets')"}
     default_mode: ARTIFACT
-    notes: Images are cropped from the user's own art at the exact sizes; artwork is never generated.
+    notes: >-
+      Images are cropped from the user's own art at the exact sizes; artwork is never generated. Capsules, page
+      background and library images were uploaded live into empty slots; existing images are never replaced.
+      Screenshots, trailers and the library logo position are still uploaded by hand.
   - id: icons
     name: App icon and shortcut icon
     api: {status: never}

@@ -531,7 +531,9 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
     @user_errors
     async def apply(
         path: str,
-        section: Literal["cloud", "installation", "achievements", "store_text", "store_page", "leaderboards", "build"],
+        section: Literal[
+            "cloud", "installation", "achievements", "store_text", "store_page", "store_assets", "leaderboards", "build"
+        ],
         app: Literal["main", "demo", "playtest"] = "main",
         dry_run: bool = True,
         user_confirmed: bool = False,
@@ -546,7 +548,8 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         and with the BROWSER mode: "cloud", "installation", "achievements" (main game), "store_text" (short and long
         description in every approved language), "store_page" (the store page form: links, support info, legal
         line, system requirements, platforms, language table, genres, categories, third-party DRM/accounts; empty
-        fields never clear Steam's). Every call saves a snapshot of what Steam had first.
+        fields never clear Steam's), "store_assets" (uploads prepare_images' capsules and library images into the
+        slots Steam has no image for yet; never replaces one). Every call saves a snapshot of what Steam had first.
 
         Args:
             path: Folder that holds steamworks.yaml.
@@ -583,12 +586,14 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "achievements",
             "store_text",
             "store_page",
+            "store_assets",
         ],
         app: Literal["main", "demo", "playtest"] = "main",
     ) -> dict[str, Any]:
         """Read-only look at what Steam has now. With the publisher key: "builds" (recent builds and branches),
         "leaderboards", "achievement_schema". With the BROWSER mode: "cloud", "installation", "achievements",
-        "store_text", "store_page", "pending" (the unpublished changes the Publish tab would show), and "checklist" (the
+        "store_text", "store_page", "store_assets" (which image slots are filled), "pending" (the unpublished changes
+        the Publish tab would show), and "checklist" (the
         release checklists of the app's Steamworks landing page, each item linked to its gap_report rule).
         "snapshots" lists the snapshots saved before writes (local)."""
         return await execu.inspect(open_project(path), what, app)

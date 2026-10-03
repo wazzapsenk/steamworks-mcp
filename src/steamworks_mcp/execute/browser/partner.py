@@ -80,7 +80,8 @@ async def read_store_form(t: Transport, item_id: str) -> tuple[dict[str, Any], s
 
 
 async def save_store_page(t: Transport, item_id: str, changes: dict[str, str]) -> None:
-    """Post the store page's own form back with ``changes``; Steamworks redirects with "Changes saved"."""
+    """Post the store page's own form back with ``changes``. Steamworks redirects to the edit page, adding
+    "Changes saved" only when something changed (an identical post gets no message); the caller reads back."""
     res = _checked(
         await t.submit_form(
             f"/admin/game/edit/{item_id}",
@@ -90,8 +91,27 @@ async def save_store_page(t: Transport, item_id: str, changes: dict[str, str]) -
         ),
         "store page save",
     )
-    if "Changes saved" not in unquote_plus(res.url + res.redirect):
-        raise RuntimeError("store page save: Steamworks did not confirm it (no 'Changes saved').")
+    where = unquote_plus(res.url + " " + res.redirect)
+    if f"/admin/game/edit/{item_id}" not in where:
+        raise RuntimeError(f"store page save: Steamworks answered with an unexpected page ({urlsplit(res.url).path}).")
+    if m := re.search(r"[?&]errors?\[?\d*\]?=([^&]+)", where):
+        raise RuntimeError(f"store page save: {m.group(1)}")
+
+
+async def upload_store_image(t: Transport, item_id: str, part: str, file_name: str, data: bytes, mime: str) -> None:
+    """One image for one Graphical Assets slot, as the page's own upload posts it (into the unpublished draft)."""
+    res = _checked(
+        await t.post_multipart(
+            f"/admin/game/save/{item_id}?activetab=tab_graphicalassets&json=1", {}, {part: (file_name, data, mime)}
+        ),
+        "image upload",
+    )
+    try:
+        answer = json.loads(res.text) if res.text.strip() else {}
+    except ValueError:
+        answer = {}
+    if isinstance(answer, dict) and (answer.get("success") in (False, 0) or answer.get("error")):
+        raise RuntimeError(f"image upload: {answer.get('error') or answer.get('message') or 'refused'}")
 
 
 # ---------------------------------------------------------------------------------------------------- achievements
