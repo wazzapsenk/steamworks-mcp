@@ -20,7 +20,7 @@ def _store_findings(project: Project, changes: dict[str, Any]) -> list[dict[str,
     if not texts:
         return []
     lang = str(project.values().get("source_language") or "english")
-    return [f.__dict__ for f in check_store_text({lang: texts})]
+    return [f.__dict__ for f in check_store_text({lang: texts}, english_fallback=False)]
 
 
 def set_fields(

@@ -17,7 +17,7 @@ from steamworks_mcp import __version__
 from steamworks_mcp import fields as fields_ops
 from steamworks_mcp import project as proj
 from steamworks_mcp.config import Config, WorkspaceError, resolve_in_workspace
-from steamworks_mcp.export import preview, vdf
+from steamworks_mcp.export import package, preview, vdf
 from steamworks_mcp.gates.engine import evaluate_gates
 from steamworks_mcp.gates.report import gap_report as gap_report_fn
 from steamworks_mcp.generate import deterministic as gen_det
@@ -473,6 +473,18 @@ def create_server(config: Config) -> MCPServer:
         out = loc.set_translations(project.values(), project.files.root, project.state, language, translations, source)
         project.save()
         return out
+
+    @server.tool()
+    @user_errors
+    def export_package(path: str, gate: int) -> dict[str, Any]:
+        """Write everything needed to finish a gate by hand to .steam-mcp/exports/gate_<gate>/: correctly named
+        files (store localization JSON and per-language texts, store/library images and icons, SteamPipe scripts,
+        achievement icons and CSV) and a CHECKLIST.md that says, for every open item, which Steamworks page and
+        field it goes to and what to paste. Done items are ticked. Nothing is uploaded or published."""
+        project = open_project(path)
+        return package.export_package(
+            project.values(), project.state, project.files, gate, browser=config.browser_enabled
+        )
 
     @server.tool()
     def server_info() -> dict[str, Any]:

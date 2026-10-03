@@ -247,7 +247,7 @@ def check(entry: Entry, text: str, lang: str, glossary: dict[str, Any]) -> tuple
     if entry.key == "store.short_description" and length > SHORT_DESCRIPTION_MAX:
         return f"{length} characters; Steam's limit is {SHORT_DESCRIPTION_MAX} in every language.", []
     if entry.key in ("store.short_description", "store.about"):
-        findings = check_store_text({lang: {entry.key: text}})
+        findings = check_store_text({lang: {entry.key: text}}, english_fallback=False)
         if errors := [f for f in findings if f.severity == "error"]:
             return "; ".join(f"[{f.rule_id}] {f.message}" for f in errors), []
         warnings += [f"[{f.rule_id}] {f.message}" for f in findings]

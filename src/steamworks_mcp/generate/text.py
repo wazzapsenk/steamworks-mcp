@@ -222,7 +222,7 @@ def save_text_draft(
     is_outline = strategy == "outline"
     lang = str(values.get("source_language") or "english")
     if field in (SHORT_FIELD, LONG_FIELD) and not is_outline:
-        errors = [f for f in check_store_text({lang: {field: value}}) if f.severity == "error"]
+        errors = [f for f in check_store_text({lang: {field: value}}, english_fallback=False) if f.severity == "error"]
         if errors:
             raise ValueError(
                 "Rejected, breaks Valve's store rules: " + "; ".join(f"[{e.rule_id}] {e.message}" for e in errors)

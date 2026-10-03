@@ -90,8 +90,13 @@ def check_text(rule: StoreRule, field: str, language: str, text: str) -> list[Te
     return out
 
 
-def check_store_text(texts: dict[str, dict[str, str]], ids: list[str] | None = None) -> list[TextFinding]:
-    """``texts``: ``{language: {field path: text}}`` (e.g. ``{"english": {"store.about": "..."}}``)."""
+def check_store_text(
+    texts: dict[str, dict[str, str]], ids: list[str] | None = None, *, english_fallback: bool = True
+) -> list[TextFinding]:
+    """``texts``: ``{language: {field path: text}}`` (e.g. ``{"english": {"store.about": "..."}}``).
+
+    ``english_fallback`` checks that English has every text; only meaningful when ``texts`` holds every language.
+    """
     out: list[TextFinding] = []
     rules = deterministic_text_rules(ids)
     for language, fields in texts.items():
@@ -102,7 +107,7 @@ def check_store_text(texts: dict[str, dict[str, str]], ids: list[str] | None = N
                 field = TARGET_FIELDS.get(target)
                 if field and fields.get(field):
                     out += check_text(rule, field, language, fields[field])
-    if any(r.kind == "english_present" for r in rules):
+    if english_fallback and any(r.kind == "english_present" for r in rules):
         english = texts.get("english", {})
         for field in TARGET_FIELDS.values():
             has_any = any(lang_fields.get(field) for lang_fields in texts.values())
