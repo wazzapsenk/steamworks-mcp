@@ -5,6 +5,7 @@ Every sample text is written for a fictional game.
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import shutil
 from pathlib import Path
@@ -26,6 +27,7 @@ from steamworks_mcp.manifest.models import Manifest
 from steamworks_mcp.manifest.state import State
 from steamworks_mcp.media.images import prepare_achievement_icons, prepare_store_images, screenshot_report
 from steamworks_mcp.project import Project
+from steamworks_mcp.references import patterns
 from steamworks_mcp.server import create_server
 from steamworks_mcp.style_guides import guide
 from steamworks_mcp.validate import rubric
@@ -501,6 +503,28 @@ def test_briefs_ask_for_missing_recommended_answers(tmp_path: Path) -> None:
     b = gen_text.brief(v, ProjectFiles(tmp_path), "store_short")
     assert b["status"] == "ready" and b["missing_recommended"] == ["game.hook", "game.fantasy", "game.launch_content"]
     assert "game.hook" not in b["use_the_answers"]
+
+
+def test_briefs_show_what_recent_pages_in_the_genre_look_like(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    page = {
+        "type": "game",
+        "short_description": "Stack a fort with friends.",
+        "about_the_game": "<h2>Build it</h2><p>Stack cushions.</p>",
+        "genres": [{"description": "Casual"}],
+        "supported_languages": "English",
+    }
+    data = patterns.build([patterns.measure(i, page) for i in range(5)], dt.date(2026, 10, 3))
+    monkeypatch.setattr(patterns, "store_patterns", lambda: data)
+    v = values()  # primary genre Casual
+    short = gen_text.brief(v, ProjectFiles(tmp_path), "store_short")["recent_successful_pages"]
+    assert short["group"] == "Casual" and short["games"] == 5 and short["recorded_on"] == "2026-10-03"
+    assert short["short_description"]["chars"]["median"] == 26 and "about" not in short
+    outline = gen_text.brief(v, ProjectFiles(tmp_path), "store_long", "outline")["recent_successful_pages"]
+    assert (
+        outline["about"]["with_headers_share"] == 1.0 and "media" in outline and "Numbers only" in outline["how_to_use"]
+    )
+    monkeypatch.setattr(patterns, "store_patterns", lambda: None)
+    assert gen_text.brief(v, ProjectFiles(tmp_path), "store_short")["recent_successful_pages"] is None
 
 
 def test_player_modes() -> None:

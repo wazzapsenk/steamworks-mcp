@@ -24,6 +24,7 @@ from steamworks_mcp.manifest.io import ProjectFiles, atomic_write, load_drafts, 
 from steamworks_mcp.manifest.state import Source, is_empty
 from steamworks_mcp.references import bundled_analysis, cached_texts, catalog, matching, tags_for_game
 from steamworks_mcp.references.anticopy import MIN_RUN, find_overlaps
+from steamworks_mcp.references.patterns import brief_section
 from steamworks_mcp.style_guides import StyleGuide, for_tags
 from steamworks_mcp.validate import rubric
 from steamworks_mcp.validate.store_text import check_store_text, store_rules
@@ -241,6 +242,7 @@ def brief(values: dict[str, Any], files: ProjectFiles, section: str, stage: str 
             "valve_rules": _valve_rules(SHORT_FIELD),
             "rubric": _rubric_rules("short", guide),
             "references": _reference_summaries(values, "short"),
+            "recent_successful_pages": brief_section(values, "short"),
             **common,
             "submit": "save_draft(path, field='store.short_description', value=<text>, strategy=<strategy>) "
             "once per variant.",
@@ -255,6 +257,7 @@ def brief(values: dict[str, Any], files: ProjectFiles, section: str, stage: str 
             **_recommended(values),
             "rubric": _rubric_rules("long", guide),
             "references": _reference_summaries(values, "long"),
+            "recent_successful_pages": brief_section(values, "long"),
             **common,
             "submit": "save_draft(path, field='store.about', value=<outline>, strategy='outline'). The user approves "
             "it with set_field(path, field='store.about', from_draft=<id>); then "
@@ -277,6 +280,7 @@ def brief(values: dict[str, Any], files: ProjectFiles, section: str, stage: str 
             "valve_rules": _valve_rules(LONG_FIELD),
             "rubric": _rubric_rules("long", guide),
             "references": _reference_summaries(values, "long"),
+            "recent_successful_pages": brief_section(values, "long"),
             **common,
             "submit": "save_draft(path, field='store.about', value=<bbcode>, strategy='text').",
         }

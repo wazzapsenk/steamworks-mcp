@@ -139,3 +139,6 @@ Other bundled data:
 - `events.yaml`: Next Fest, sales and fests, with the discount and planning rules. Checks warn when it is stale.
 - `capabilities.yaml`: rendered as [CAPABILITIES.md](CAPABILITIES.md).
 - `languages.yaml`: Steam language codes.
+- `store_patterns.json`: what the store pages of popular new releases look like, per Steam genre and overall
+  (lengths, paragraphs, headers, lists, media, mentions, languages), with the recording date and the sampled app ids.
+  Derived numbers only; `scripts/build_store_patterns.py` refreshes it.

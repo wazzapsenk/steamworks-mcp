@@ -195,6 +195,8 @@ async def test_resources_and_prompts(workspace: Path) -> None:
     async with Client(create_server(config)) as client:
         templates = {t.uri_template for t in (await client.list_resource_templates()).resource_templates}
         assert {"steam://gates/{n}", "steam://manifest/{project}", "steam://style-guide/{genre}"} <= templates
+        resources = {str(r.uri) for r in (await client.list_resources()).resources}
+        assert {"steam://capabilities", "steam://store-patterns"} <= resources
         gate = await client.read_resource("steam://gates/1")
         assert '"rules"' in gate.contents[0].text  # type: ignore[union-attr]
         manifest = await client.read_resource("steam://manifest/game")

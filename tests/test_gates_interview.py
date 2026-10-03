@@ -13,6 +13,7 @@ from mcp.server.elicitation import render_elicitation_schema
 from mcp_types import ElicitResult
 from PIL import Image
 
+from steamworks_mcp import spec_info as spec_info_module
 from steamworks_mcp.config import Config
 from steamworks_mcp.gates.engine import RuleResult, evaluate_gates
 from steamworks_mcp.interview.forms import form_key, form_model
@@ -21,6 +22,7 @@ from steamworks_mcp.manifest.drafts import Draft
 from steamworks_mcp.manifest.io import ManifestFile, ProjectFiles, load_state, save_draft
 from steamworks_mcp.manifest.models import Manifest
 from steamworks_mcp.manifest.state import State
+from steamworks_mcp.references import patterns
 from steamworks_mcp.server import create_server
 from steamworks_mcp.validate.crosschecks import CHECKS, CheckContext
 from steamworks_mcp.validate.store_text import check_store_text
@@ -530,6 +532,20 @@ async def test_the_source_language_is_never_a_target(example: Path) -> None:
     assert not out.get("not_saved")
     m = ManifestFile.load(example / "game" / "steamworks.yaml").manifest
     assert (m.source_language, m.target_languages) == ("german", ["english"])
+
+
+def test_spec_info_store_patterns(monkeypatch: pytest.MonkeyPatch) -> None:
+    page = {"type": "game", "genres": [{"description": "Action"}], "supported_languages": "English"}
+    data = patterns.build([patterns.measure(i, page) for i in range(5)], dt.date(2026, 10, 3))
+    monkeypatch.setattr(spec_info_module, "store_patterns", lambda: data)
+    assert spec_info_module.spec_info("store_patterns")["appids"] == [0, 1, 2, 3, 4]
+    action = spec_info_module.spec_info("store_patterns:action")
+    assert action["genre"] == "Action" and action["games"] == 5
+    with pytest.raises(ValueError, match="groups: Action"):
+        spec_info_module.spec_info("store_patterns:Racing")
+    monkeypatch.setattr(spec_info_module, "store_patterns", lambda: None)
+    with pytest.raises(ValueError, match="build_store_patterns"):
+        spec_info_module.spec_info("store_patterns")
 
 
 @pytest.mark.anyio

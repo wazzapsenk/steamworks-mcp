@@ -340,7 +340,8 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
 
         kind: "schema" (steamworks.yaml fields), "gates" (overview), "gate:<0-3>" (all rules of a gate),
         "capabilities", "store_rules", "asset_specs", "events", "style_guide:<id>", "reference:<appid>"
-        (derived analysis of a reference game), "references" (catalog).
+        (derived analysis of a reference game), "references" (catalog), "store_patterns" (what the store pages of
+        popular new releases look like, per Steam genre; numbers only), "store_patterns:<Steam genre>".
         """
         return spec_info(kind)
 
@@ -659,6 +660,12 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         """Derived measurements of a bundled reference game (no raw texts)."""
         return as_json(spec_info(f"reference:{int(appid)}"))
 
+    @server.resource("steam://store-patterns", mime_type="application/json")
+    def store_patterns_resource() -> str:
+        """What the store pages of popular new Steam releases look like, per Steam genre and overall: lengths,
+        structure, headers, lists, media, mentions, languages. Derived measurements only, no text."""
+        return as_json(spec_info("store_patterns"))
+
     @server.resource("steam://manifest/{project}", mime_type="application/json")
     def manifest_resource(project: str) -> str:
         """Current values and per-field status of a project (a folder directly under the workspace root)."""
@@ -692,7 +699,12 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "three variants it asks for, each saved with save_draft. Then generate(section='store_long', "
             "stage='outline'), let me pick an outline, and write the text with stage='text'. Run validate("
             "section='store') after each draft, judge its questions, fix what fails, and show me preview_store "
-            "before I pick drafts with set_field(from_draft=...)."
+            "before I pick drafts with set_field(from_draft=...).\n"
+            "If a brief lists missing_recommended answers, ask me those first (start_interview). Build on its "
+            "use_the_answers, and use recent_successful_pages (also steam://store-patterns) as what successful "
+            "recent pages in this genre look like: lengths, structure, headers, lists, media. Numbers only, never "
+            "a text to imitate. Write in the source language only; when I approved the texts, translate them with "
+            "the localize_everything prompt."
         )
 
     @server.prompt(title="Localize everything")

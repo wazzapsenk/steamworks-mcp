@@ -35,6 +35,7 @@ stores the result as a draft until you approve it. Every value in `steamworks.ya
 `.steam-mcp/state.json`: missing, draft, needs_review, approved, applied.
 
 Resources: `steam://capabilities`, `steam://gates/{n}`, `steam://style-guide/{genre}`, `steam://references/{appid}`,
+`steam://store-patterns` (what the store pages of popular new releases look like, per genre; numbers only),
 `steam://manifest/{project}` (and `get_spec_info` returns the same for clients that only use tools). Prompts:
 `release_assistant`, `write_store_page`, `localize_everything`, `design_achievements`, `review_gate`.
 
@@ -332,7 +333,9 @@ The BROWSER-mode tests replay real, sanitized Steamworks traffic from
 contains secrets or private terms. `scripts/live/validate.py` checks a live app against the whole write protocol.
 
 Reference data: [`docs/SCHEMA.md`](docs/SCHEMA.md) (the manifest), `src/steamworks_mcp/data/` (gates, store rules,
-asset specs, events, style guides).
+asset specs, events, style guides, store patterns). `scripts/build_store_patterns.py` refreshes
+`data/store_patterns.json` from Steam's current Popular New Releases (public store data, one request per second, at
+most 80 games); like `scripts/build_references.py` it commits derived numbers only, never text from the pages.
 
 ## License
 
