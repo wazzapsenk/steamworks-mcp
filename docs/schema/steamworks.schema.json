@@ -693,6 +693,85 @@
       "title": "Content",
       "type": "object"
     },
+    "ControllerSupport": {
+      "additionalProperties": false,
+      "description": "Edit Store Page > Basic Info > Controller Support (a wizard). Required even when no controller is supported.",
+      "properties": {
+        "xbox": {
+          "anyOf": [
+            {
+              "enum": [
+                "full",
+                "partial",
+                "none"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Xbox controllers: the whole game playable with one (full), parts of it (partial), or not at all.",
+          "title": "Xbox"
+        },
+        "playstation": {
+          "description": "PlayStation controllers the game supports, wired and over Bluetooth.",
+          "items": {
+            "enum": [
+              "ps4",
+              "ps4_bluetooth",
+              "ps5",
+              "ps5_bluetooth"
+            ],
+            "type": "string"
+          },
+          "title": "Playstation",
+          "type": "array"
+        },
+        "steam_input_api": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The game uses the Steam Input API.",
+          "title": "Steam Input Api"
+        },
+        "no_keyboard": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Steamworks' \"no keyboard support\": the game cannot be played with keyboard and mouse.",
+          "title": "No Keyboard"
+        },
+        "gamepad_preferred": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A controller is the recommended way to play.",
+          "title": "Gamepad Preferred"
+        }
+      },
+      "title": "ControllerSupport",
+      "type": "object"
+    },
     "Depot": {
       "additionalProperties": false,
       "properties": {
@@ -747,6 +826,19 @@
           "default": null,
           "description": "Build output folder for this depot.",
           "title": "Content Root"
+        },
+        "language": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Only for language-specific depots; empty means the depot serves every language.",
+          "title": "Language"
         },
         "exclude": {
           "description": "File patterns left out of the depot, e.g. ``*.pdb``.",
@@ -2055,6 +2147,9 @@
           "default": null,
           "title": "Franchise"
         },
+        "support": {
+          "$ref": "#/$defs/SupportInfo"
+        },
         "platforms": {
           "description": "Operating systems ticked on the store page; each needs system requirements and a depot that launches.",
           "items": {
@@ -2067,6 +2162,19 @@
           },
           "title": "Platforms",
           "type": "array"
+        },
+        "primary_genre": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The one genre Steam lists first, e.g. \"Action\".",
+          "title": "Primary Genre"
         },
         "genres": {
           "description": "Steam store genres, e.g. [\"Action\", \"Indie\", \"Casual\"].",
@@ -2101,6 +2209,42 @@
         },
         "system_requirements": {
           "$ref": "#/$defs/SystemRequirements"
+        },
+        "controller": {
+          "$ref": "#/$defs/ControllerSupport"
+        },
+        "accessibility": {
+          "description": "Features ticked in the Accessibility Features wizard; [\"none\"] when the game has none.",
+          "items": {
+            "enum": [
+              "none",
+              "resizable_ui",
+              "subtitles",
+              "color_alternatives",
+              "contrast_controls",
+              "camera_comfort",
+              "background_volume_controls",
+              "stereo_sound",
+              "surround_sound",
+              "narrated_menus",
+              "chat_speech_to_text",
+              "chat_text_to_speech",
+              "playable_without_quicktime_events",
+              "keyboard_only_option",
+              "mouse_only_option",
+              "touch_only_option",
+              "difficulty_levels",
+              "save_anytime",
+              "playable_at_own_pace",
+              "playable_without_vision"
+            ],
+            "type": "string"
+          },
+          "title": "Accessibility",
+          "type": "array"
+        },
+        "third_party": {
+          "$ref": "#/$defs/ThirdParty"
         },
         "links": {
           "$ref": "#/$defs/StoreLinks"
@@ -2151,7 +2295,7 @@
           "default": null,
           "title": "Online Manual"
         },
-        "support": {
+        "forums": {
           "anyOf": [
             {
               "type": "string"
@@ -2161,7 +2305,8 @@
             }
           ],
           "default": null,
-          "title": "Support"
+          "description": "Your own forums, if not the Steam community hub.",
+          "title": "Forums"
         },
         "social": {
           "additionalProperties": {
@@ -2173,6 +2318,50 @@
         }
       },
       "title": "StoreLinks",
+      "type": "object"
+    },
+    "SupportInfo": {
+      "additionalProperties": false,
+      "description": "Edit Store Page > Basic Info > Support Info. At least one is required.",
+      "properties": {
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Email"
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phone"
+        }
+      },
+      "title": "SupportInfo",
       "type": "object"
     },
     "SystemRequirements": {
@@ -2213,6 +2402,52 @@
         }
       },
       "title": "SystemRequirements",
+      "type": "object"
+    },
+    "ThirdParty": {
+      "additionalProperties": false,
+      "description": "Third-party DRM and accounts, which the store page has to disclose.",
+      "properties": {
+        "drm": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "DRM besides Steam, e.g. \"Denuvo\"; empty when there is none.",
+          "title": "Drm"
+        },
+        "account": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A third-party account the game requires, e.g. \"Example Studio account\"; empty when none.",
+          "title": "Account"
+        },
+        "account_links_to_steam": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Account Links To Steam"
+        }
+      },
+      "title": "ThirdParty",
       "type": "object"
     },
     "Trailer": {

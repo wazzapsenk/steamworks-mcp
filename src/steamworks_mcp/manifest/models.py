@@ -198,9 +198,71 @@ class StoreLinks(Model):
     website: str | None = None
     privacy_policy: str | None = None
     online_manual: str | None = None
-    support: str | None = None
+    forums: str | None = None
+    """Your own forums, if not the Steam community hub."""
     social: dict[str, str] = Field(default_factory=dict)
     """e.g. {"discord": "https://…", "x": "https://…", "youtube": "https://…"}."""
+
+
+class SupportInfo(Model):
+    """Edit Store Page > Basic Info > Support Info. At least one is required."""
+
+    url: str | None = None
+    email: str | None = None
+    phone: str | None = None
+
+
+ControllerPad = Literal["ps4", "ps4_bluetooth", "ps5", "ps5_bluetooth"]
+
+
+class ControllerSupport(Model):
+    """Edit Store Page > Basic Info > Controller Support (a wizard). Required even when no controller is supported."""
+
+    xbox: Literal["full", "partial", "none"] | None = None
+    """Xbox controllers: the whole game playable with one (full), parts of it (partial), or not at all."""
+    playstation: list[ControllerPad] = Field(default_factory=list)
+    """PlayStation controllers the game supports, wired and over Bluetooth."""
+    steam_input_api: TriState = None
+    """The game uses the Steam Input API."""
+    no_keyboard: TriState = None
+    """Steamworks' "no keyboard support": the game cannot be played with keyboard and mouse."""
+    gamepad_preferred: TriState = None
+    """A controller is the recommended way to play."""
+
+
+AccessibilityFeature = Literal[
+    "none",
+    "resizable_ui",
+    "subtitles",
+    "color_alternatives",
+    "contrast_controls",
+    "camera_comfort",
+    "background_volume_controls",
+    "stereo_sound",
+    "surround_sound",
+    "narrated_menus",
+    "chat_speech_to_text",
+    "chat_text_to_speech",
+    "playable_without_quicktime_events",
+    "keyboard_only_option",
+    "mouse_only_option",
+    "touch_only_option",
+    "difficulty_levels",
+    "save_anytime",
+    "playable_at_own_pace",
+    "playable_without_vision",
+]
+"""The Accessibility Features wizard's options ("none" when the game has none of them)."""
+
+
+class ThirdParty(Model):
+    """Third-party DRM and accounts, which the store page has to disclose."""
+
+    drm: str | None = None
+    """DRM besides Steam, e.g. "Denuvo"; empty when there is none."""
+    account: str | None = None
+    """A third-party account the game requires, e.g. "Example Studio account"; empty when none."""
+    account_links_to_steam: TriState = None
 
 
 class Legal(Model):
@@ -221,8 +283,11 @@ class Store(Model):
     developers: list[str] = Field(default_factory=list)
     publishers: list[str] = Field(default_factory=list)
     franchise: str | None = None
+    support: SupportInfo = Field(default_factory=SupportInfo)
     platforms: list[OsName] = Field(default_factory=list)
     """Operating systems ticked on the store page; each needs system requirements and a depot that launches."""
+    primary_genre: str | None = None
+    """The one genre Steam lists first, e.g. "Action"."""
     genres: list[str] = Field(default_factory=list)
     """Steam store genres, e.g. ["Action", "Indie", "Casual"]."""
     tags: list[str] = Field(default_factory=list)
@@ -231,8 +296,21 @@ class Store(Model):
     """Steam categories, e.g. "Online Co-op", "Steam Achievements", "Steam Cloud", "Full controller support"."""
     supported_languages: dict[LanguageCode, LanguageSupport] = Field(default_factory=dict)
     system_requirements: SystemRequirements = Field(default_factory=SystemRequirements)
+    controller: ControllerSupport = Field(default_factory=ControllerSupport)
+    accessibility: list[AccessibilityFeature] = Field(default_factory=list)
+    """Features ticked in the Accessibility Features wizard; ["none"] when the game has none."""
+    third_party: ThirdParty = Field(default_factory=ThirdParty)
     links: StoreLinks = Field(default_factory=StoreLinks)
     legal: Legal = Field(default_factory=Legal)
+
+    @field_validator("accessibility")
+    @classmethod
+    def _accessibility(cls, v: list[str]) -> list[str]:
+        if "none" in v and len(v) > 1:
+            raise ValueError('"none" cannot be combined with accessibility features')
+        if len(set(v)) != len(v):
+            raise ValueError("accessibility features are listed twice")
+        return v
 
 
 class Trailer(Model):
@@ -451,6 +529,8 @@ class Depot(Model):
     arch: Literal["all", "32", "64"] = "64"
     content_root: RelPath | None = None
     """Build output folder for this depot."""
+    language: LanguageCode | None = None
+    """Only for language-specific depots; empty means the depot serves every language."""
     exclude: list[str] = Field(default_factory=list)
     """File patterns left out of the depot, e.g. ``*.pdb``."""
 

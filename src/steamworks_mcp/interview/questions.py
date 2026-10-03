@@ -92,6 +92,21 @@ CATALOG: dict[str, dict[str, Any]] = {
     "store.platforms": {"q": "Which operating systems does the game support?", "kind": "multi"},
     "store.tags": {"q": "Which user tags fit best? Give at least 5, most important first.", "kind": "list"},
     "store.supported_languages": {"q": "Which languages does the game itself support?"},
+    "store.genres": {"q": "Which Steam genres fit (e.g. Action, Casual, Indie, Strategy)?", "kind": "list"},
+    "store.developers": {"q": "Developer name(s) as shown on the store page?", "kind": "list"},
+    "store.publishers": {"q": "Publisher name(s)? (Your own studio when you self-publish.)", "kind": "list"},
+    "store.support.url": {"q": "Support website for players? (Website, e-mail or phone: one of them is enough.)"},
+    "store.support.email": {"q": "Support e-mail address? (Website, e-mail or phone: one of them is enough.)"},
+    "store.support.phone": {"q": "Support phone number? (Website, e-mail or phone: one of them is enough.)"},
+    "store.controller.xbox": {
+        "q": "Xbox controllers: is the whole game playable with one (full), only parts of it (partial), or not at "
+        "all (none)? Steam asks even when controllers are not supported."
+    },
+    "store.accessibility": {
+        "q": "Which accessibility features does the game have (e.g. subtitles, resizable UI, difficulty levels, "
+        "save anytime, color alternatives)? Say 'none' if it has none.",
+        "kind": "list",
+    },
     "target_languages": {"q": "Which languages should the store page be translated into?", "kind": "list"},
     "release.planned_date": {"q": "Planned release date? (YYYY-MM-DD; Steam keeps it hidden until you show it)"},
     "release.display_date": {"q": "What should the store show before the exact date (e.g. 'Q2 2027', 'Coming soon')?"},

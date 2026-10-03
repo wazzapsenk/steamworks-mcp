@@ -7,6 +7,7 @@ come from this tool's own policy rather than from Valve have ``origin: tool``.
 Check kinds:
 
 * ``present``     every field (or pattern match) is non-empty
+* ``any_present`` at least one of the fields is non-empty
 * ``answered``    a yes/no field has been answered (true or false)
 * ``confirmed``   a yes/no field is true (the user confirmed it)
 * ``min_items``   a list/dict field has at least ``min`` entries
@@ -63,6 +64,11 @@ class Condition(Model):
 class Present(Model):
     kind: Literal["present"]
     fields: list[str] = Field(min_length=1)
+
+
+class AnyPresent(Model):
+    kind: Literal["any_present"]
+    fields: list[str] = Field(min_length=2)
 
 
 class Answered(Model):
@@ -132,6 +138,7 @@ class Info(Model):
 
 Check = Annotated[
     Present
+    | AnyPresent
     | Answered
     | Confirmed
     | MinItems
@@ -169,6 +176,9 @@ class GateRule(Model):
     """Verbatim supporting sentence from ``source_doc`` (at most 25 words)."""
     notes: str | None = None
     unverified: bool = False
+    steamworks_checklist: str | None = None
+    """The item of the release checklists on the app's Steamworks landing page this rule stands for, e.g.
+    "Your Store Presence / Support Info"."""
 
     @model_validator(mode="after")
     def _sources(self) -> GateRule:
@@ -199,7 +209,7 @@ class GateFile(Model):
         for r in self.rules:
             refs += [c.field for c in r.when]
             c = r.check
-            if isinstance(c, (Present, Answered, Confirmed)):
+            if isinstance(c, (Present, AnyPresent, Answered, Confirmed)):
                 refs += c.fields
             elif isinstance(c, (MinItems, Range)):
                 refs.append(c.field)

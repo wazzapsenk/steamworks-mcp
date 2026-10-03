@@ -29,6 +29,7 @@ rules:
     rule: '>= 1 launch option; executable path without leading slashes or dots.'
     source_doc: https://partner.steamgames.com/doc/sdk/uploading
     quote: Define at least one launch option (the path and optionally, any arguments required to launch the game).
+    steamworks_checklist: Your Game Build / Launch Options Defined
   - id: install_folder_set
     title: Install folder set
     description: Set the SteamPipe install directory for the app.
@@ -42,6 +43,7 @@ rules:
     where: Edit Steamworks Settings > Installation > General Installation
     source_doc: https://partner.steamgames.com/doc/sdk/uploading
     quote: New apps should have a Steam Pipe install directory as well as a depot
+    steamworks_checklist: Your Game Build / Install Directory Set
   - id: depots_configured
     title: Depots configured
     description: Configure depots (rename default depot; language "All languages" and OS "All OSes" unless specific).
@@ -55,6 +57,18 @@ rules:
     rule: '>= 1 depot.'
     source_doc: https://partner.steamgames.com/doc/sdk/uploading
     quote: Go to the Depots page and add depots as needed for this app. By default, a depot may already be configured for your application.
+    steamworks_checklist: Your Game Build / At Least One Depot Configured
+  - id: depot_languages_configured
+    title: Depot languages configured
+    description: Have one depot for every language, or at least one that is not language-specific (apps.*.builds.depots.*.language).
+    severity: required
+    check:
+      kind: checklist
+    execution_mode: MANUAL
+    where: Steamworks Settings > SteamPipe > Depots (language)
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: Your app must have at least one depot that is not language specific OR contain a depot for every language.
+    steamworks_checklist: Your Game Build / Depot Languages Configured
   - id: supported_os_steamworks_settings
     title: Supported OS Steamworks settings
     description: Tick supported operating systems in the Steamworks settings (separate from the store page checkboxes).
@@ -66,6 +80,62 @@ rules:
     where: Edit Steamworks Settings > Supported Operating Systems
     source_doc: https://partner.steamgames.com/doc/store/application/platforms
     quote: In the Steamworks Settings for your app, check the appropriate operating system boxes under Supported Operating Systems.
+    steamworks_checklist: Your Game Build / Platform Support Matches
+  - id: proposed_pricing_submitted
+    title: Proposed pricing submitted
+    description: Proposed pricing is reviewed together with the store page when marking ready for review.
+    severity: required
+    check:
+      kind: confirmed
+      fields:
+        - pricing.submitted
+    when:
+      - field: pricing.free_to_play
+        op: is_not_true
+    execution_mode: MANUAL
+    where: App landing page > Store packages, pricing, & release dates > package > Propose Pricing
+    source_doc: https://partner.steamgames.com/doc/store/releasing
+    quote: ready for your store page and proposed pricing to be reviewed
+    steamworks_checklist: Your Game Build / Pricing For At Least One Package
+  - id: pricing_approved
+    title: Pricing approved
+    description: Initial pricing must be reviewed/approved by Valve; check every currency carefully.
+    severity: required
+    check:
+      kind: checklist
+    when:
+      - field: pricing.free_to_play
+        op: is_not_true
+    execution_mode: MANUAL
+    where: Package landing page > Propose Pricing
+    rule: 'Lead time: usually 1-2 business days.'
+    source_doc: https://partner.steamgames.com/doc/store/pricing
+    quote: Initial pricing as well as proposed pricing adjustments will be reviewed by Valve and are usually processed within one or two business days.
+    steamworks_checklist: Your Game Build / Published Pricing For At Least One Package
+  - id: trailer_uploaded
+    title: Trailer uploaded
+    description: Upload at least one trailer on the store page's Trailers tab.
+    severity: required
+    check:
+      kind: min_items
+      field: assets.trailers
+      min: 1
+    execution_mode: MANUAL
+    where: Edit Store Page > Trailers
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: You must upload at least one trailer of your product on the trailers tab in the store page admin
+    steamworks_checklist: Your Game Build / Trailer Uploaded
+  - id: app_configuration
+    title: App configuration
+    description: Store and Steamworks types of the app match; contact Valve if this is ever open.
+    severity: required
+    check:
+      kind: info
+    execution_mode: MANUAL
+    where: App landing page > Your Game Build
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: Store and Steamworks types for this app match. This should always be complete.
+    steamworks_checklist: Your Game Build / App Configuration
   - id: publish_steamworks_settings
     title: Publish Steamworks settings
     description: Publish Steamworks settings changes (depots, installation, launch options) - unpublished config breaks builds.
@@ -84,15 +154,46 @@ rules:
     where: All Associated Packages, DLC, Demos And Tools
     source_doc: https://partner.steamgames.com/doc/sdk/uploading
     quote: Your newly defined depots will need to be included in a package to grant you ownership of them.
+    steamworks_checklist: Your Game Build / All Depots Attached
+  - id: achievements_configured
+    title: Achievements configured
+    description: The store page claims Steam Achievements, so the achievements have to exist in Steamworks.
+    severity: required
+    check:
+      kind: min_items
+      field: achievements
+      min: 1
+    when:
+      - field: store.categories
+        op: contains
+        value: Steam Achievements
+    execution_mode: BROWSER
+    fallback_mode: ARTIFACT
+    where: Steamworks Settings > Stats & Achievements
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: Your store page indicates achievement support, so you must configure your achievements.
+    steamworks_checklist: Your Game Build / Achievement Configured
+  - id: store_devcomp_packages_match
+    title: Store and devcomp packages match
+    description: The developer comp package contains the same depots as the store package.
+    severity: required
+    check:
+      kind: checklist
+    execution_mode: MANUAL
+    where: App landing page > All Associated Packages
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: For release testing, your devcomp package must contain the same depots as your store package
+    steamworks_checklist: Your Game Build / Store And Devcomp Packages Match
   - id: os_depot_package_warning_resolved
     title: OS depot package warning resolved
     description: Resolve the landing-page warning "Operating System Depot missing from a package".
-    severity: recommended
+    severity: required
     check: *id001
     execution_mode: MANUAL
     where: App landing page warnings
     source_doc: https://partner.steamgames.com/doc/store/application/depots
     quote: When this warning appears on your app landing page, you should probably correct it
+    steamworks_checklist: Your Game Build / Package Includes Windows Depot
   - id: build_uploaded
     title: Build uploaded
     description: Upload a mostly final build via steamcmd/SteamPipe using the builder account; it must include all features described on the store page.
@@ -113,6 +214,7 @@ rules:
     rule: Manual set-live on "default" only.
     source_doc: https://partner.steamgames.com/doc/store/application/branches
     quote: When uploading your content you can not set the build live on the default branch automatically. You must do that manually in App Admin.
+    steamworks_checklist: Your Game Build / At Least One Build Configured
   - id: game_build_checklist_complete
     title: Game build checklist complete
     description: Complete the "Game Build" release checklist on the app landing page.
@@ -181,80 +283,6 @@ rules:
     rule: Review typically 3-5 business days; plan >= 7 business days before release.
     source_doc: https://partner.steamgames.com/doc/store/review_process
     quote: typically takes 3-5 business days to complete, but we ask that you plan for at least 7 business days
-  - id: library_capsule
-    title: Library capsule
-    description: Library Capsule (must include game logo; subtitle allowed; no other text).
-    severity: required
-    check:
-      kind: asset
-      asset: library_capsule
-    execution_mode: ARTIFACT
-    where: Store Page Admin > Graphical Assets > Library Assets (checklist section not documented)
-    rule: 600x900 px (300x450 auto-generated)
-    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
-    quote: 'Size: 600px x 900px'
-    notes: Docs do not say whether library assets sit in the Store Presence or Game Build checklist; placed in gate 2 because they are client-facing.
-  - id: library_header
-    title: Library header
-    description: Library Header capsule; falls back to the store Header Capsule if not set.
-    severity: required
-    check:
-      kind: asset
-      asset: library_header
-    execution_mode: ARTIFACT
-    where: Store Page Admin > Graphical Assets > Library Assets
-    rule: 920x430 px
-    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
-    quote: 'Size: 920px x 430px'
-    notes: Marked "Required" in the docs, yet a fallback exists; may not hard-block.
-  - id: library_hero
-    title: Library hero
-    description: Library Hero (artwork only, no words).
-    severity: required
-    check:
-      kind: asset
-      asset: library_hero
-    execution_mode: ARTIFACT
-    where: Store Page Admin > Graphical Assets > Library Assets
-    rule: 3840x1240 px PNG (1920x620 auto-generated)
-    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
-    quote: 'Size: 3840px x 1240px'
-  - id: library_logo
-    title: Library logo
-    description: Library Logo (logotype only, transparent background), drawn over the hero.
-    severity: required
-    check:
-      kind: asset
-      asset: library_logo
-    execution_mode: ARTIFACT
-    where: Store Page Admin > Graphical Assets > Library Assets
-    rule: 1280 px wide and/or 720 px tall PNG
-    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
-    quote: 'Size: Either 1280px wide and/or 720px tall'
-  - id: shortcut_icon
-    title: Shortcut icon
-    description: Desktop shortcut icon (.ico generated from PNG); macOS needs an extra ICNS "Mac Icon".
-    severity: required
-    check:
-      kind: asset
-      asset: shortcut_icon
-    execution_mode: ARTIFACT
-    where: Community and Client Icons asset fields (exact menu path not documented)
-    rule: 256x256 or 512x512 px, ICO or PNG
-    source_doc: https://partner.steamgames.com/doc/store/assets/community
-    quote: 'Size: 256px x 256px or 512px x 512px, ICO or PNG'
-  - id: app_icon
-    title: App icon
-    description: Small app icon used in library list view, chat, notifications.
-    severity: required
-    check:
-      kind: asset
-      asset: app_icon
-    execution_mode: ARTIFACT
-    where: Community and Client Icons asset fields (exact menu path not documented)
-    rule: 184x184 px JPG
-    source_doc: https://partner.steamgames.com/doc/store/assets/community
-    quote: 'Size: 184px by 184px JPG'
   - id: test_via_steam_before_release
     title: Test via Steam before release
     description: Test the Steam-delivered build yourself (Dev Comp package, team accounts, keys, Playtest) before release.

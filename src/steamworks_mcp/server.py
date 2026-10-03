@@ -578,6 +578,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "achievement_schema",
             "snapshots",
             "pending",
+            "checklist",
             "cloud",
             "installation",
             "achievements",
@@ -587,8 +588,9 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
     ) -> dict[str, Any]:
         """Read-only look at what Steam has now. With the publisher key: "builds" (recent builds and branches),
         "leaderboards", "achievement_schema". With the BROWSER mode: "cloud", "installation", "achievements",
-        "store_text", and "pending" (the unpublished changes the Publish tab would show). "snapshots" lists the
-        snapshots saved before writes (local)."""
+        "store_text", "pending" (the unpublished changes the Publish tab would show), and "checklist" (the
+        release checklists of the app's Steamworks landing page, each item linked to its gap_report rule).
+        "snapshots" lists the snapshots saved before writes (local)."""
         return await execu.inspect(open_project(path), what, app)
 
     @server.tool()

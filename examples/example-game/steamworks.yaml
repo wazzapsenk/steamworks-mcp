@@ -77,7 +77,9 @@ store:
     [/list]
   developers: [Example Studio]
   publishers: [Example Studio]
+  support: {email: support@example.com}
   platforms: [windows]
+  primary_genre: Casual
   genres: [Casual, Indie]
   tags: [Co-op, Online Co-Op, Physics, Building, Funny, Party Game]
   categories: [Single-player, Online Co-op, Steam Achievements, Steam Cloud, Full controller support, Remote Play Together]
@@ -87,6 +89,8 @@ store:
   system_requirements:
     windows:
       minimum: {os: Windows 10 64-bit, processor: Intel Core i5-6600, memory: 8 GB RAM, graphics: GTX 960, storage: 3 GB available space}
+  controller: {xbox: full, playstation: [ps4, ps5, ps5_bluetooth], gamepad_preferred: true}
+  accessibility: [subtitles, difficulty_levels, save_anytime]
   links:
     website: https://example.com/pillow-fort-panic
     privacy_policy: https://example.com/privacy

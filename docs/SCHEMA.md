@@ -31,15 +31,16 @@ my-game/
 
 A full example is [`examples/example-game/steamworks.yaml`](../examples/example-game/steamworks.yaml). Keys are
 snake_case. Unknown keys are errors. A missing value (`null`, empty string or empty list) means "not known yet" and
-shows up in gap reports.
+shows up in gap reports. The file aims to cover every field of Steamworks and the store page; only filled values are
+ever written to Steamworks, empty ones are left as they are there.
 
 | Section | What it holds | Usually filled by |
 |---|---|---|
 | `game` | What the game is: name, pitch, genres, players, session length, core loop, USPs, audience, tone, platform features, engine, reference app ids. Input for writing; never uploaded. | scan + interview |
 | `source_language`, `target_languages` | Steam API language codes (`english`, `schinese`, `koreana`, `brazilian`, `latam`, …) | interview |
-| `apps` (`main`, `demo`, `playtest`) | One profile per Steam app: `appid`, `installation` (install folder, launch options), `cloud` (quotas, Auto-Cloud paths, root overrides), `builds` (depots, branches) | scan + interview |
+| `apps` (`main`, `demo`, `playtest`) | One profile per Steam app: `appid`, `installation` (install folder, launch options), `cloud` (quotas, Auto-Cloud paths, root overrides), `builds` (depots with their language, branches) | scan + interview |
 | `prerequisites` | Gate 0: partner account, Steam Direct fee (+ date), tax, bank, identity, restricted automation account | interview (never scanned) |
-| `store` | Main store page: short description, About This Game (BBCode), developers, publishers, platforms, genres, tags, categories, languages table, system requirements, links, legal line | generators + interview |
+| `store` | Main store page: short description, About This Game (BBCode), developers, publishers, support info (website, e-mail, phone), platforms, primary genre and genres, tags, categories, languages table, system requirements, controller support (the Controller Support wizard), accessibility features (the Accessibility Features wizard), third-party DRM and accounts, links, legal line | generators + interview |
 | `assets` | Source art (key art and its focus point, logo, screenshots folder, hand-made overrides, trailers); store images are cropped from these, never generated | user |
 | `content` | Content survey, mature content descriptors, AI disclosure, ratings | interview (never assumed) |
 | `achievements`, `stats`, `leaderboards` | Main game's definitions, keyed by API name | scan + generators |
@@ -118,10 +119,14 @@ rubric results and score, and status `candidate | chosen | rejected`. The user p
 ## Gate files
 
 `src/steamworks_mcp/data/gates/gate_{0..3}.yaml` list what Steam requires at each release gate. Each rule has a
-check kind (`present`, `answered`, `confirmed`, `min_items`, `range`, `date_gap`, `asset`, `screenshots`,
+check kind (`present`, `any_present`, `answered`, `confirmed`, `min_items`, `range`, `date_gap`, `asset`, `screenshots`,
 `store_rules`, `crosscheck`, `checklist`, `info`), optional `when` conditions, `severity`
 (`required | recommended | optional`), an `execution_mode`, and, for Valve rules, `source_doc` plus a verbatim
-`quote` of at most 25 words. Rules the docs do not confirm are marked `unverified: true`. The schema is
+`quote` of at most 25 words. Rules the docs do not confirm are marked `unverified: true`. Gates 1 and 2 follow the
+two release checklists on the app's Steamworks landing page ("Your Store Presence", "Your Game Build"): every item
+has a rule whose `steamworks_checklist` names it and whose quote is Valve's explanation of the item, including the
+items Steamworks adds once a feature is on (Steam Cloud quotas, achievements). In the BROWSER mode,
+`steamworks_inspect(what="checklist")` reads the live checklists and links each item to its rule. The schema is
 [`gate.schema.json`](schema/gate.schema.json).
 
 Other bundled data:

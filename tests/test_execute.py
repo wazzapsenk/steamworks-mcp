@@ -238,6 +238,36 @@ def test_a_saved_but_unchanged_section_is_not_a_change() -> None:
     assert P.parse_diff(diff) == {"ufs": {"new": False, "removed": [], "added": [], "changed": False}}
 
 
+async def test_release_checklists_are_read() -> None:
+    items = await P.read_checklists(replay("visibility/before"), APP)
+    by_name = {(i["checklist"], i["item"]): i for i in items}
+    assert by_name[("Your Store Presence", "Descriptions")]["status"] == "complete"
+    support = by_name[("Your Store Presence", "Support Info")]
+    assert support["status"] == "incomplete" and "support contact" in support["explanation"]
+    assert by_name[("Your Store Presence", "Cloud Saves")]["status"] == "suggested"
+    assert ("Your Game Build", "Trailer Uploaded") in by_name and len(items) == 30
+
+
+def test_every_checklist_item_has_a_gate_rule() -> None:
+    from steamworks_mcp.gates.engine import gate_files
+
+    items = P.parse_checklists(
+        next(
+            e["response"]["content"]["text"]
+            for e in json.loads((FIX / "visibility/before.har").read_text("utf-8"))["log"]["entries"]
+            if "/apps/landing/" in e["request"]["url"]
+        )
+    )
+    linked = {r.steamworks_checklist for g in gate_files() for r in g.rules}
+    assert {f"{i['checklist']} / {i['item']}" for i in items} <= linked
+    # items Steamworks adds once a feature is on (seen live on an app with Steam Cloud and achievements)
+    assert {
+        "Your Store Presence / File Quota",
+        "Your Store Presence / File Limit",
+        "Your Game Build / Achievement Configured",
+    } <= linked
+
+
 async def test_expired_session_is_reported() -> None:
     with pytest.raises(NotLoggedInError, match="steamworks_open"):
         await P.read_achievements(replay("errors/session_expired"), APP)

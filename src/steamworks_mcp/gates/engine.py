@@ -15,6 +15,7 @@ from steamworks_mcp.capabilities import capabilities
 from steamworks_mcp.data import data_files, load_yaml
 from steamworks_mcp.gates.models import (
     Answered,
+    AnyPresent,
     AssetCheck,
     Checklist,
     Condition,
@@ -75,6 +76,8 @@ class RuleResult:
                 out[key] = value
         if self.status in ("fail", "todo", "unknown", "review", "warn"):
             out["what"] = r.description
+            if r.steamworks_checklist:
+                out["steamworks_checklist"] = r.steamworks_checklist
             if r.where:
                 out["where"] = r.where
             if r.rule:
@@ -218,6 +221,12 @@ class Evaluator:
                     res.missing.append(p)
                     if v is False:
                         res.message = f"{p} is answered 'no'."
+        elif isinstance(c, AnyPresent):
+            paths = [p for f in c.fields for p in _expand(self.values, f)]
+            res.fields = paths
+            if all(is_empty(fp.get(self.values, p)) for p in paths):
+                res.missing = list(c.fields)
+                res.message = "Fill at least one of these."
         elif isinstance(c, MinItems):
             v = fp.get(self.values, c.field)
             res.fields = [c.field]

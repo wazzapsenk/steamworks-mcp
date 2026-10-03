@@ -25,6 +25,62 @@ rules:
     rule: All (*) fields on every tab.
     source_doc: https://partner.steamgames.com/doc/store/page
     quote: You will need to complete the sections marked with a (*) in each tab.
+  - id: basic_info
+    title: Basic info
+    description: Set the app name, platforms, supported languages and genres on the Basic Info tab.
+    severity: required
+    check:
+      kind: present
+      fields:
+        - game.name
+        - store.genres
+    execution_mode: MANUAL
+    where: Edit Store Page > Basic Info
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: You need to set your application name, platforms, supported languages, and genres in the store admin
+    steamworks_checklist: Your Store Presence / Basic Info
+  - id: developer_publisher_names
+    title: Developer and publisher names
+    description: Name the developer and the publisher.
+    severity: required
+    check:
+      kind: present
+      fields:
+        - store.developers
+        - store.publishers
+    execution_mode: MANUAL
+    where: Edit Store Page > Basic Info
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: You must specify the developer and publisher of your game
+    steamworks_checklist: Your Store Presence / Developer and Publisher Names
+  - id: support_info
+    title: Support info
+    description: 'Give players at least one way to reach support: a website, an e-mail address or a phone number.'
+    severity: required
+    check:
+      kind: any_present
+      fields:
+        - store.support.url
+        - store.support.email
+        - store.support.phone
+    execution_mode: MANUAL
+    where: Edit Store Page > Basic Info > Support Info
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: You must fill out at least one of the support contact methods on the basic info tab in your app
+    steamworks_checklist: Your Store Presence / Support Info
+  - id: controller_support_info
+    title: Controller support information
+    description: Fill out the Controller Support section, also when the game supports no controller.
+    severity: required
+    check:
+      kind: present
+      fields:
+        - store.controller.xbox
+    execution_mode: MANUAL
+    where: Edit Store Page > Basic Info > Controller Support
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: You need to fill out controller information for your game, even if the info is that controllers are unsupported
+    steamworks_checklist: Your Store Presence / Controller Support Description
   - id: short_description
     title: Short description
     description: Short description (plain text, no time-based text such as "Now Available").
@@ -40,6 +96,7 @@ rules:
     source_doc: https://partner.steamgames.com/doc/store/page/description
     quote: The short description is limited to a few hundred characters
     notes: Required-ness inferred from the (*) required-field marker rule and the store review description check; the exact character limit is not documented.
+    steamworks_checklist: Your Store Presence / Descriptions
   - id: about_this_game_description
     title: About this game description
     description: Long "About This Game" description must be detailed and coherent.
@@ -54,6 +111,7 @@ rules:
     rule: Embedded images < 5MB.
     source_doc: https://partner.steamgames.com/doc/store/review_process
     quote: The description will need to be detailed and coherent.
+    steamworks_checklist: Your Store Presence / Descriptions
   - id: description_no_external_links
     title: Description no external links
     description: No links (incl. QR codes or implied URLs) to other websites in descriptions or graphical assets; use the dedicated link fields.
@@ -110,6 +168,7 @@ rules:
     rule: 920x430 px; only game logo + artwork; old (pre-Aug-2024) dimensions are rejected.
     source_doc: https://partner.steamgames.com/doc/store/assets/standard
     quote: "Size: Please provide '920px x 430px'"
+    steamworks_checklist: Your Store Presence / Capsule Images
   - id: small_capsule
     title: Small capsule
     description: Small Capsule image with a logo readable at the smallest size.
@@ -122,6 +181,7 @@ rules:
     rule: 462x174 px (120x45 and 184x69 auto-generated).
     source_doc: https://partner.steamgames.com/doc/store/assets/standard
     quote: "Size: Please provide '462px x 174px' image."
+    steamworks_checklist: Your Store Presence / Capsule Images
   - id: main_capsule
     title: Main capsule
     description: Main Capsule image (front-page carousel).
@@ -134,6 +194,7 @@ rules:
     rule: 1232x706 px
     source_doc: https://partner.steamgames.com/doc/store/assets/standard
     quote: 'Size: 1232px x 706px'
+    steamworks_checklist: Your Store Presence / Capsule Images
   - id: vertical_capsule
     title: Vertical capsule
     description: Vertical Capsule image (seasonal sale pages).
@@ -146,6 +207,7 @@ rules:
     rule: 748x896 px
     source_doc: https://partner.steamgames.com/doc/store/assets/standard
     quote: 'Size: 748px x 896px'
+    steamworks_checklist: Your Store Presence / Capsule Images
   - id: capsule_content_rules
     title: Capsule content rules
     description: Base capsules may only contain artwork, game name and official subtitle; readable logo; accurate dimensions; PG-13 artwork. Extra text only via time-limited Artwork Overrides.
@@ -171,6 +233,7 @@ rules:
     rule: At least 5 screenshots; minimum 1920x1080; 16:9.
     source_doc: https://partner.steamgames.com/doc/store/assets/standard
     quote: You must provide at least 5 screenshots of your product.
+    steamworks_checklist: Your Store Presence / 5 Or More Screenshots
   - id: screenshots_all_ages_flag
     title: Screenshots all ages flag
     description: Mark suitable screenshots as "suitable for all ages" so the game can appear on the front page and hover previews.
@@ -193,6 +256,86 @@ rules:
     rule: 1438x810 px
     source_doc: https://partner.steamgames.com/doc/store/assets/standard
     quote: If you don't upload your own, we'll automatically take the last screenshot and generate an appropriate background image from that.
+  - id: library_capsule
+    title: Library capsule
+    description: Library Capsule (must include game logo; subtitle allowed; no other text).
+    severity: required
+    check:
+      kind: asset
+      asset: library_capsule
+    execution_mode: ARTIFACT
+    where: Store Page Admin > Graphical Assets > Library Assets (checklist section not documented)
+    rule: 600x900 px (300x450 auto-generated)
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+    quote: 'Size: 600px x 900px'
+    notes: Docs do not say whether library assets sit in the Store Presence or Game Build checklist; placed in gate 2 because they are client-facing.
+    steamworks_checklist: Your Store Presence / Library Assets
+  - id: library_hero
+    title: Library hero
+    description: Library Hero (artwork only, no words).
+    severity: required
+    check:
+      kind: asset
+      asset: library_hero
+    execution_mode: ARTIFACT
+    where: Store Page Admin > Graphical Assets > Library Assets
+    rule: 3840x1240 px PNG (1920x620 auto-generated)
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+    quote: 'Size: 3840px x 1240px'
+    steamworks_checklist: Your Store Presence / Library Assets
+  - id: library_logo
+    title: Library logo
+    description: Library Logo (logotype only, transparent background), drawn over the hero.
+    severity: required
+    check:
+      kind: asset
+      asset: library_logo
+    execution_mode: ARTIFACT
+    where: Store Page Admin > Graphical Assets > Library Assets
+    rule: 1280 px wide and/or 720 px tall PNG
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+    quote: 'Size: Either 1280px wide and/or 720px tall'
+    steamworks_checklist: Your Store Presence / Library Assets
+  - id: library_header
+    title: Library header
+    description: Library Header capsule; falls back to the store Header Capsule if not set.
+    severity: recommended
+    check:
+      kind: asset
+      asset: library_header
+    execution_mode: ARTIFACT
+    where: Store Page Admin > Graphical Assets > Library Assets
+    rule: 920x430 px
+    source_doc: https://partner.steamgames.com/doc/store/assets/libraryassets
+    quote: 'Size: 920px x 430px'
+    notes: The Store Presence checklist asks for the library hero, logo and capsule only; the header falls back to the store header capsule.
+    steamworks_checklist: Your Store Presence / Library Assets
+  - id: app_icon
+    title: App icon
+    description: Small app icon used in library list view, chat, notifications.
+    severity: required
+    check:
+      kind: asset
+      asset: app_icon
+    execution_mode: ARTIFACT
+    where: Steamworks Settings > Installation > Client Images
+    rule: 184x184 px JPG
+    source_doc: https://partner.steamgames.com/doc/store/assets/community
+    quote: 'Size: 184px by 184px JPG'
+    steamworks_checklist: Your Store Presence / App Icon
+  - id: shortcut_icon
+    title: Shortcut icon
+    description: Desktop shortcut icon (.ico generated from PNG); macOS needs an extra ICNS "Mac Icon".
+    severity: required
+    check:
+      kind: asset
+      asset: shortcut_icon
+    execution_mode: ARTIFACT
+    where: Steamworks Settings > Installation > Client Images (Client Shortcut .ico)
+    rule: 256x256 or 512x512 px, ICO or PNG
+    source_doc: https://partner.steamgames.com/doc/store/assets/community
+    quote: 'Size: 256px x 256px or 512px x 512px, ICO or PNG'
+    steamworks_checklist: Your Store Presence / Shortcut Icon
   - id: trailer
     title: Trailer
     description: Store page trailer; Valve strongly prefers a gameplay trailer first.
@@ -206,7 +349,7 @@ rules:
     rule: Up to 1920x1080; 30/29.97 or 60/59.94 fps; 5,000+ Kbps; .mov/.wmv/.mp4; H.264 + AAC preferred; 16:9 preferred; audio 44/48 kHz.
     source_doc: https://partner.steamgames.com/doc/store/coming_soon
     quote: You'll need a set of branding images, written description, and ideally a gameplay trailer.
-    notes: Trailers page says a trailer is "required" for release; Coming Soon page says "ideally a gameplay trailer". Not listed in the Review Process checks. Treat as a warning, not a hard block.
+    notes: Optional for Coming Soon ("ideally a gameplay trailer"); the Game Build checklist requires one before release (gate 2, trailer_uploaded).
   - id: content_survey_complete
     title: Content survey complete
     description: Complete all three Content Survey sections (General Content -> regional ratings, Mature Content, Generative AI) before submitting store page or build for review.
@@ -220,6 +363,7 @@ rules:
     rule: All 3 sections complete before review submission; some answers locked after approval (contact Steam Support).
     source_doc: https://partner.steamgames.com/doc/gettingstarted/contentsurvey
     quote: The content survey contains three primary sections that all must be completed prior to submitting the game to the Review Process
+    steamworks_checklist: Your Store Presence / Content Survey
   - id: mature_content_disclosure
     title: Mature content disclosure
     description: Disclose all mature/adult content, including content shipped in builds but not reachable.
@@ -270,6 +414,7 @@ rules:
     rule: At least 5 tags before launch (required); up to 20 recommended (only top 20 shown). Tag Wizard needs Edit App Metadata + Publish App Changes To Steam.
     source_doc: https://partner.steamgames.com/doc/store/tags
     quote: We began requiring at least 5 tags be applied to a title before its launch on Steam, but we recommend you add up to 20.
+    steamworks_checklist: Your Store Presence / Store Page Descriptive Tags
   - id: supported_languages_declared
     title: Supported languages declared
     description: Declare in-game language support (Interface / Full Audio / Subtitles) per language.
@@ -284,6 +429,7 @@ rules:
     quote: There are options for Subtitles, Interface, or Full Audio for each language.
     notes: No doc explicitly states that at least one supported language is mandatory for review. Searched store/localization, store/page, store/review_process, store/releasing.
     unverified: true
+    steamworks_checklist: Your Store Presence / Basic Info
   - id: store_page_localization
     title: Store page localization
     description: Localize store page text/images/trailers; both store and in-game localization are ideal.
@@ -312,6 +458,7 @@ rules:
     rule: Must match OSes the build actually launches on (see build review).
     source_doc: https://partner.steamgames.com/doc/store/application/platforms
     quote: Edit your store page and check the appropriate operating system boxes on the Basic Info tab.
+    steamworks_checklist: Your Store Presence / Basic Info
   - id: system_requirements
     title: System requirements
     description: Enter system requirements for each supported OS.
@@ -325,6 +472,7 @@ rules:
     source_doc: https://partner.steamgames.com/doc/store/application/platforms
     quote: Then scroll down and enter the corresponding system requirements.
     notes: Documented as a release step for each platform; whether the checklist hard-blocks without it is not stated.
+    steamworks_checklist: Your Store Presence / System Requirements
   - id: release_date_set
     title: Release date set
     description: Set an exact intended release date (hidden) plus a public display format.
@@ -339,6 +487,7 @@ rules:
     rule: 'Display options: exact date, month+year, quarter, year, or "Coming Soon". Lists sort by the last day of the shown range.'
     source_doc: https://partner.steamgames.com/doc/store/release_dates
     quote: You'll need to set an exact intended release date, which is not directly visible to players.
+    steamworks_checklist: Your Store Presence / Planned Release Date
   - id: early_access_questionnaire
     title: Early access questionnaire
     description: Early Access titles must tick the Early Access box and answer every Early Access question.
@@ -360,21 +509,6 @@ rules:
     rule: All Early Access questions answered.
     source_doc: https://partner.steamgames.com/doc/store/review_process
     quote: For titles that are releasing in Early Access, you will need to answer all the questions in the Early Access section.
-  - id: proposed_pricing_submitted
-    title: Proposed pricing submitted
-    description: Proposed pricing is reviewed together with the store page when marking ready for review.
-    severity: required
-    check:
-      kind: confirmed
-      fields:
-        - pricing.submitted
-    when:
-      - field: pricing.free_to_play
-        op: is_not_true
-    execution_mode: MANUAL
-    where: App landing page > Store packages, pricing, & release dates > package > Propose Pricing
-    source_doc: https://partner.steamgames.com/doc/store/releasing
-    quote: ready for your store page and proposed pricing to be reviewed
   - id: mark_store_ready_for_review
     title: Mark store ready for review
     description: Click "Mark As Ready For Review" for the store presence; Valve reviews and sets "Ready for release".
@@ -442,3 +576,78 @@ rules:
     fallback_mode: ARTIFACT
     where: Edit Store Page > Description
     origin: tool
+  - id: cloud_saves
+    title: Cloud saves
+    description: Steam Cloud keeps save files in sync across PCs.
+    severity: recommended
+    check:
+      kind: confirmed
+      fields:
+        - apps.main.cloud.enabled
+    execution_mode: BROWSER
+    fallback_mode: MANUAL
+    where: Steamworks Settings > Steam Cloud
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: Allows user save files to follow them across PCs
+    steamworks_checklist: Your Store Presence / Cloud Saves
+  - id: cloud_file_quota
+    title: Steam Cloud file quota
+    description: With Steam Cloud on, set the bytes each user may store.
+    severity: required
+    check:
+      kind: present
+      fields:
+        - apps.main.cloud.byte_quota
+    when: &id003
+      - field: apps.main.cloud.enabled
+        op: is_true
+    execution_mode: BROWSER
+    fallback_mode: MANUAL
+    where: Steamworks Settings > Steam Cloud
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: You must set a quota for steam cloud files
+    notes: Shown on the checklist only once Steam Cloud is enabled for the app.
+    steamworks_checklist: Your Store Presence / File Quota
+  - id: cloud_file_limit
+    title: Steam Cloud file limit
+    description: With Steam Cloud on, set how many files each user may store.
+    severity: required
+    check:
+      kind: present
+      fields:
+        - apps.main.cloud.file_quota
+    when: *id003
+    execution_mode: BROWSER
+    fallback_mode: MANUAL
+    where: Steamworks Settings > Steam Cloud
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: You you must define the maximum number of files cloud can store for a user
+    notes: Shown on the checklist only once Steam Cloud is enabled for the app. (The double "You" is Valve's.)
+    steamworks_checklist: Your Store Presence / File Limit
+  - id: steam_achievements
+    title: Steam achievements
+    description: Achievements for the game.
+    severity: recommended
+    check:
+      kind: min_items
+      field: achievements
+      min: 1
+    execution_mode: BROWSER
+    fallback_mode: ARTIFACT
+    where: Steamworks Settings > Stats & Achievements
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: Add achievements to your game
+    steamworks_checklist: Your Store Presence / Steam Achievements
+  - id: accessibility_features
+    title: Accessibility features
+    description: Go through the Accessibility Features wizard (store.accessibility lists what the game has, or "none").
+    severity: recommended
+    check:
+      kind: min_items
+      field: store.accessibility
+      min: 1
+    execution_mode: MANUAL
+    where: Edit Store Page > Basic Info > Accessibility
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: If your app has any accessibility features, please complete the Accessibility Features Wizard in the Edit Store, Basic Info tab.
+    steamworks_checklist: Your Store Presence / Accessibility features

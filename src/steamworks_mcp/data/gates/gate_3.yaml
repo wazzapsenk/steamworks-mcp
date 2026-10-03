@@ -58,26 +58,15 @@ rules:
     rule: No self-service date change within 14 days of the specified date (once Coming Soon is live).
     source_doc: https://partner.steamgames.com/doc/store/release_dates
     quote: You can change the release date of your game up to two weeks prior to your specified date.
-  - id: pricing_approved
-    title: Pricing approved
-    description: Initial pricing must be reviewed/approved by Valve; check every currency carefully.
-    severity: required
-    check: &id001
-      kind: checklist
-    when: &id002
-      - field: pricing.free_to_play
-        op: is_not_true
-    execution_mode: MANUAL
-    where: Package landing page > Propose Pricing
-    rule: 'Lead time: usually 1-2 business days.'
-    source_doc: https://partner.steamgames.com/doc/store/pricing
-    quote: Initial pricing as well as proposed pricing adjustments will be reviewed by Valve and are usually processed within one or two business days.
   - id: price_all_currencies
     title: Price all currencies
     description: Enter a price in every supported currency, otherwise users of a missing currency cannot buy.
     severity: recommended
-    check: *id001
-    when: *id002
+    check: &id002
+      kind: checklist
+    when: &id001
+      - field: pricing.free_to_play
+        op: is_not_true
     execution_mode: MANUAL
     where: Package landing page > Propose Pricing
     rule: 37 currencies / 4 region groups; conversion helpers available.
@@ -91,7 +80,7 @@ rules:
       kind: range
       field: pricing.base_price_usd
       min: 0.99
-    when: *id002
+    when: *id001
     execution_mode: MANUAL
     where: Package landing page > Propose Pricing
     rule: '>= $0.99 USD tier; minimum transaction price ~ $0.49.'
@@ -101,7 +90,7 @@ rules:
     title: Store package ready
     description: Standard store package exists, has pricing, and carries the intended public name (create standard packages if missing).
     severity: required
-    check: *id001
+    check: *id002
     execution_mode: MANUAL
     where: App landing page > Store packages, pricing, & release dates; All Associated Packages, DLC, Demos And Tools > Create Standard Packages
     source_doc: https://partner.steamgames.com/doc/store/page
@@ -148,7 +137,7 @@ rules:
     title: Release app button
     description: Release manually with the green "Release App" button -> review summary -> "Publish Now" -> confirm "Release Now". Approved titles never auto-release.
     severity: required
-    check: *id001
+    check: *id002
     execution_mode: MANUAL
     where: App landing page > Release App
     rule: 'Release actions: publish store package, start launch discount, set playable/released, release timestamp NOW. Needs release_permissions.'

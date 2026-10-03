@@ -21,6 +21,7 @@ from steamworks_mcp.execute.api import PartnerApi, SteamApiError, plan_leaderboa
 from steamworks_mcp.execute.browser import partner as P
 from steamworks_mcp.execute.browser.transport import NotLoggedInError, Transport
 from steamworks_mcp.export import vdf
+from steamworks_mcp.gates.engine import gate_files
 from steamworks_mcp.manifest.io import atomic_write
 from steamworks_mcp.project import Project
 
@@ -28,7 +29,7 @@ APPS = ("main", "demo", "playtest")
 API_SECTIONS = ("leaderboards", "build")
 BROWSER_SECTIONS = sync.SECTIONS
 SECTIONS = BROWSER_SECTIONS + API_SECTIONS
-INSPECT = ("builds", "leaderboards", "achievement_schema", "snapshots", "pending", *BROWSER_SECTIONS)
+INSPECT = ("builds", "leaderboards", "achievement_schema", "snapshots", "pending", "checklist", *BROWSER_SECTIONS)
 
 TransportFactory = Callable[[], Awaitable[Transport]]
 
@@ -392,6 +393,18 @@ class Executor:
             stats = self.api().schema(appid).get("availableGameStats") or {}
             return {"appid": appid, "achievements": stats.get("achievements") or [], "stats": stats.get("stats") or []}
         t = await self.transport(f"steamworks_inspect({what})")
+        if what == "checklist":
+            items = await P.read_checklists(t, appid)
+            rules = {r.steamworks_checklist: r.id for g in gate_files() for r in g.rules if r.steamworks_checklist}
+            for item in items:
+                rule = rules.get(f"{item['checklist']} / {item['item']}")
+                if rule:
+                    item["gate_rule"] = rule
+            return {
+                "appid": appid,
+                "items": items,
+                "note": "Steamworks' own release checklists (read-only). gate_rule names the matching gap_report rule.",
+            }
         if what == "pending":
             pending = await P.pending_changes(t, appid)
             return {

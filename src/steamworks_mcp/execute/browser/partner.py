@@ -5,6 +5,7 @@ All values use Steamworks' own vocabulary; :mod:`steamworks_mcp.execute.sync` ma
 
 from __future__ import annotations
 
+import html
 import json
 import re
 from typing import Any
@@ -431,6 +432,51 @@ async def pending_changes(t: Transport, appid: int) -> dict[str, Any]:
         "sections": sections,
         "changed_sections": sorted(k for k, v in sections.items() if v["changed"]),
     }
+
+
+# ---------------------------------------------------------------------------------------------------- checklists
+
+PANEL = re.compile(r'<div class="panel checklist[^"]*">(.*?)(?=<div class="panel |\Z)', re.S)
+
+
+def _text(fragment: str) -> str:
+    return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", fragment))).strip()
+
+
+def parse_checklists(page: str) -> list[dict[str, Any]]:
+    """The release checklists of an app's landing page ("Your Store Presence", "Your Game Build"): every item with
+    its section, status (complete, incomplete, suggested) and Valve's explanation."""
+    items = []
+    for panel in PANEL.finditer(page):
+        body = panel.group(1)
+        title = re.search(r"<h1[^>]*>(.*?)</h1>", body, re.S)
+        name = _text(title.group(1)) if title else ""
+        for part in re.split(r'<div class="sectionTitle_small">', body)[1:]:
+            section = _text(part.split("</div>")[0]).replace("(?)", "").strip()
+            for status, row in re.findall(r'<tr class="checklist_(\w+)">(.*?)</tr>', part, re.S):
+                tip = re.search(r'data-tooltip-text="([^"]*)"', row)
+                link = re.search(r'href="(https://partner\.steamgames\.com[^"]+)"', row)
+                items.append(
+                    {
+                        "checklist": name,
+                        "section": section,
+                        "item": _text(re.sub(r'<a class="ttip.*?</a>', "", row, flags=re.S))
+                        .replace("\u2714", "")
+                        .strip(),
+                        "status": status,
+                        "explanation": html.unescape(tip.group(1)) if tip else "",
+                        "link": html.unescape(link.group(1)) if link else "",
+                    }
+                )
+    return items
+
+
+async def read_checklists(t: Transport, appid: int) -> list[dict[str, Any]]:
+    page = _checked(await t.get(f"/apps/landing/{appid}"), "app landing page").text
+    items = parse_checklists(page)
+    if not items:
+        raise FormatError("The app landing page changed (release checklists not found).")
+    return items
 
 
 def item_from_url(url: str) -> str | None:

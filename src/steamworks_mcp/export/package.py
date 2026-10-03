@@ -210,6 +210,8 @@ def render_checklist(
             L.append(f"- [{tick}] **{r.rule.title}**{where} `({r.mode})`")
             if r.status not in DONE:
                 L.append(f"  {r.rule.description}")
+                if r.rule.steamworks_checklist:
+                    L.append(f"  Steamworks checklist: {r.rule.steamworks_checklist}")
                 if r.message and not (r.rule.check.kind == "asset" and r.status == "todo"):
                     L.append(f"  Now: {r.message}")
                 if r.missing:

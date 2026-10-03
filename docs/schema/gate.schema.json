@@ -26,6 +26,30 @@
       "title": "Answered",
       "type": "object"
     },
+    "AnyPresent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "any_present",
+          "title": "Kind",
+          "type": "string"
+        },
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "title": "Fields",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "fields"
+      ],
+      "title": "AnyPresent",
+      "type": "object"
+    },
     "AssetCheck": {
       "additionalProperties": false,
       "properties": {
@@ -208,6 +232,7 @@
           "discriminator": {
             "mapping": {
               "answered": "#/$defs/Answered",
+              "any_present": "#/$defs/AnyPresent",
               "asset": "#/$defs/AssetCheck",
               "checklist": "#/$defs/Checklist",
               "confirmed": "#/$defs/Confirmed",
@@ -225,6 +250,9 @@
           "oneOf": [
             {
               "$ref": "#/$defs/Present"
+            },
+            {
+              "$ref": "#/$defs/AnyPresent"
             },
             {
               "$ref": "#/$defs/Answered"
@@ -385,6 +413,18 @@
           "default": false,
           "title": "Unverified",
           "type": "boolean"
+        },
+        "steamworks_checklist": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Steamworks Checklist"
         }
       },
       "required": [
