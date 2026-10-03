@@ -52,7 +52,7 @@ build-backend = "hatchling.build"
 packages = ["src/steamworks_mcp"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["legacy", "tests/fixtures", "spikes", ".steamworks-mcp"]
+exclude = ["tests/fixtures", "spikes", ".steamworks-mcp"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -61,7 +61,6 @@ addopts = "-q"
 [tool.ruff]
 line-length = 120
 target-version = "py311"
-extend-exclude = ["legacy"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "PTH", "C4"]
@@ -70,9 +69,9 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["src", "tests"]
+files = ["src", "tests", "scripts"]
 plugins = ["pydantic.mypy"]
-exclude = ["^legacy/", "^spikes/"]
+exclude = ["^spikes/"]
 
 [[tool.mypy.overrides]]
 module = ["playwright.*"]  # the optional [browser] extra

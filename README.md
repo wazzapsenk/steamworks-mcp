@@ -11,9 +11,8 @@ client.
 
 > Not affiliated with or endorsed by Valve. "Steam" and "Steamworks" are trademarks of Valve Corporation.
 
-> **Status: 0.2 in development.** This is the Python rewrite. The TypeScript v0.1 still lives in
-> [`legacy/ts/`](legacy/ts/) until the new execution layer has been checked on a real demo or playtest app; it also
-> holds the recorder for the Steamworks test fixtures.
+> **Status: 0.2 in development.** This is the Python rewrite of the TypeScript v0.1, which stays in the git
+> history.
 
 ## What it does
 
@@ -297,8 +296,9 @@ uv run python scripts/gen_docs.py --check   # docs/CAPABILITIES.md and docs/sche
 ```
 
 The BROWSER-mode tests replay real, sanitized Steamworks traffic from
-[`tests/fixtures/steamworks/`](tests/fixtures/steamworks/), which also explains how to re-record it. A test checks
-that no fixture or tracked file contains secrets or private terms.
+[`tests/fixtures/steamworks/`](tests/fixtures/steamworks/). `scripts/live/record.py` re-records it and
+`scripts/live/sanitize.py` turns the raw recordings into fixtures; a test checks that no fixture or tracked file
+contains secrets or private terms. `scripts/live/validate.py` checks a live app against the whole write protocol.
 
 Reference data: [`docs/SCHEMA.md`](docs/SCHEMA.md) (the manifest), `src/steamworks_mcp/data/` (gates, store rules,
 asset specs, events, style guides).

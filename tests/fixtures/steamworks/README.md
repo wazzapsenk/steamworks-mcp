@@ -28,23 +28,25 @@ launch-option delete reloads the page). Those entries say so in `response.conten
 | `ffff…NNNN` (same length) | any hex id of 24+ chars: session id, keys, CDN image hashes |
 | `REDACTED` | cookie, token and key values |
 | `ExampleGame` / `Redacted` | app names / other local terms from `SANITIZE_DENYLIST` |
-| `[turkish text removed]` | Turkish sample text (this repository is English-only) |
+| `[turkish text removed]` | Turkish sample text, replaced in the first recordings (no longer done: sample text may be in any language) |
 
 Cookie, `Set-Cookie` and `Authorization` headers are removed. Large store editor pages keep their body only in
 `store/read.har`.
 
 ## Re-recording
 
-The recorder still uses the TypeScript v0.1 browser code:
-
 ```bash
-cd legacy/ts
-npx tsx scripts/live/record.ts <appId> list      # steps
-npx tsx scripts/live/record.ts <appId> sprint    # everything, cleanup last
-npx tsx scripts/live/sanitize.ts <appId>         # raw recordings -> this folder
-cd ../..
+uv sync --extra browser
+uv run python scripts/live/record.py <appId> list      # steps
+uv run python scripts/live/record.py <appId> sprint    # everything, cleanup last
+uv run python scripts/live/sanitize.py <appId>         # raw recordings -> this folder
 uv run pytest tests/test_fixture_sanitization.py
 ```
 
 Use a test app or a playtest, never a released game. Raw recordings stay in `.steamworks-mcp/recordings/` (ignored
-by git). The recorder never publishes, prepares or reverts anything, and it only deletes rows it created itself.
+by git). The recorder sends everything through the BROWSER mode's own code and guard, so it never publishes,
+prepares or reverts anything, and it only deletes rows it created itself. Tests that check recorded values (for
+example the quota in `cloud/read`) need updating after a re-recording on another app.
+
+The recordings here were made with the first, TypeScript recorder; `sanitize.py` reproduces them byte for byte
+from the same raw files (apart from the Turkish sample text, which it no longer replaces).

@@ -3,11 +3,11 @@
 Two kinds of checks:
 
 * Generic patterns that work on any machine: cookie headers, session ids / keys / hashes that were not replaced
-  by placeholders, SteamID64s, e-mail addresses, token values, Turkish sample text, antivirus script injections.
+  by placeholders, SteamID64s, e-mail addresses, token values, antivirus script injections.
 * A local denylist: ``SANITIZE_DENYLIST`` in ``.env`` (account name, persona, e-mail, studio and app names, local
   paths). The list never leaves the developer's machine; without it only the generic checks run.
 
-The fixtures are produced by ``legacy/ts/scripts/live/sanitize.ts`` from raw recordings that never enter the repository.
+The fixtures are produced by ``scripts/live/sanitize.py`` from raw recordings that never enter the repository.
 """
 
 from __future__ import annotations
@@ -22,10 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "steamworks"
 
 # Files that legitimately carry the author's name (license and package metadata).
-AUTHOR_METADATA = {"LICENSE", "package.json", "package-lock.json", "pyproject.toml"}
-
-# Case-sensitive on purpose: with IGNORECASE, Python folds "ı" to "i" and would match every "i".
-TURKISH_CHARS = re.compile(r"[ıİşŞğĞ]|\\u0(?:131|130|15[fF]|15[eE]|11[fF]|11[eE])|&#(?:305|304|351|350|287|286);")
+AUTHOR_METADATA = {"LICENSE", "pyproject.toml"}
 
 FIXTURE_PATTERNS: dict[str, re.Pattern[str]] = {
     "cookie header": re.compile(r'"name":\s*"(cookie|set-cookie)"', re.IGNORECASE),
@@ -38,7 +35,6 @@ FIXTURE_PATTERNS: dict[str, re.Pattern[str]] = {
     "partner id": re.compile(
         r'(?:partnerid=|g_nPrimaryPublisher = |data-publisherid=\\?"|publisherid=\\?")(?!900000\b|0\b)\d'
     ),
-    "turkish text": TURKISH_CHARS,
     "antivirus injection": re.compile(r"kaspersky", re.IGNORECASE),
 }
 

@@ -258,7 +258,7 @@ def test_state_and_drafts_persist(tmp_path: Path) -> None:
 
 
 def test_v01_manifest_imports() -> None:
-    old = YAML(typ="safe").load((ROOT / "legacy/ts/examples/demo-game/steamworks.yaml").read_text(encoding="utf-8"))
+    old = YAML(typ="safe").load((ROOT / "tests/fixtures/v01_manifest.yaml").read_text(encoding="utf-8"))
     new = Manifest.model_validate(from_v01(old))
     assert new.game.name == old["name"]
     assert [a.id for a in new.achievements] == [a["id"] for a in old["achievements"]]
