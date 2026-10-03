@@ -22,11 +22,14 @@ permissions:
 areas:
   - id: build_upload
     name: Build upload (depots, app_build VDF)
-    api: {status: unverified, how: "steamcmd / SteamPipe with the builder account"}
+    api: {status: verified, how: "steamcmd / SteamPipe with the builder account"}
     browser: {status: never}
     default_mode: API
     fallback_mode: ARTIFACT
-    notes: Without steamcmd configured, the tool writes the app_build / depot_build VDFs and the command to run.
+    notes: >-
+      Uploaded a test build with the generated VDFs and a cached steamcmd login (nothing set live; the steamcmd
+      output itself is not kept as a fixture). Without steamcmd
+      configured, the tool writes the app_build / depot_build VDFs and the command to run.
   - id: set_build_live
     name: Set a build live on a branch
     api: {status: unverified, how: "ISteamApps/SetAppBuildLive (beta branches)"}
@@ -43,8 +46,8 @@ areas:
     default_mode: API
     fallback_mode: MANUAL
     notes: >-
-      Recorded on an app without builds only: both calls then answer HTTP 500. The answer for an app with builds is
-      not recorded yet.
+      GetAppBuilds is recorded with and without builds. GetAppBetas answered HTTP 500 on unreleased apps, so the
+      branch list is not verified.
   - id: leaderboards
     name: Leaderboards
     api: {status: verified, how: "ISteamLeaderboards/FindOrCreateLeaderboard, GetLeaderboardsForGame, DeleteLeaderboard"}

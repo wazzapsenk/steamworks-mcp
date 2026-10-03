@@ -173,6 +173,10 @@ async def api_read(c: Ctx) -> str:
         "betas": lambda: f"{len(api.betas(c.appid))} keys",
         "leaderboards": lambda: f"{len(api.leaderboards(c.appid))} boards",
     }
+    return each(reads)
+
+
+def each(reads: dict[str, Callable[[], Any]]) -> str:
     out = []
     for name, read in reads.items():
         try:
@@ -180,6 +184,17 @@ async def api_read(c: Ctx) -> str:
         except SteamApiError as exc:
             out.append(f"{name}: {exc}")
     return " | ".join(out)
+
+
+@step("api/builds", "GetAppBuilds and GetAppBetas once the app has a build (upload one first; nothing is set live)")
+async def api_builds(c: Ctx) -> str:
+    api = c.api()
+    return each(
+        {
+            "builds": lambda: f"{len(api.builds(c.appid, 5).get('builds') or {})} builds",
+            "betas": lambda: api.betas(c.appid),
+        }
+    )
 
 
 @step("api/public_unkeyed", "Public endpoints without any key (what anyone can see)")

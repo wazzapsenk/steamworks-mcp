@@ -1,0 +1,49 @@
+[
+  {
+    "method": "GET",
+    "url": "https://partner.steam-api.com/ISteamApps/GetAppBuilds/v1/",
+    "query": {
+      "key": "<redacted>",
+      "appid": "1000000",
+      "count": "5"
+    },
+    "status": 200,
+    "response": {
+      "response": {
+        "builds": {
+          "4000001": {
+            "BuildID": 4000001,
+            "CreationTime": 1791026643,
+            "Description": "BuildTest (main)",
+            "AccountIDCreator": 100000002,
+            "depots": {
+              "3000001": {
+                "DepotID": 3000001,
+                "DepotVersionGID": "5000001",
+                "TotalOriginalBytes": "43",
+                "TotalCompressedBytes": "96"
+              }
+            }
+          }
+        },
+        "result": 1,
+        "message": ""
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "url": "https://partner.steam-api.com/ISteamApps/GetAppBetas/v1/",
+    "query": {
+      "key": "<redacted>",
+      "appid": "1000000"
+    },
+    "status": 500,
+    "response": {
+      "response": {
+        "result": 42,
+        "message": "Couldn't get app info for app 1000000"
+      }
+    }
+  }
+]

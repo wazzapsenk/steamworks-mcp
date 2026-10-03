@@ -58,7 +58,15 @@ async def read_store_localization(t: Transport, item_id: str) -> dict[str, Any]:
 
 
 async def upload_store_localization(t: Transport, appid: int, data: dict[str, Any]) -> None:
-    raw = json.dumps(data, ensure_ascii=False).encode("utf-8")
+    """Empty values are dropped: Steamworks clears a field whose value in the import is empty."""
+    languages = {
+        lang: kept
+        for lang, fields in (data.get("languages") or {}).items()
+        if (kept := {k: v for k, v in (fields or {}).items() if str(v or "").strip()})
+    }
+    if not languages:
+        return
+    raw = json.dumps({**data, "languages": languages}, ensure_ascii=False).encode("utf-8")
     _checked(await t.upload_store_localization(appid, "store_localization.json", raw), "store localization upload")
 
 

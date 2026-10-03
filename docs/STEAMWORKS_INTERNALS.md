@@ -103,6 +103,10 @@ What it showed beyond the recordings:
 - **Partial uploads work.** A file with only `languages.english["app[content][short_description]"]` changed that one
   field; About and every other language stayed as they were. (`store/write`, `store/readback`,
   `uploads/store_loc_upload.json`)
+- **An empty value clears the field.** A file with `"app[content][short_description]": ""` emptied the English short
+  description (tested by hand on a test app, then restored). The tool drops empty values before every upload, so
+  it never clears a field.
+- The export also carries fields from other tabs, such as `app[content][sysreqs][windows][min][osversion]`.
 - The page loads `IStoreCatalogService/GetDevPageLinks` from `api.steampowered.com` with a short-lived
   `access_token`. Treat it like a cookie: never log it.
 
@@ -213,13 +217,16 @@ Leaderboards (`ISteamLeaderboards`):
 
 Builds and the schema:
 
-- `GetAppBuilds/v1` and `GetAppBetas/v1` answered HTTP 500 on an app whose SteamPipe > Builds page said no builds
-  had been created yet:
-  - `GetAppBuilds`: `{"response": {"result": 2, "message": "Failed to query app builds"}}`
-  - `GetAppBetas`: `{"response": {"result": 42, "message": "Couldn't get app info for app …"}}`
-
-  The answer for an app that has builds is not recorded yet. `GetAppDepotVersions/v1` answered normally on the same
-  app (the tool does not use it).
+- `GetAppBuilds/v1` (`appid`, `count`) answers
+  `{"response": {"builds": {"<BuildID>": {BuildID, CreationTime, Description, AccountIDCreator, depots:
+  {"<DepotID>": {DepotID, DepotVersionGID, TotalOriginalBytes, TotalCompressedBytes}}}}, "result": 1}}`
+  (`api/builds`, after one test build was uploaded with steamcmd and set live nowhere). On an app without any build
+  it answers HTTP 500 `{"response": {"result": 2, "message": "Failed to query app builds"}}` (`api/read`).
+- `GetAppBetas/v1` answered HTTP 500 `{"response": {"result": 42, "message": "Couldn't get app info for app …"}}` on
+  two unreleased apps, with and without a build, so its success shape is not recorded.
+- `GetAppDepotVersions/v1` and `GetPartnerAppListForWebAPIKey/v2` (the apps the key reaches) answered normally; the
+  tool does not use them.
+- steamcmd prints the builder account's id (`Logging in user '…' [U:1:…]`); the tool hides it with the name.
 - `GetSchemaForGame/v2` returns the published schema only: `{"game": {}}` while nothing is published.
 
 Builds going live (from Valve's documentation, not recorded):

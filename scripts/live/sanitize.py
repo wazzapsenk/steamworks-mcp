@@ -11,6 +11,8 @@ step) for every raw step; other fixtures in the output folder are left alone. Wh
 - the recorded app id -> 1000000, its store item id -> 2000000, other app ids of the account -> 1000001+,
   the partner id -> 900000
 - SteamID64s -> 76561190000000001, the derived 32-bit account id -> 100000001
+- GetAppBuilds: the uploader's account id -> 100000002, depot ids -> 3000001+, build ids -> 4000001+, depot
+  manifest ids -> 5000001+
 - SANITIZE_DENYLIST terms (from .env): app names -> "ExampleGame", everything else -> "Redacted"
 - e-mail addresses -> user@example.com; antivirus script injections (removed)
 
@@ -76,6 +78,16 @@ class Replacements:
         for s64 in dict.fromkeys(re.findall(r"7656119\d{10}", joined)):
             self.numbers.append((digits(s64), "76561190000000001"))
             self.numbers.append((digits(str(int(s64) - 76561197960265728)), "100000001"))
+        # GetAppBuilds: the uploader's account id, and depot, build and manifest ids that point back at the app
+        for pattern, first in (
+            (r'AccountIDCreator\\?"\s*:\s*(\d+)', 100000002),
+            (r'DepotID\\?"\s*:\s*(\d+)', 3000001),
+            (r'BuildID\\?"\s*:\s*(\d+)', 4000001),
+            (r'DepotVersionGID\\?"\s*:\s*\\?"(\d+)', 5000001),
+        ):
+            for i, found in enumerate(dict.fromkeys(re.findall(pattern, joined))):
+                if not any(p.search(found) for p, _ in self.numbers):
+                    self.numbers.append((digits(found), str(first + i)))
 
         app_names = {str(a["name"]).lower() for a in apps}
         self.terms: list[tuple[re.Pattern[str], str]] = []

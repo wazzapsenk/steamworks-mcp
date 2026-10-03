@@ -395,7 +395,9 @@ def plan_store(
         cur = current["languages"].get(lang)
         cur_fields = cur if isinstance(cur, dict) else {}
         for field, text in fields.items():
-            if (force and text) or normalize_store_text(cur_fields.get(field, "")) != normalize_store_text(text):
+            if not (text or "").strip():
+                continue  # an empty value in the import clears the field on Steam; empty fields are never written
+            if force or normalize_store_text(cur_fields.get(field, "")) != normalize_store_text(text):
                 changes.setdefault(lang, {})[field] = text
                 before.setdefault(lang, {})[field] = cur_fields.get(field, "")
     if not changes:

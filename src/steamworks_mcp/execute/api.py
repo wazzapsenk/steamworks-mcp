@@ -5,8 +5,8 @@ account's name only: its password and Steam Guard code are never handled here (l
 keeps the session).
 
 Parameters follow partner.steamgames.com/doc/webapi/ISteamLeaderboards and /ISteamApps. The leaderboard calls were
-checked against a real key on a test app (docs/STEAMWORKS_INTERNALS.md); the response shapes of GetAppBuilds and
-GetAppBetas were not (that app had no builds yet).
+checked against a real key on a test app, and GetAppBuilds with and without a build (docs/STEAMWORKS_INTERNALS.md).
+GetAppBetas never answered on an unreleased app, so its shape is still unverified.
 """
 
 from __future__ import annotations
@@ -23,6 +23,10 @@ DISPLAY_TYPES = {"numeric": "Numeric", "seconds": "Seconds", "milliseconds": "Mi
 """steamworks.yaml display types -> the Web API's names. Not the SDK's (TimeSeconds, TimeMilliSeconds): Steam accepts
 those too, but stores an empty display type."""
 NO_BUILDS = "Steam answers this way for an app without any build yet (SteamPipe > Builds is empty)."
+NO_BETAS = (
+    "Steam answered this way on two unreleased apps, with and without an uploaded build; the branches are listed in "
+    "Steamworks under SteamPipe > Builds."
+)
 
 
 class SteamApiError(RuntimeError):
@@ -80,12 +84,12 @@ class PartnerApi:
             raise SteamApiError(f"{path}: Steam answered result {out.get('result')} (1 = OK) for {params.get('name')}.")
         return dict(out)
 
-    def _builds_call(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
+    def _builds_call(self, path: str, params: dict[str, Any], hint: str) -> dict[str, Any]:
         try:
             return dict(self._call("GET", path, params).get("response") or {})
         except SteamApiError as exc:
             if exc.status == 500:
-                raise SteamApiError(f"{exc} - {NO_BUILDS}", exc.status) from None
+                raise SteamApiError(f"{exc} - {hint}", exc.status) from None
             raise
 
     # reads
@@ -97,10 +101,11 @@ class PartnerApi:
         )
 
     def builds(self, appid: int, count: int = 10) -> dict[str, Any]:
-        return self._builds_call("/ISteamApps/GetAppBuilds/v1/", {"appid": appid, "count": count})
+        """{"builds": {"<BuildID>": {BuildID, CreationTime, Description, AccountIDCreator, depots: {...}}}, ...}"""
+        return self._builds_call("/ISteamApps/GetAppBuilds/v1/", {"appid": appid, "count": count}, NO_BUILDS)
 
     def betas(self, appid: int) -> dict[str, Any]:
-        return self._builds_call("/ISteamApps/GetAppBetas/v1/", {"appid": appid})
+        return self._builds_call("/ISteamApps/GetAppBetas/v1/", {"appid": appid}, NO_BETAS)
 
     def leaderboards(self, appid: int) -> list[dict[str, Any]]:
         """Every board of the app. Cached by Steam: a board created or deleted a moment ago can be missing or still
@@ -220,6 +225,7 @@ def plan_leaderboards(
 # ---------------------------------------------------------------------------------------------------- steamcmd
 
 SECRET_LINES = re.compile(r"(?im)^.*(password|passwd|auth code|two-factor|guard code|token|ssfn).*$")
+STEAM_IDS = re.compile(r"\[U:1:\d+\]|\b7656119\d{10}\b")
 
 
 def run_steamcmd(steamcmd: str, username: str, script: Path, timeout: int = 3600) -> dict[str, Any]:
@@ -240,6 +246,7 @@ def run_steamcmd(steamcmd: str, username: str, script: Path, timeout: int = 3600
     out = proc.stdout + proc.stderr
     needs_login = proc.returncode != 0 and bool(re.search(r"password|Steam Guard|two-factor|Login Failure", out, re.I))
     out = SECRET_LINES.sub("<line hidden>", out).replace(username, "<builder account>")
+    out = STEAM_IDS.sub("<steam id>", out)  # steamcmd prints the builder's id: "Logging in user ... [U:1:123]"
     build = re.search(r"BuildID\s+(\d+)", out)
     return {
         "exit_code": proc.returncode,

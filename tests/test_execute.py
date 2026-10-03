@@ -376,6 +376,26 @@ def test_store_text_comparison_ignores_paragraph_tags() -> None:
     assert sync.normalize_store_text("[p]One[/p][p]Two[/p]") == sync.normalize_store_text("One\n\nTwo")
 
 
+async def test_store_text_never_sends_an_empty_value() -> None:
+    """Recorded on a test app: an empty value in the import clears the field on Steam."""
+    short, about = "app[content][short_description]", "app[content][about]"
+    current = {"languages": {"english": {short: "Old text", about: "Old about"}}}
+    assert sync.plan_store(APP, "2000000", {"english": {short: "", about: "  "}}, current, force=True) == []
+    sent: list[bytes] = []
+
+    class Recorder:
+        async def upload_store_localization(self, appid: int, name: str, data: bytes) -> Response:
+            sent.append(data)
+            return Response(200, "", '{"success": 1}')
+
+    await P.upload_store_localization(
+        Recorder(),  # type: ignore[arg-type]
+        APP,
+        {"itemid": "2000000", "languages": {"english": {short: "New", about: ""}, "german": {short: ""}}},
+    )
+    assert [json.loads(d)["languages"] for d in sent] == [{"english": {short: "New"}}]
+
+
 # ------------------------------------------------------------------------------------------------ apply: the protocol
 
 CLOUD = {
@@ -640,12 +660,21 @@ def recorded_api(step: str) -> tuple[PartnerApi, list[dict[str, Any]]]:
 def test_api_reads_as_recorded_on_an_app_without_builds() -> None:
     api, left = recorded_api("api/read")
     assert api.schema(APP) == {}  # nothing published yet
-    reads: list[Callable[[], dict[str, Any]]] = [lambda: api.builds(APP, 5), lambda: api.betas(APP)]
-    for read in reads:
-        with pytest.raises(SteamApiError, match=r"HTTP 500.*without any build yet") as exc:
-            read()
-        assert exc.value.status == 500
+    with pytest.raises(SteamApiError, match=r"HTTP 500.*without any build yet") as exc:
+        api.builds(APP, 5)
+    assert exc.value.status == 500
+    with pytest.raises(SteamApiError, match=r"HTTP 500.*SteamPipe > Builds"):
+        api.betas(APP)
     assert api.leaderboards(APP) == [] and left == []
+
+
+def test_api_lists_builds_as_recorded() -> None:
+    api, left = recorded_api("api/builds")
+    build = api.builds(APP, 5)["builds"]["4000001"]
+    assert build["Description"] == "BuildTest (main)" and list(build["depots"]) == ["3000001"]
+    with pytest.raises(SteamApiError, match="with and without an uploaded build"):
+        api.betas(APP)  # still HTTP 500 on an unreleased app that has a build
+    assert left == []
 
 
 def test_leaderboard_calls_as_recorded() -> None:
@@ -740,7 +769,8 @@ def test_steamcmd_never_gets_a_password_and_hides_secrets(tmp_path: Path, monkey
 
     def fake_run(cmd: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
         calls.append(cmd)
-        log = "Logging in user 'builder_acct'\nCached credentials found.\nBuildID 4242\n"
+        log = "Logging in user 'builder_acct' [U:1:123456] to Steam Public...OK\n"
+        log += "Cached credentials found.\nBuildID 4242\n"
         log += "Successfully finished AppID 1000000 build\n"
         return subprocess.CompletedProcess(cmd, 0, log + "Using password token xyz\n", "")
 
@@ -749,6 +779,7 @@ def test_steamcmd_never_gets_a_password_and_hides_secrets(tmp_path: Path, monkey
     assert calls == [[str(exe), "+login", "builder_acct", "+run_app_build", str(script), "+quit"]]
     assert out["success"] is True and out["build_id"] == 4242
     assert "builder_acct" not in out["log_tail"] and "token xyz" not in out["log_tail"]
+    assert "123456" not in out["log_tail"] and "<steam id>" in out["log_tail"]
     with pytest.raises(SteamApiError, match="STEAMCMD_USERNAME"):
         run_steamcmd(str(exe), "bad name; rm", script)
     with pytest.raises(SteamApiError, match="not found"):
