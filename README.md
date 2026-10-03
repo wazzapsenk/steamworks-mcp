@@ -49,6 +49,16 @@ it is right), or **done in Steamworks**.
 You need [uv](https://docs.astral.sh/uv/getting-started/installation/), a small tool that runs Python programs (one
 command to install), and Claude or ChatGPT. You do **not** need Steam keys or a Steam login to start.
 
+The server speaks both MCP transports:
+
+| Transport | For | Started by |
+|---|---|---|
+| **stdio** (the default) | Apps that start the server on your computer: Claude Desktop, Claude Code, Codex, Cursor | the app itself (`steamworks-mcp`); `setup` and the plugin configure it |
+| **Streamable HTTP** | Apps that connect over the internet: ChatGPT, claude.ai | `steamworks-mcp remote` (with a secure address), or `steamworks-mcp --http` (local only, [details](docs/ADVANCED.md#remote-clients-chatgpt-claudeai)) |
+
+Over HTTP every request needs sign-in (OAuth, or a bearer token); over stdio only the app that started the server
+can talk to it.
+
 ### Claude Desktop
 
 In a terminal:
