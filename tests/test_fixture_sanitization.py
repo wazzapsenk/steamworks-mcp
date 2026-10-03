@@ -74,11 +74,11 @@ def committable_files() -> list[Path]:
     return [ROOT / p for p in out.split("\0") if p and (ROOT / p).is_file()]
 
 
-def repo_owner_url() -> str | None:
-    """``github.com/<owner>`` of the origin remote: public by definition, so it may contain a denylisted handle."""
+def repo_owner() -> str | None:
+    """Owner of the origin remote: public by definition (repo URLs), so it may contain a denylisted handle."""
     res = subprocess.run(["git", "remote", "get-url", "origin"], cwd=ROOT, capture_output=True, text=True)
     m = re.search(r"github\.com[:/]([^/]+)/", res.stdout)
-    return f"github.com/{m.group(1)}".lower() if m else None
+    return m.group(1).lower() if m else None
 
 
 def text_of(path: Path) -> str | None:
@@ -140,7 +140,7 @@ def test_repository_has_no_denylisted_terms() -> None:
     terms = read_denylist()
     if not terms:
         pytest.skip("SANITIZE_DENYLIST is not set in .env; only the generic checks ran")
-    owner = repo_owner_url()
+    owner = repo_owner()
     hits = []
     for path in committable_files():
         if path.name in AUTHOR_METADATA:
@@ -150,7 +150,8 @@ def test_repository_has_no_denylisted_terms() -> None:
             continue
         lower = text.lower()
         if owner:
-            lower = lower.replace(owner, "github.com/<owner>")
+            for host in ("github.com/", "githubusercontent.com/"):
+                lower = lower.replace(host + owner, host + "<owner>")
         hits += [
             f"{path.relative_to(ROOT).as_posix()}: term #{i + 1}" for i, t in enumerate(terms) if t.lower() in lower
         ]

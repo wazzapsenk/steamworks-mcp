@@ -1,0 +1,136 @@
+# A fictional game, used as documentation and in the tests. Field status lives in .steam-mcp/state.json.
+schema_version: 1
+
+game:
+  name: Pillow Fort Panic
+  pitch: Build blanket forts with up to four friends and defend them from a midnight pillow ambush.
+  genres: [co-op party, physics comedy]
+  players: {min: 1, max: 4, online_coop: true, local_coop: false, online_pvp: false}
+  session_length: {min_minutes: 15, max_minutes: 30}
+  core_loop: Scavenge furniture, build a fort before midnight, survive three waves of pillow raiders, upgrade.
+  usps:
+    - Every fort piece is a physics object you can grab, stack or throw
+    - Raids escalate when a friend fumbles the building
+    - Short rounds that fit a lunch break
+  target_audience: Friend groups who play together on Discord
+  tone: chaotic and silly, never mean
+  platform_features: {remote_play_together: true, steam_deck: unknown, controller: full}
+  engine: {name: unity, version: 6000.3.10f1}
+
+source_language: english
+target_languages: [german, french, schinese]
+
+apps:
+  main:
+    appid: 1000000
+    installation:
+      install_folder: PillowFortPanic
+      launch_options:
+        - executable: PillowFortPanic.exe
+          description: Play Pillow Fort Panic
+          os: windows
+          arch: "64"
+    cloud:
+      enabled: true
+      byte_quota: 10000000
+      file_quota: 20
+      auto_cloud:
+        - root: WinAppDataLocalLow
+          subdirectory: Example Studio/Pillow Fort Panic
+          pattern: "*.sav"
+          os: all
+      overrides:
+        - root: WinAppDataLocalLow
+          os: macos
+          use_instead: MacAppSupport
+          add_path: unity.Example Studio.Pillow Fort Panic
+    builds:
+      depots:
+        - name: windows
+          os: windows
+          content_root: Builds/Windows
+          exclude: ["*.pdb"]
+  demo:
+    appid: 1000001
+    cloud: {shared_appid: 1000000}
+
+prerequisites:
+  partner_account: true
+  steam_direct_fee_paid: true
+  steam_direct_fee_paid_on: 2026-09-01
+  tax_interview_done: true
+  bank_info_done: true
+  identity_verified: true
+  restricted_account: false
+
+store:
+  short_description: >-
+    Build blanket forts with up to four friends, then hold them against waves of pillow raiders. Every couch cushion
+    is a physics object, every round lasts fifteen minutes, and every collapse is somebody's fault.
+  about: |-
+    [h2]Build it. Defend it. Blame your friends.[/h2]
+    [p]Grab cushions, chairs and mattresses and stack them into a fort before the clock strikes twelve.[/p]
+    [list]
+    [*]Online co-op for 1-4 players
+    [*]Physics-driven building with no grid
+    [*]15-minute rounds
+    [/list]
+  developers: [Example Studio]
+  publishers: [Example Studio]
+  platforms: [windows]
+  genres: [Casual, Indie]
+  tags: [Co-op, Online Co-Op, Physics, Building, Funny, Party Game]
+  categories: [Single-player, Online Co-op, Steam Achievements, Steam Cloud, Full controller support, Remote Play Together]
+  supported_languages:
+    english: {interface: true, full_audio: false, subtitles: true}
+    german: {interface: true, subtitles: true}
+  system_requirements:
+    windows:
+      minimum: {os: Windows 10 64-bit, processor: Intel Core i5-6600, memory: 8 GB RAM, graphics: GTX 960, storage: 3 GB available space}
+  links:
+    website: https://example.com/pillow-fort-panic
+    privacy_policy: https://example.com/privacy
+  legal:
+    legal_line: © 2026 Example Studio
+
+assets:
+  key_art: store/art/keyart.png
+  logo: store/art/logo.png
+  screenshots_dir: store/screenshots
+
+content:
+  survey_completed: false
+  ai: {uses_ai: false}
+
+stats:
+  - {name: FORTS_BUILT, display_name: Forts built, increment_only: true}
+
+achievements:
+  - id: ACH_FIRST_FORT
+    name: Blanket Architect
+    description: Survive your first midnight raid.
+    icon: achievements/first_fort.png
+    category: progression
+  - id: ACH_TEN_FORTS
+    name: Cushion Contractor
+    description: Build ten forts.
+    progress: {stat: FORTS_BUILT, min: 0, max: 10}
+    category: progression
+  - id: ACH_FRIENDLY_FIRE
+    name: It Was the Cat
+    description: Knock down your own fort.
+    hidden: true
+    category: secret_funny
+
+leaderboards:
+  - {name: FASTEST_FORT, display_name: Fastest fort, sort_method: ascending, display_type: seconds}
+
+pricing:
+  free_to_play: false
+  base_price_usd: 9.99
+  launch_discount_percent: 10
+
+release:
+  display_date: Q2 2027
+  planned_date: 2027-05-12
+  early_access: false

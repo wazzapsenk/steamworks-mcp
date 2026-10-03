@@ -1,0 +1,35 @@
+# Steam-supported languages.
+# Source: https://partner.steamgames.com/doc/store/localization/languages
+#   api: language code used by Steamworks pages and the client API (e.g. "schinese")
+#   web: Web API language code (e.g. "zh-CN")
+- {api: arabic, web: ar, name: Arabic}
+- {api: bulgarian, web: bg, name: Bulgarian}
+- {api: schinese, web: zh-CN, name: Chinese (Simplified)}
+- {api: tchinese, web: zh-TW, name: Chinese (Traditional)}
+- {api: czech, web: cs, name: Czech}
+- {api: danish, web: da, name: Danish}
+- {api: dutch, web: nl, name: Dutch}
+- {api: english, web: en, name: English}
+- {api: finnish, web: fi, name: Finnish}
+- {api: french, web: fr, name: French}
+- {api: german, web: de, name: German}
+- {api: greek, web: el, name: Greek}
+- {api: hungarian, web: hu, name: Hungarian}
+- {api: indonesian, web: id, name: Indonesian}
+- {api: italian, web: it, name: Italian}
+- {api: japanese, web: ja, name: Japanese}
+- {api: koreana, web: ko, name: Korean}
+- {api: malay, web: ms, name: Malay}
+- {api: norwegian, web: "no", name: Norwegian}
+- {api: polish, web: pl, name: Polish}
+- {api: portuguese, web: pt, name: Portuguese (Portugal)}
+- {api: brazilian, web: pt-BR, name: Portuguese (Brazil)}
+- {api: romanian, web: ro, name: Romanian}
+- {api: russian, web: ru, name: Russian}
+- {api: spanish, web: es, name: Spanish (Spain)}
+- {api: latam, web: es-419, name: Spanish (Latin America)}
+- {api: swedish, web: sv, name: Swedish}
+- {api: thai, web: th, name: Thai}
+- {api: turkish, web: tr, name: Turkish}
+- {api: ukrainian, web: uk, name: Ukrainian}
+- {api: vietnamese, web: vi, name: Vietnamese}
