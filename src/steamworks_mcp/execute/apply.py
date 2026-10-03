@@ -8,7 +8,8 @@
    ``apply`` refuses to write.
 4. Only approved values are written. Rows that exist only in Steamworks stay unless ``remove_extra`` is asked for.
 5. After writing, everything is read back; matching fields become ``applied``; ``audit.jsonl`` gets an entry.
-6. Nothing is ever published (see :mod:`steamworks_mcp.execute.guard`).
+6. Nothing is ever published (see :mod:`steamworks_mcp.execute.guard`), with one exception: store tags, which Steam
+   applies at once, are only written with ``goes_live_now=True`` on top of ``user_confirmed=True``.
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from steamworks_mcp.execute import depots, store_assets, store_page, sync
+from steamworks_mcp.execute import depots, store_assets, store_page, store_tags, sync
 from steamworks_mcp.execute.browser import partner as P
 from steamworks_mcp.execute.browser.transport import Transport
 from steamworks_mcp.manifest import paths as fp
@@ -28,7 +29,8 @@ from steamworks_mcp.manifest.io import ProjectFiles, atomic_write
 from steamworks_mcp.manifest.state import State, TransitionError, now
 from steamworks_mcp.media.images import prepare_achievement_icons
 
-CONSENT_VERSION = 1
+CONSENT_VERSION = 2
+"""Raised whenever the terms change, so the user reads them again (2: the store tags exception)."""
 CONSENT_TEXT = """\
 BROWSER mode drives the Steamworks partner site in a browser window that you log into yourself.
 
@@ -39,6 +41,8 @@ BROWSER mode drives the Steamworks partner site in a browser window that you log
 - It never types or stores your password or Steam Guard codes and never reads cookie values.
 - It never publishes, prepares to publish or reverts anything. Its writes are unpublished drafts that you review in
   the Publish tab; "Revert Changes" there undoes them.
+- One exception: store tags. Steam applies them at once when they are saved, so the tool writes them only after you
+  agreed to exactly that, separately from everything else.
 - Valve does not document or endorse this kind of automation; using it is your decision and at your own risk.
 """
 
@@ -94,6 +98,8 @@ async def read_section(t: Transport, section: str, appid: int) -> dict[str, Any]
         return await store_assets.read_section(t, appid)
     if section == "depots":
         return await depots.read_section(t, appid)
+    if section == "store_tags":
+        return await store_tags.read_section(t, appid)
     raise ValueError(f"section must be one of {', '.join(sync.SECTIONS)}")
 
 
@@ -147,6 +153,8 @@ def _plan(
         return store_assets.plan(current["item_id"], desired, current)
     if section == "depots":
         return depots.plan(appid, desired, current, force)
+    if section == "store_tags":
+        return store_tags.plan(appid, desired, current, force)
     return sync.plan_store(appid, current["item_id"], desired, current, force)
 
 
@@ -165,6 +173,8 @@ def desired_from_values(
         return store_assets.desired(ProjectFiles(root).state_dir / "exports" / "images", values)
     if section == "depots":
         return depots.desired(values, app)
+    if section == "store_tags":
+        return store_tags.desired(values, current)
     if section == "cloud":
         return sync.desired_cloud(values, app, current)
     if section == "installation":
@@ -197,11 +207,12 @@ async def apply_section(
     user_confirmed: bool = False,
     remove_extra: bool = False,
     upload_icons: bool = False,
+    goes_live_now: bool = False,
 ) -> dict[str, Any]:
     appid = fp.get(values, f"apps.{app}.appid")
     if not appid:
         raise ApplyRefused(f"apps.{app}.appid is not set.")
-    if section in ("achievements", "store_page", "store_assets") and app != "main":
+    if section in ("achievements", "store_page", "store_assets", "store_tags") and app != "main":
         raise ApplyRefused("Achievements and the store page are defined for the main game only.")
     current = await read_section(t, section, int(appid))
     sid = save_snapshot(files, app, int(appid), section, current)
@@ -221,14 +232,19 @@ async def apply_section(
     ops = _plan(section, int(appid), desired, current, remove_extra, icons)
     changes = [op.describe() for op in ops]
     if dry_run:
-        return {
+        out: dict[str, Any] = {
             "snapshot": sid,
             "dry_run": True,
             "changes": changes,
             "next": CONFIRM_NEXT if changes else "Steamworks already matches.",
         }
+        if section == "store_tags" and changes:
+            out["warning"] = store_tags.GOES_LIVE
+        return out
     if not user_confirmed:
         raise ApplyRefused("Writing needs user_confirmed=true, after the user saw the dry-run changes.")
+    if section == "store_tags" and not goes_live_now:
+        raise ApplyRefused(store_tags.GOES_LIVE)
     if not consent.restore_verified(int(appid)):
         raise ApplyRefused(
             f"Live-test protocol: the first write on app {appid} must be restore_snapshot('{sid}') (it writes "
@@ -360,6 +376,11 @@ async def restore_snapshot(
 ) -> dict[str, Any]:
     snap = load_snapshot(files, sid)
     section, appid = snap["section"], int(snap["appid"])
+    if section == "store_tags":
+        raise ApplyRefused(
+            "Store tags are live at once, so they are not restored automatically: set the old ones again with "
+            f"apply(section='store_tags') or in the Tag Wizard. They were: {snap['data'].get('applied')}."
+        )
     if section == "store_assets":
         raise ApplyRefused(
             "Uploaded images cannot be restored by this tool (it only fills empty slots and cannot remove an image): "

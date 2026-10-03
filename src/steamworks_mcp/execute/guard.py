@@ -2,7 +2,9 @@
 
 ``check`` runs before every request this tool makes:
 
-* Nothing that publishes, prepares to publish or reverts is ever requested, not even the Publish page.
+* Nothing that publishes, prepares to publish or reverts is ever requested, not even the Publish page. The one
+  exception is store tags, which Steam applies at once when they are saved: apply(section="store_tags") posts them
+  only with an extra goes_live_now=true from the user.
 * Pages may only be opened on Steam's own domains.
 * Writes (non-GET) only go to partner.steamgames.com, and only to the endpoints this tool uses.
 
@@ -21,8 +23,8 @@ WRITE_HOST = "partner.steamgames.com"
 FORBIDDEN = re.compile(
     r"publish|/apps/(prepare|revert|retireapp)/|/admin/game/(submit|release|revert|prepare)"
     r"|/admin/store/package(revert|prepare)"
-    # live at once although nothing in the name says so: store tags, and package names and contents
-    r"|/tagdata/forcetagranking|/store/ajaxpackagesave",
+    # live at once although nothing in the name says so: package names and contents
+    r"|/store/ajaxpackagesave",
     re.I,
 )
 ALLOWED_WRITES = [
@@ -34,6 +36,8 @@ ALLOWED_WRITES = [
     re.compile(r"^/admin/game/uploadloc/\d+$"),
     re.compile(r"^/admin/game/save/\d+$"),  # the store page form; saved into the unpublished draft
     re.compile(r"^/depots/upload/\d+$"),  # the Depots page's save (unpublished app data)
+    # store tags are live at once; apply(section="store_tags") asks for goes_live_now=true before it posts this
+    re.compile(r"^/tagdata/forcetagranking$"),
     re.compile(r"^/apps/diff/\d+$"),  # the Publish page's read-only "View Diffs"
 ]
 

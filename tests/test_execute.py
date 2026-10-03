@@ -118,8 +118,7 @@ def audit_entries(project: Project) -> list[dict[str, Any]]:
         ("POST", "/admin/store/packagerevert/3000000"),
         ("POST", "/admin/store/packageprepare/3000000"),
         ("POST", "/apps/retireapp/1000000"),
-        ("POST", "/tagdata/forcetagranking"),  # store tags go live at once
-        ("POST", "/store/ajaxpackagesave/3000000"),  # package names and contents too
+        ("POST", "/store/ajaxpackagesave/3000000"),  # package names and contents go live at once
     ],
 )
 def test_guard_blocks_publishing(method: str, path: str) -> None:
@@ -587,6 +586,43 @@ async def test_depot_settings_change_only_existing_depots() -> None:
     assert sent == [(1000000, {"1000001": {"oslist": "windows", "osarch": "64"}})]  # never the whole list
     done = {"depots": {"1000001": {"name": "Content", "config": {"oslist": "windows", "osarch": "64"}}}}
     assert depots.changes(depots.desired(values, "main"), done) == {}
+
+
+async def test_store_tags_go_live_only_with_goes_live_now(project: Project, consent: Consent) -> None:
+    project = setv(project, {"store.tags": ["Arcade", "Shooter", "Not A Tag"]})
+    consent.mark_restore_verified(APP)
+    survey = {
+        "appid": APP,
+        "devTags": [],
+        "communityTags": [{"tagid": 19, "name": "Action"}],
+        "tagNames": {"1773": "Arcade", "1774": "Shooter", "19": "Action"},
+    }
+    page = f"<script>$J( function() {{ initSurvey( {json.dumps(survey)} ); }} );</script>"
+    posts: list[tuple[str, dict[str, str]]] = []
+
+    class Wizard:
+        async def get(self, path: str) -> Response:
+            return Response(200, "https://partner.steamgames.com" + path, page)
+
+        async def post(self, path: str, form: dict[str, str]) -> Response:
+            guard.check("POST", "https://partner.steamgames.com" + path)
+            posts.append((path, form))
+            return Response(200, "https://partner.steamgames.com" + path, '{"success": 1}')
+
+    t: Any = Wizard()
+    dry = await run_apply(project, consent, t, "store_tags")
+    assert "at once" in dry["warning"]
+    assert [(c["action"], c["after"]) for c in dry["changes"]] == [
+        ("skip", "not written"),  # "Not A Tag"
+        ("publish now", ["Arcade", "Shooter"]),
+    ]
+    with pytest.raises(ApplyRefused, match="goes_live_now"):
+        await run_apply(project, consent, t, "store_tags", dry_run=False, user_confirmed=True)
+    assert posts == []
+    await run_apply(project, consent, t, "store_tags", dry_run=False, user_confirmed=True, goes_live_now=True)
+    assert posts == [
+        ("/tagdata/forcetagranking", {"appid": str(APP), "rankedtagids[0]": "1773", "rankedtagids[1]": "1774"})
+    ]  # community tags are never removed: no negatedtagids
 
 
 async def test_store_text_never_sends_an_empty_value() -> None:
@@ -1104,7 +1140,7 @@ async def test_browser_flow_through_the_server(tmp_path: Path) -> None:
         assert snaps["snapshots"] == [dry["snapshot"]]
         blocked = await call("apply", path="game", section="cloud", dry_run=False, user_confirmed=True)
         assert blocked.is_error and "restore_snapshot" in blocked.content[0].text
-    assert json.loads(config.consent_path.read_text(encoding="utf-8"))["version"] == 1
+    assert json.loads(config.consent_path.read_text(encoding="utf-8"))["version"] == 2
     assert project.files.snapshots_dir.exists()
 
 

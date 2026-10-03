@@ -539,6 +539,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "store_page",
             "store_assets",
             "depots",
+            "store_tags",
             "leaderboards",
             "build",
         ],
@@ -547,10 +548,13 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         user_confirmed: bool = False,
         remove_extra: bool = False,
         upload_icons: bool = False,
+        goes_live_now: bool = False,
     ) -> dict[str, Any]:
         """Make Steam match the approved values of one section. Always call with dry_run=true first and show the user
         the changes; write (dry_run=false, user_confirmed=true) only after they agreed. Nothing is ever published:
-        BROWSER writes are drafts the user reviews and publishes in Steamworks.
+        BROWSER writes are drafts the user reviews and publishes in Steamworks. The one exception is "store_tags":
+        Steam applies tags at once, so it also needs goes_live_now=true, and only after the user agreed to exactly
+        that.
 
         Sections: "leaderboards" (Web API, publisher key), "build" (uploads the SteamPipe scripts with steamcmd),
         and with the BROWSER mode: "cloud", "installation", "achievements" (main game), "store_text" (short and long
@@ -558,8 +562,9 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         line, system requirements, platforms, language table, genres, categories, third-party DRM/accounts; empty
         fields never clear Steam's), "store_assets" (uploads prepare_images' capsules and library images into the
         slots Steam has no image for yet; never replaces one, and also sets the library logo position), "depots"
-        (OS, architecture and language of depots that already exist, through the Depots page's own Save). Every
-        call saves a snapshot of what Steam had first.
+        (OS, architecture and language of depots that already exist, through the Depots page's own Save),
+        "store_tags" (store.tags in order, through the Tag Wizard; live at once; community tags are never removed).
+        Every call saves a snapshot of what Steam had first.
 
         Args:
             path: Folder that holds steamworks.yaml.
@@ -569,6 +574,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             user_confirmed: The user saw the dry-run changes and agreed.
             remove_extra: Also delete rows that exist only in Steam. Only when the user explicitly asks for it.
             upload_icons: achievements: also upload the icons (prepared from achievements.*.icon).
+            goes_live_now: store_tags: the user agreed that the tags go live on the store at once.
         """
         return await execu.apply(
             open_project(path),
@@ -578,6 +584,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             user_confirmed=user_confirmed,
             remove_extra=remove_extra,
             upload_icons=upload_icons,
+            goes_live_now=goes_live_now,
         )
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True))
@@ -598,6 +605,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "store_page",
             "store_assets",
             "depots",
+            "store_tags",
         ],
         app: Literal["main", "demo", "playtest"] = "main",
     ) -> dict[str, Any]:

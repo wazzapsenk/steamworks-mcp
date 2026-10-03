@@ -166,9 +166,17 @@ What it showed beyond the recordings:
   - Filling the empty row with a plain name (no link to a developer homepage) added it and completed the
     "Developer and Publisher Names" checklist item. Recorded live.
   - Removing a name needs the page's own remove control; the tool only adds.
-- **Live at once although the name does not say so.** These are on the guard's forbidden list:
-  - Store tags (`/tagdata/forcetagranking`; the page says the changes "have been successfully published").
-  - Package names and contents (`/store/ajaxpackagesave/{packageId}`; renaming publishes right away).
+- **Live at once although the name does not say so:**
+  - **Package names and contents** (`/store/ajaxpackagesave/{packageId}`; renaming publishes right away) are on the
+    guard's forbidden list.
+  - **Store tags.** The Tag Wizard (`/taxonomy/tagwizard/{appid}`) carries its data in `initSurvey({...})`:
+    - `tagNames` (id → name of every tag), `devTags` (the developer's tags) and `communityTags`.
+    - Publish posts `POST /tagdata/forcetagranking` with `appid`, `sessionid`, `rankedtagids[]` (most important
+      first, 20 at most) and `negatedtagids[]` (community tags to remove). The answer is
+      `{"success": 1, "finalTags": [...]}`.
+    - The page says the changes "have been successfully published to Steam".
+    - The tool reads this live, and writes it only with `goes_live_now=true`, never sending `negatedtagids`. The
+      write itself is not recorded: it would publish.
 
 ## Depots
 

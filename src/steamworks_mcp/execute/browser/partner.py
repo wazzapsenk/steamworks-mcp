@@ -141,6 +141,12 @@ async def set_library_logo_position(
     )
 
 
+async def apply_store_tags(t: Transport, appid: int, tag_ids: list[int]) -> None:
+    """The Tag Wizard's Publish: ranked tags, most important first. Live at once; community tags are never removed."""
+    form = {"appid": str(appid), **{f"rankedtagids[{i}]": str(tid) for i, tid in enumerate(tag_ids)}}
+    _ok(await t.post("/tagdata/forcetagranking", form), "store tags")
+
+
 # ---------------------------------------------------------------------------------------------------- depots
 
 

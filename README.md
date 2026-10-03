@@ -148,6 +148,10 @@ Don't let automation act as your administrator account. Create a separate Steam 
 not need publish, pricing or financial permissions, because this tool never publishes. `gap_report` reminds you
 of this in gate 0.
 
+The one thing Steam makes live without a Publish step is store tags. `apply(section="store_tags")` writes them only
+with `goes_live_now=true` on top of the usual confirmation, and never removes community tags. Packages, which
+Steam also changes at once, are never edited.
+
 ## Connect it
 
 ### Claude Code

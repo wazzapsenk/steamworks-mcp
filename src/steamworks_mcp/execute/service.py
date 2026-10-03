@@ -164,6 +164,7 @@ class Executor:
         user_confirmed: bool,
         remove_extra: bool,
         upload_icons: bool,
+        goes_live_now: bool = False,
     ) -> dict[str, Any]:
         if section in BROWSER_SECTIONS:
             t = await self.transport(f"apply({section})")
@@ -179,6 +180,7 @@ class Executor:
                 user_confirmed=user_confirmed,
                 remove_extra=remove_extra,
                 upload_icons=upload_icons,
+                goes_live_now=goes_live_now,
             )
         elif section == "leaderboards":  # blocking HTTP calls and steamcmd run in a worker thread
             out = await anyio.to_thread.run_sync(
@@ -540,6 +542,9 @@ class Executor:
         data = await A.read_section(t, what, appid)
         if what == "store_page":  # every input of every language: only the filled ones are worth showing
             data = {**data, "form": {k: v for k, v in data["form"].items() if v}}
+        if what == "store_tags":  # the names of the tags in use, not Steam's whole tag list
+            names = data["names"]
+            data = {k: [names.get(i, i) for i in data[k]] for k in ("applied", "community")}
         return {"appid": appid, "steamworks": data}
 
 

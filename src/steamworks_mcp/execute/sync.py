@@ -19,7 +19,7 @@ from steamworks_mcp.localization.store import Localization
 from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.state import State, is_empty
 
-SECTIONS = ("cloud", "installation", "achievements", "store_text", "store_page", "store_assets", "depots")
+SECTIONS = ("cloud", "installation", "achievements", "store_text", "store_page", "store_assets", "depots", "store_tags")
 STORE_PAGE_FIELDS = (
     "store.developers",
     "store.publishers",
@@ -83,6 +83,8 @@ def written(section: str, app: str, path: str, icons: bool = False) -> bool:
         return path in ("assets.key_art", "assets.logo") or path.startswith(
             ("assets.overrides.", "assets.library_logo_position")
         )
+    if section == "store_tags":
+        return path == "store.tags" or path.startswith("store.tags.")
     if section == "depots":  # only the settings; ids, folders and exclusions are for the build
         return re.fullmatch(rf"apps\.{app}\.builds\.depots\.[^.]+\.(os|arch|language)", path) is not None
     if section == "leaderboards":
