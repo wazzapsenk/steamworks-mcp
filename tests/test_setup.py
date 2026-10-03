@@ -21,7 +21,7 @@ def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("STEAMWORKS_MCP_HOME", str(tmp_path / "home" / ".steamworks-mcp"))
     for var in ("STEAMWORKS_MCP_ROOT", "STEAMWORKS_PUBLISHER_KEY", "STEAM_MCP_BROWSER", "STEAMCMD_PATH"):
         monkeypatch.delenv(var, raising=False)
-    monkeypatch.setattr(setup_cli.shutil, "which", lambda _: None)  # no real `claude` CLI
+    monkeypatch.setattr("shutil.which", lambda _: None)  # no real `claude` CLI
     (tmp_path / "home").mkdir()
     monkeypatch.chdir(tmp_path)  # no .env of the repository
     return tmp_path / "home"
