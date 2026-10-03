@@ -7,7 +7,7 @@
       "name": "steamworks",
       "source": "./",
       "description": "Release assistant for Steam games: store page, achievements, translations, images, checks against Valve's rules, and Steamworks only after you approve.",
-      "version": "0.3.0"
+      "version": "0.3.1"
     }
   ]
 }

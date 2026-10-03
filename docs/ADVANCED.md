@@ -106,7 +106,9 @@ claude mcp add steamworks -e STEAMWORKS_MCP_ROOT=/path/to/your/games -- uv --dir
 
 ### Claude Desktop
 
-`claude_desktop_config.json`:
+`claude_desktop_config.json` (Settings > Developer > Edit Config opens it). On Windows the Microsoft Store build
+keeps it in `%LOCALAPPDATA%\Packages\Claude_<id>\LocalCache\Roaming\Claude\`, not in `%APPDATA%\Claude\`; a file in
+the latter is never read by that build. `steamworks-mcp setup` writes to the right one.
 
 ```json
 {

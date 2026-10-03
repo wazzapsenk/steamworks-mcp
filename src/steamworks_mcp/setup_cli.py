@@ -90,11 +90,21 @@ class Client:
         return self.config is not None and self.config.parent.is_dir()
 
 
+def windows_desktop_folder(home: Path) -> Path:
+    """Claude Desktop's folder on Windows. The Microsoft Store (MSIX) build virtualizes %APPDATA%: it reads its config
+    from the package's LocalCache, so a file written to the real %APPDATA%\\Claude is never seen by the app."""
+    local = Path(os.environ.get("LOCALAPPDATA", home / "AppData" / "Local"))
+    packaged = sorted((local / "Packages").glob("Claude_*/LocalCache/Roaming/Claude"))
+    if packaged:
+        return packaged[0]
+    return Path(os.environ.get("APPDATA", home / "AppData" / "Roaming")) / "Claude"
+
+
 def clients(home: Path | None = None) -> list[Client]:
     home = home or Path.home()
     system = platform.system()
     if system == "Windows":
-        desktop = Path(os.environ.get("APPDATA", home / "AppData" / "Roaming")) / "Claude"
+        desktop = windows_desktop_folder(home)
     elif system == "Darwin":
         desktop = home / "Library" / "Application Support" / "Claude"
     else:

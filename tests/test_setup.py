@@ -18,6 +18,7 @@ def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     for var in ("HOME", "USERPROFILE"):
         monkeypatch.setenv(var, str(tmp_path / "home"))
     monkeypatch.setenv("APPDATA", str(tmp_path / "home" / "AppData" / "Roaming"))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "home" / "AppData" / "Local"))
     monkeypatch.setenv("STEAMWORKS_MCP_HOME", str(tmp_path / "home" / ".steamworks-mcp"))
     for var in ("STEAMWORKS_MCP_ROOT", "STEAMWORKS_PUBLISHER_KEY", "STEAM_MCP_BROWSER", "STEAMCMD_PATH"):
         monkeypatch.delenv(var, raising=False)
@@ -94,6 +95,19 @@ def test_setup_only_settings_connects_no_app(home: Path, tmp_path: Path) -> None
     assert setup_cli.setup(["--root", str(tmp_path), "--only-settings", "--yes"]) == 0
     assert (home / ".steamworks-mcp" / "settings.env").is_file()
     assert not (home / ".cursor" / "mcp.json").exists()
+
+
+def test_claude_desktop_from_the_microsoft_store(home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The Store (MSIX) build reads its config from the package's LocalCache, not from %APPDATA%\\Claude."""
+    monkeypatch.setattr("platform.system", lambda: "Windows")
+    real = home / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
+    assert next(c for c in setup_cli.clients() if c.id == "claude-desktop").config == real
+    packaged = home / "AppData" / "Local" / "Packages" / "Claude_pzs8sxrjxfjjc" / "LocalCache" / "Roaming" / "Claude"
+    packaged.mkdir(parents=True)
+    desktop = next(c for c in setup_cli.clients() if c.id == "claude-desktop")
+    assert desktop.config == packaged / "claude_desktop_config.json" and desktop.installed()
+    setup_cli.connect(desktop, ["uvx", "steamworks-mcp"])
+    assert setup_cli.is_connected(desktop) and not real.exists()
 
 
 def test_setup_asks_and_saves_keys(home: Path, tmp_path: Path) -> None:

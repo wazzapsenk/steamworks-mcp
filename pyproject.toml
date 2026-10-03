@@ -1,6 +1,6 @@
 [project]
 name = "steamworks-mcp"
-version = "0.3.0"
+version = "0.3.1"
 description = "Release assistant for Steam games, as an MCP server for Claude and ChatGPT: store page, achievements, checks against Valve's rules, market data, and Steamworks only after you approve."
 dynamic = ["readme"]
 license = "MIT"
