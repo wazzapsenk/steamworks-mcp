@@ -84,12 +84,28 @@ class WorkspaceError(ValueError):
     pass
 
 
-def load_config(env: Mapping[str, str] | None = None, dotenv: Path | None = None) -> Config:
+SETTINGS_FILE = "settings.env"
+"""Per-user settings in the home folder (``steamworks-mcp setup`` writes it): the games folder and optional keys, the
+same for every client, so client configurations need no environment variables."""
+
+
+def home_dir(env: Mapping[str, str]) -> Path:
+    h = (env.get("STEAMWORKS_MCP_HOME") or "").strip()
+    return Path(h).expanduser() if h else Path.home() / ".steamworks-mcp"
+
+
+def load_config(
+    env: Mapping[str, str] | None = None, dotenv: Path | None = None, settings: Path | None = None
+) -> Config:
+    """The real environment wins over a ``.env`` (in the working folder, or ``dotenv``), which wins over the user's
+    settings file. The settings file is read by default only with the real environment (``env`` is None)."""
     values: dict[str, str] = {}
-    path = dotenv if dotenv is not None else Path.cwd() / ".env"
-    if path.is_file():
-        values.update(parse_dotenv(path.read_text(encoding="utf-8")))
-    values.update(env if env is not None else os.environ)  # the real environment wins over .env
+    if settings is None and env is None:
+        settings = home_dir(os.environ) / SETTINGS_FILE
+    for path in (settings, dotenv if dotenv is not None else Path.cwd() / ".env"):
+        if path is not None and path.is_file():
+            values.update(parse_dotenv(path.read_text(encoding="utf-8")))
+    values.update(env if env is not None else os.environ)
 
     def get(name: str) -> str | None:
         v = values.get(name, "").strip()
@@ -110,7 +126,7 @@ def load_config(env: Mapping[str, str] | None = None, dotenv: Path | None = None
         cache_dir=Path(c).expanduser() / "references" if (c := get("STEAMWORKS_MCP_CACHE")) else default_cache_dir(),
         steamcmd_path=get("STEAMCMD_PATH"),
         steamcmd_username=get("STEAMCMD_USERNAME"),
-        home_dir=Path(h).expanduser() if (h := get("STEAMWORKS_MCP_HOME")) else Path.home() / ".steamworks-mcp",
+        home_dir=home_dir(values),
     )
 
 
