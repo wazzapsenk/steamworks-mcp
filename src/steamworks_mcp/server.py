@@ -40,7 +40,8 @@ from steamworks_mcp.manifest.paths import FieldPathError, iter_fields
 from steamworks_mcp.manifest.state import TransitionError, is_empty
 from steamworks_mcp.media import images
 from steamworks_mcp.oauth import LocalOAuth
-from steamworks_mcp.references import market
+from steamworks_mcp.references import live, market
+from steamworks_mcp.references import reviews as review_study
 from steamworks_mcp.references.analyze import analyze
 from steamworks_mcp.references.fetch import FetchError, ReferenceFetcher
 from steamworks_mcp.scanners import run_scanners
@@ -572,6 +573,115 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         project = open_project(path)
         fetcher = ReferenceFetcher(config.cache_dir, web_api_key=config.web_api_key)
         return present.save_market_study(market.save(fetcher, project.files, notes))
+
+    # ------------------------------------------------------------------ live market numbers
+
+    def fetcher() -> ReferenceFetcher:
+        return ReferenceFetcher(config.cache_dir, web_api_key=config.web_api_key)
+
+    def own_appid(project: proj.Project) -> int | None:
+        appid = ((project.values().get("apps") or {}).get("main") or {}).get("appid")
+        return int(appid) if appid else None
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True))
+    @user_errors
+    def store_lookup(query: str) -> dict[str, Any]:
+        """Look a game up on the Steam store by name, app id or store link: price, review score, players right now,
+        release date, genres, modes (co-op, PvP…), Steam features, platforms, languages, achievements and DLC.
+        Public data, cached for a few hours; nothing is saved in the project."""
+        return present.store_lookup(live.lookup(fetcher(), query))
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True))
+    @user_errors
+    def compare_games(path: str | None = None, appids: list[int] | None = None) -> dict[str, Any]:
+        """Compare games side by side: price, reviews, positive share, players right now, release, modes, and which
+        Steam features most of them use. Default: the games of the market study (study_market) plus this game once
+        it is on the store.
+
+        Args:
+            path: The game's folder, to compare with its market study.
+            appids: Games to compare instead (store_lookup finds app ids by name). At most 15.
+        """
+        project = open_project(path) if path else None
+        ids = live.peers(project.files if project else None, appids)
+        own = own_appid(project) if project else None
+        if own and own not in ids:
+            ids = [own, *ids]
+        return present.compare_games(live.compare(fetcher(), ids, own))
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True))
+    @user_errors
+    def price_brief(path: str, appids: list[int] | None = None, countries: list[str] | None = None) -> dict[str, Any]:
+        """What close games charge: their US full prices (median and middle half), and for each country store how
+        much they charge per US dollar, applied to this game's base price (pricing.base_price_usd, else their
+        median). Default games: the market study's. Nothing is saved; the user decides the price.
+
+        Args:
+            path: The game's folder.
+            appids: Games to compare with instead of the market study's.
+            countries: Two-letter store codes (default us, gb, de, pl, tr, br, cn, jp, kr, in).
+        """
+        project = open_project(path)
+        ids = live.peers(project.files, appids)
+        return present.price_brief(live.price_brief(fetcher(), project.values(), ids, countries))
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True))
+    @user_errors
+    def estimate_sales(
+        path: str | None = None, appids: list[int] | None = None, wishlists: int | None = None
+    ) -> dict[str, Any]:
+        """Rough copies sold for close games, from their review counts, and, with `wishlists`, a first-week range
+        for this game at its base price and launch discount. Rules of thumb with every assumption listed, never a
+        forecast. Default games: the market study's.
+
+        Args:
+            path: The game's folder (its market study and price).
+            appids: Games to estimate instead.
+            wishlists: This game's wishlists on release day, if the user knows them (Steamworks shows them).
+        """
+        project = open_project(path) if path else None
+        values = project.values() if project else {}
+        ids: list[int] = []
+        try:
+            ids = live.peers(project.files if project else None, appids)
+        except ValueError:
+            if wishlists is None:
+                raise
+        return present.estimate_sales(live.estimate_sales(fetcher(), values, ids, wishlists))
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True))
+    @user_errors
+    def study_reviews(path: str, appids: list[int] | None = None, per_kind: int = 10) -> dict[str, Any]:
+        """Start a review study: the most helpful positive and negative English reviews of the close games (default:
+        the market study's) or of any games, e.g. this game after launch. Read them and label each game with the
+        returned themes (what players praise and criticize), then call save_review_study. Only the app ids are saved;
+        the texts stay in the local cache and nothing about reviewers is fetched.
+
+        Args:
+            path: The game's folder.
+            appids: Games to study instead of the market study's.
+            per_kind: Reviews per game and kind (positive, negative): 3-25, default 10.
+        """
+        project = open_project(path)
+        ids = live.peers(project.files, appids)
+        return present.study_reviews(review_study.start(fetcher(), project.files, ids, per_kind))
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
+    @user_errors
+    def save_review_study(path: str, notes: list[dict[str, Any]]) -> dict[str, Any]:
+        """Save your labels for the games study_reviews returned: per game appid, praised (1-4 themes, most important
+        first), criticized (0-4) and insight (one sentence in your own words; one that repeats 4+ consecutive words
+        of a review is rejected). Keeps labels and shares, never review text; the store-text briefs use it."""
+        project = open_project(path)
+        return present.save_review_study(review_study.save(fetcher(), project.files, notes))
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True))
+    @user_errors
+    def launch_watch(path: str) -> dict[str, Any]:
+        """After release: the game's review score and count, players right now and price, against the last check
+        (each check is kept in .steam-mcp/market/launch.jsonl). Call it again any day to see the trend."""
+        project = open_project(path)
+        return present.launch_watch(live.launch_watch(fetcher(), project.values(), project.files))
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors

@@ -94,12 +94,12 @@ def cell(value: Any, limit: int = 60) -> str:
     return fmt(value, limit).replace("|", "\\|")
 
 
-def table(headers: Sequence[str], rows: Iterable[Sequence[Any]], limit: int = MAX_ROWS) -> str:
+def table(headers: Sequence[str], rows: Iterable[Sequence[Any]], limit: int = MAX_ROWS, width: int = 60) -> str:
     rows = list(rows)
     if not rows:
         return ""
     lines = ["| " + " | ".join(headers) + " |", "|" + "|".join("---" for _ in headers) + "|"]
-    lines += ["| " + " | ".join(cell(c) for c in row) + " |" for row in rows[:limit]]
+    lines += ["| " + " | ".join(cell(c, width) for c in row) + " |" for row in rows[:limit]]
     if len(rows) > limit:
         lines.append(f"\n…and {len(rows) - limit} more.")
     return "\n".join(lines)
@@ -742,3 +742,238 @@ def status_project(data: dict[str, Any]) -> dict[str, Any]:
         f"- Values: {', '.join(facts)}.\n- Store text: {texts}.\n- Translations: {translations}.",
     )
     return result(data, summary, display=display)
+
+
+# ---------------------------------------------------------------------------------------------------- live market
+
+
+def money(value: float | None, currency: str = "USD") -> str:
+    if value is None:
+        return "—"
+    return f"${value:,.2f}" if currency == "USD" else f"{value:,.2f} {currency}"
+
+
+def _price_text(game: dict[str, Any]) -> str:
+    if game.get("free"):
+        return "free"
+    price = game.get("price_usd")
+    if not price:
+        return "not for sale"
+    text = money(price["full"])
+    if price.get("discount_percent"):
+        text += f" ({money(price['now'])} now, -{price['discount_percent']}%)"
+    return text
+
+
+def _reviews_text(game: dict[str, Any]) -> str:
+    r = game.get("reviews") or {}
+    if not r.get("total"):
+        return "no reviews yet"
+    share = f", {r['positive_share']:.0%} positive" if r.get("positive_share") is not None else ""
+    return f"{r.get('score') or ''} ({r['total']:,} reviews{share})".strip()
+
+
+def number(value: int | None) -> str:
+    return "—" if value is None else f"{value:,}"
+
+
+def _players_text(game: dict[str, Any]) -> str:
+    if game.get("players_now") is None:
+        return "player count not public"
+    return f"{game['players_now']:,} playing now"
+
+
+def store_lookup(data: dict[str, Any]) -> dict[str, Any]:
+    g = data["game"]
+    summary = f"{g.get('name')}: {_price_text(g)}, {_reviews_text(g)}, {_players_text(g)}."
+    rows = [
+        ["Developer", ", ".join(g.get("developers") or []) or "—"],
+        ["Publisher", ", ".join(g.get("publishers") or []) or "—"],
+        ["Release", ("coming soon: " if g.get("coming_soon") else "") + str(g.get("released") or "—")],
+        ["Price (US)", _price_text(g)],
+        ["Reviews", _reviews_text(g)],
+        ["Playing now", number(g.get("players_now"))],
+        ["Genres", g.get("genres")],
+        ["Modes", g.get("modes")],
+        ["Steam features", g.get("features")],
+        ["Platforms", g.get("platforms")],
+        ["Languages", g.get("languages")],
+        ["Achievements", g.get("achievements")],
+        ["DLC", g.get("dlc")],
+        ["Store page", g.get("store_page")],
+    ]
+    display = table(["", g.get("name") or "Game"], rows, limit=40, width=200)
+    if data.get("other_matches"):
+        display += "\n\nOther matches: " + ", ".join(f"{m['name']} ({m['appid']})" for m in data["other_matches"])
+    return result(data, summary, display=display)
+
+
+def _share(game: dict[str, Any]) -> str:
+    share = (game.get("reviews") or {}).get("positive_share")
+    return "—" if share is None else f"{share:.0%}"
+
+
+def compare_games(data: dict[str, Any]) -> dict[str, Any]:
+    games, o = data.get("games") or [], data.get("overview") or {}
+    if not games:
+        return result(data, "None of these games could be read from the store.", outcome="refused")
+    summary = f"Compared {plural(len(games), 'game')}"
+    if o.get("median_price_usd") is not None:
+        summary += f": median price {money(o['median_price_usd'])}"
+    if o.get("median_reviews") is not None:
+        summary += f", median {int(o['median_reviews']):,} reviews"
+    if o.get("median_positive_share") is not None:
+        summary += f" ({o['median_positive_share']:.0%} positive)"
+    rows = [
+        [
+            g.get("name"),
+            _price_text(g),
+            f"{(g.get('reviews') or {}).get('total', 0):,}",
+            _share(g),
+            number(g.get("players_now")),
+            g.get("released"),
+            ", ".join(m for m in g.get("modes") or [] if m != "Single-player") or "single-player",
+        ]
+        for g in games
+    ]
+    common = ", ".join(f"{k} {v:.0%}" for k, v in list((o.get("features") or {}).items())[:6])
+    display = join(
+        table(["Game", "Price (US)", "Reviews", "Positive", "Playing now", "Released", "Modes"], rows),
+        f"Steam features these games use: {common}." if common else "",
+    )
+    return result(data, summary + ".", display=display)
+
+
+def price_brief(data: dict[str, Any]) -> dict[str, Any]:
+    us = data.get("us_full_prices") or {}
+    if us.get("median") is None:
+        return result(data, "None of these games has a price in the US store.", outcome="refused")
+    summary = f"Close games cost {money(us['median'])} in the US (median"
+    if us.get("middle_half"):
+        low, high = us["middle_half"]
+        summary += f"; the middle half {money(low)}–{money(high)}"
+    summary += ")"
+    base = data.get("base_price_usd")
+    if base is not None:
+        summary += f"; the regional prices below are for {money(base)}"
+    rows = [
+        [r["name"], r["currency"], f"{r['per_usd']:g}", money(r.get("for_base_price"), r["currency"]), r["games"]]
+        for r in data.get("regions") or []
+    ]
+    games = table(
+        ["Game", "Full price (US)"],
+        [
+            [g.get("name"), money(g["full_price_usd"]) if g.get("full_price_usd") else "free / not for sale"]
+            for g in data.get("games") or []
+        ],
+    )
+    target = f"For {money(base)}" if base is not None else "For the base price"
+    display = join(
+        table(["Store", "Currency", "Per US dollar", target, "Games"], rows),
+        section("Games compared", games),
+    )
+    steps = [
+        "Ask the user which base price they want; save it with set_field(field='pricing.base_price_usd', value=...).",
+        "Ask whether to use Steam's recommended regional prices or their own; save pricing.regional_pricing "
+        "(steam_recommended or custom).",
+    ]
+    return result(data, summary + ".", next=steps, display=display)
+
+
+def _range(r: dict[str, Any]) -> str:
+    return f"{r['low']:,}–{r['high']:,} (typical {r['typical']:,})"
+
+
+def estimate_sales(data: dict[str, Any]) -> dict[str, Any]:
+    games = data.get("games") or []
+    own = data.get("this_game")
+    if own:
+        fw = own["first_week_copies"]
+        summary = (
+            f"With {own['wishlists']:,} wishlists, a first week of roughly {fw['low']:,}–{fw['high']:,} copies "
+            f"(typical {fw['typical']:,})"
+        )
+        if own.get("first_week_after_steam_cut_usd"):
+            net = own["first_week_after_steam_cut_usd"]
+            summary += f", about {money(net['low'])}–{money(net['high'])} after Steam's cut"
+    else:
+        summary = f"Rough copies sold for {plural(len(games), 'close game')}, from their review counts"
+    a = data.get("assumptions") or {}
+    rows = [
+        [
+            g.get("name"),
+            f"{g.get('reviews', 0):,}",
+            _range(g["copies"]),
+            money(g["gross_usd_at_full_price"]["typical"]) if g.get("gross_usd_at_full_price") else "—",
+        ]
+        for g in games
+    ]
+    notes = ""
+    if a:
+        share = a["first_week_share_of_wishlists"]
+        notes = "\n".join(
+            [
+                f"- Copies per review: {_range(a['copies_per_review'])}. {a.get('copies_per_review_note', '')}",
+                f"- First week: {share['low']:.0%}–{share['high']:.0%} of the wishlists. "
+                f"{a.get('first_week_note', '')}",
+                f"- {a.get('gross_note', '')}",
+            ]
+        )
+    display = join(
+        table(["Game", "Reviews", "Copies sold (estimate)", "Gross at full price (typical)"], rows),
+        section("Rules of thumb, not forecasts", notes),
+    )
+    return result(data, summary + ". Rules of thumb, not a forecast.", display=display)
+
+
+def study_reviews(data: dict[str, Any]) -> dict[str, Any]:
+    games = data.get("games") or []
+    return result(
+        data,
+        f"Reviews of {plural(len(games), 'game')} to read and label.",
+        next="Label every game with the themes and send the notes with save_review_study; never quote the reviews.",
+        display=table(
+            ["Game", "Positive reviews", "Negative reviews"],
+            [[g["name"], len(g["positive"]), len(g["negative"])] for g in games],
+        ),
+    )
+
+
+def _theme_table(shares: list[dict[str, Any]]) -> str:
+    return table(["Theme", "Share of games"], [[s["theme"].replace("_", " "), f"{s['share']:.0%}"] for s in shares])
+
+
+def save_review_study(data: dict[str, Any]) -> dict[str, Any]:
+    praised = ", ".join(s["theme"].replace("_", " ") for s in (data.get("praised") or [])[:3])
+    criticized = ", ".join(s["theme"].replace("_", " ") for s in (data.get("criticized") or [])[:3])
+    summary = f"Review study saved: players praise {praised or 'nothing in common'}"
+    if criticized:
+        summary += f" and criticize {criticized}"
+    display = join(
+        section("Praised", _theme_table(data.get("praised") or [])),
+        section("Criticized", _theme_table(data.get("criticized") or [])),
+    )
+    missing = data.get("not_labelled") or []
+    return result(data, summary + ".", outcome="partial" if missing else "ok", display=display)
+
+
+def launch_watch(data: dict[str, Any]) -> dict[str, Any]:
+    g = data["game"]
+    if g.get("coming_soon"):
+        return result(data, f"{g.get('name')} is not released yet; its review and player numbers start at launch.")
+    summary = f"{g.get('name')}: {_reviews_text(g)}, {_players_text(g)}"
+    rows = [
+        ["Reviews", _reviews_text(g)],
+        ["Playing now", number(g.get("players_now"))],
+        ["Price (US)", _price_text(g)],
+    ]
+    if data.get("highest_players_seen"):
+        rows.append(["Most players seen at a check", number(data["highest_players_seen"])])
+    if since := data.get("since_last_check"):
+        summary += f"; {since['new_reviews']:+,} reviews since the last check"
+        rows.append(["New reviews since the last check", f"{since['new_reviews']:+,}"])
+        if since.get("positive_share_change") is not None:
+            rows.append(["Positive share change", f"{since['positive_share_change']:+.1%}"])
+        rows.append(["Last check", since["last_check"]])
+    steps = ["To see what players say, call study_reviews(path, appids=[<the game's app id>])."]
+    return result(data, summary + ".", next=steps, display=table(["", g.get("name") or "Game"], rows, width=200))

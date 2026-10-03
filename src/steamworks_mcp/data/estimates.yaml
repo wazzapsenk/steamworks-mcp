@@ -1,0 +1,25 @@
+# Rules of thumb behind estimate_sales. They vary a lot by genre, price, release year and audience: every number
+# here gives a range, never a forecast. Change them if you have better numbers for your genre.
+last_reviewed: '2026-10-03'
+
+review_multiplier:
+  low: 20
+  typical: 30
+  high: 60
+  note: >-
+    Copies sold per Steam review (often called the Boxleiter method). Commonly quoted between about 20 and 60:
+    cheap games, games with many players outside English-speaking countries and older games sit at the high end,
+    expensive and very niche games at the low end.
+
+wishlist_first_week:
+  low: 0.05
+  typical: 0.1
+  high: 0.2
+  note: >-
+    Share of the wishlists a game has on release day that turn into purchases in its first week. Commonly quoted
+    around 10 percent; a strong launch, a launch discount and a good review score push it up.
+
+steam_cut: 0.30
+steam_cut_note: >-
+  Valve's revenue share on the first 10 million USD of a game's revenue. Refunds, VAT and sales taxes and regional
+  prices lower the revenue further; the estimates ignore them.

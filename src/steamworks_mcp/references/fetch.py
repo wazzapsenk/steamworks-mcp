@@ -9,6 +9,13 @@ Sources (no key needed unless noted):
 * ``store.steampowered.com/search/results`` - the "Popular New Releases" and "Top Sellers" lists, optionally filtered
   by store tags, for the store patterns and the market study.
 * ``store.steampowered.com/tagdata/populartags`` - the store tags with their ids.
+* ``store.steampowered.com/api/storesearch`` - games by name.
+* ``ISteamUserStats/GetNumberOfCurrentPlayers`` - how many people play a game right now.
+* ``store.steampowered.com/appreviews/<appid>`` - the review score and totals, and review texts. Only the text, the
+  vote, the playtime at review and the date are kept; nothing about the reviewer.
+* ``appdetails?filters=price_overview&cc=<country>`` - prices in a country's store, for many games at once.
+
+Live numbers (players, reviews, prices) are cached for hours, not days: see :data:`FRESH`.
 
 Raw responses (other games' texts) only ever live in the cache, never in the repository. Each cache entry records
 when and from where it was fetched. Requests are spaced out and retried with backoff.
@@ -36,6 +43,16 @@ GAMES_ONLY = 998
 WEB_API = "https://api.steampowered.com"
 COMMUNITY = "https://steamcommunity.com/stats/{appid}/achievements/"
 USER_AGENT = "steamworks-mcp (reference research; https://github.com/wazzapsenk/steamworks-mcp)"
+STORE_FIND = "https://store.steampowered.com/api/storesearch/"
+REVIEWS = "https://store.steampowered.com/appreviews/{appid}"
+FRESH = {
+    "players": dt.timedelta(hours=1),
+    "review_summary": dt.timedelta(hours=12),
+    "reviews": dt.timedelta(days=7),
+    "price": dt.timedelta(hours=12),
+}
+"""How long live numbers stay fresh in the cache (everything else: ``max_age_days``)."""
+REVIEW_KEYS = ("recommendationid", "voted_up", "votes_up", "timestamp_created", "language", "review")
 
 
 class FetchError(RuntimeError):
@@ -75,13 +92,13 @@ class ReferenceFetcher:
     def _path(self, appid: int, kind: str) -> Path:
         return self.cache_dir / str(appid) / f"{kind}.json"
 
-    def _cached(self, appid: int, kind: str, refresh: bool) -> Cached | None:
+    def _cached(self, appid: int, kind: str, refresh: bool, max_age: dt.timedelta | None = None) -> Cached | None:
         p = self._path(appid, kind)
         if refresh or not p.exists():
             return None
         raw = json.loads(p.read_text(encoding="utf-8"))
         fetched = dt.datetime.fromisoformat(raw["fetched_at"])
-        if dt.datetime.now(dt.UTC) - fetched > self.max_age:
+        if dt.datetime.now(dt.UTC) - fetched > (max_age or self.max_age):
             return None
         return Cached(raw["data"], fetched, raw["source"])
 
@@ -211,6 +228,112 @@ class ReferenceFetcher:
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(json.dumps({"fetched_at": now.isoformat(), "source": STORE_TAGS, "data": data}), "utf-8")
         return data
+
+    # ------------------------------------------------------------------ live numbers
+
+    def find(self, term: str) -> list[dict[str, Any]]:
+        """Games whose name matches ``term`` (the store's own search box): app id, name and USD price."""
+        res = self._get(STORE_FIND, {"term": term, "l": "english", "cc": "US"})
+        if res.status_code != 200:
+            raise FetchError(f"store search {term!r}: HTTP {res.status_code}")
+        return [
+            {"appid": int(i["id"]), "name": str(i.get("name") or ""), "price": i.get("price")}
+            for i in res.json().get("items") or []
+            if i.get("type") == "app" and i.get("id")
+        ]
+
+    def current_players(self, appid: int, *, refresh: bool = False) -> Cached:
+        if hit := self._cached(appid, "players", refresh, FRESH["players"]):
+            return hit
+        url = f"{WEB_API}/ISteamUserStats/GetNumberOfCurrentPlayers/v1/"
+        res = self._get(url, {"appid": appid})
+        if res.status_code == 404:
+            return self._store(appid, "players", None, url)  # unreleased, or no player data
+        if res.status_code != 200:
+            raise FetchError(f"current players {appid}: HTTP {res.status_code}")
+        response = res.json().get("response") or {}
+        count = response.get("player_count") if response.get("result") == 1 else None
+        return self._store(appid, "players", count, url)
+
+    def review_summary(self, appid: int, *, refresh: bool = False) -> Cached:
+        """Review score and totals over every language: review_score_desc, total_positive, total_negative,
+        total_reviews."""
+        if hit := self._cached(appid, "review_summary", refresh, FRESH["review_summary"]):
+            return hit
+        url = REVIEWS.format(appid=appid)
+        params = {"json": 1, "language": "all", "purchase_type": "all", "num_per_page": 0, "filter": "all"}
+        res = self._get(url, params)
+        if res.status_code != 200:
+            raise FetchError(f"review summary {appid}: HTTP {res.status_code}")
+        summary = res.json().get("query_summary") or {}
+        keep = ("review_score", "review_score_desc", "total_positive", "total_negative", "total_reviews")
+        return self._store(appid, "review_summary", {k: summary.get(k) for k in keep}, url)
+
+    def reviews(
+        self, appid: int, kind: Literal["positive", "negative"], *, count: int | None = 20, refresh: bool = False
+    ) -> Cached:
+        """The most helpful English reviews of one kind. Kept per review: id, vote, helpful votes, date, language,
+        playtime at review (hours) and the text (cut at 1500 characters). Nothing about the reviewer is kept.
+        ``count=None``: whatever is cached (20 when nothing is)."""
+        kind_key = f"reviews_{kind}"
+        hit = self._cached(appid, kind_key, refresh, FRESH["reviews"])
+        if hit and (count is None or len(hit.data) >= count):
+            return Cached(hit.data[:count], hit.fetched_at, hit.source)
+        count = count or 20
+        url = REVIEWS.format(appid=appid)
+        params = {
+            "json": 1,
+            "language": "english",
+            "purchase_type": "all",
+            "filter": "all",
+            "review_type": kind,
+            "num_per_page": min(100, max(1, count)),
+            "cursor": "*",
+        }
+        res = self._get(url, params)
+        if res.status_code != 200:
+            raise FetchError(f"reviews {appid}: HTTP {res.status_code}")
+        rows = []
+        for r in res.json().get("reviews") or []:
+            row = {k: r.get(k) for k in REVIEW_KEYS}
+            row["review"] = " ".join(str(row["review"] or "").split())[:1500]
+            row["hours_at_review"] = round(((r.get("author") or {}).get("playtime_at_review") or 0) / 60, 1)
+            rows.append(row)
+        return self._store(appid, kind_key, rows, url)
+
+    def prices(self, appids: list[int], country: str, *, refresh: bool = False) -> dict[int, dict[str, Any] | None]:
+        """Each game's price in a country's store: currency, full and current price (in cents) and the discount.
+        None for free or unavailable games. One request covers up to 50 games that are not cached yet."""
+        cc = country.lower()
+        out: dict[int, dict[str, Any] | None] = {}
+        todo = []
+        for appid in appids:
+            if hit := self._cached(appid, f"price_{cc}", refresh, FRESH["price"]):
+                out[appid] = hit.data
+            else:
+                todo.append(appid)
+        for start in range(0, len(todo), 50):
+            batch = todo[start : start + 50]
+            params = {"appids": ",".join(str(a) for a in batch), "cc": cc, "filters": "price_overview"}
+            res = self._get(STORE_API, params)
+            if res.status_code != 200:
+                raise FetchError(f"prices ({cc}): HTTP {res.status_code}")
+            body = res.json() or {}
+            for appid in batch:
+                entry = body.get(str(appid)) or {}
+                overview = (entry.get("data") or {}).get("price_overview") if entry.get("success") else None
+                price = (
+                    {
+                        "currency": overview["currency"],
+                        "full": overview["initial"],
+                        "now": overview["final"],
+                        "discount_percent": overview.get("discount_percent", 0),
+                    }
+                    if isinstance(overview, dict)
+                    else None
+                )
+                out[appid] = self._store(appid, f"price_{cc}", price, str(res.url)).data
+        return {a: out[a] for a in appids}
 
 
 _APP_IN_URL = re.compile(r"/apps/(\d+)/")
