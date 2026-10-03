@@ -537,7 +537,10 @@ class Executor:
                 "note": "Read-only. Saving a page opens a new revision even when nothing changed; only "
                 "changed_sections hold real changes. Publishing is always done by the user in Steamworks.",
             }
-        return {"appid": appid, "steamworks": await A.read_section(t, what, appid)}
+        data = await A.read_section(t, what, appid)
+        if what == "store_page":  # every input of every language: only the filled ones are worth showing
+            data = {**data, "form": {k: v for k, v in data["form"].items() if v}}
+        return {"appid": appid, "steamworks": data}
 
 
 def list_snapshots(project: Project) -> list[str]:

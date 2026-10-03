@@ -531,7 +531,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
     @user_errors
     async def apply(
         path: str,
-        section: Literal["cloud", "installation", "achievements", "store_text", "leaderboards", "build"],
+        section: Literal["cloud", "installation", "achievements", "store_text", "store_page", "leaderboards", "build"],
         app: Literal["main", "demo", "playtest"] = "main",
         dry_run: bool = True,
         user_confirmed: bool = False,
@@ -544,7 +544,9 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
 
         Sections: "leaderboards" (Web API, publisher key), "build" (uploads the SteamPipe scripts with steamcmd),
         and with the BROWSER mode: "cloud", "installation", "achievements" (main game), "store_text" (short and long
-        description in every approved language). Every call saves a snapshot of what Steam had first.
+        description in every approved language), "store_page" (the store page form: links, support info, legal
+        line, system requirements, platforms, language table, genres, categories, third-party DRM/accounts; empty
+        fields never clear Steam's). Every call saves a snapshot of what Steam had first.
 
         Args:
             path: Folder that holds steamworks.yaml.
@@ -580,12 +582,13 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "installation",
             "achievements",
             "store_text",
+            "store_page",
         ],
         app: Literal["main", "demo", "playtest"] = "main",
     ) -> dict[str, Any]:
         """Read-only look at what Steam has now. With the publisher key: "builds" (recent builds and branches),
         "leaderboards", "achievement_schema". With the BROWSER mode: "cloud", "installation", "achievements",
-        "store_text", "pending" (the unpublished changes the Publish tab would show), and "checklist" (the
+        "store_text", "store_page", "pending" (the unpublished changes the Publish tab would show), and "checklist" (the
         release checklists of the app's Steamworks landing page, each item linked to its gap_report rule).
         "snapshots" lists the snapshots saved before writes (local)."""
         return await execu.inspect(open_project(path), what, app)

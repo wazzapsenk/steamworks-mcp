@@ -56,6 +56,10 @@ class Transport(Protocol):
 
     async def upload_store_localization(self, appid: int, file_name: str, data: bytes) -> Response: ...
 
+    async def submit_form(
+        self, page: str, selector: str, action: str, changes: list[tuple[str, str | None]]
+    ) -> Response: ...
+
 
 # ---------------------------------------------------------------------------------------------------- replay
 
@@ -125,6 +129,15 @@ class ReplayTransport:
         guard.check("POST", f"{BASE}/admin/game/uploadloc/{item}")
         return self._take("POST", f"/admin/game/uploadloc/{item}")
 
+    async def submit_form(
+        self, page: str, selector: str, action: str, changes: list[tuple[str, str | None]]
+    ) -> Response:
+        guard.check("GET", BASE + page)
+        guard.check("POST", BASE + action)
+        self.sent.append(Sent("FORM", action, {k: "<removed>" if v is None else v for k, v in changes}))
+        self._take("GET", page)
+        return self._take("POST", action)
+
 
 # ---------------------------------------------------------------------------------------------------- playwright
 
@@ -144,6 +157,17 @@ MULTIPART = """async ({url, fields, files}) => {
     fd.set(k, new Blob([bin], {type: f.mime}), f.name);
   }
   const r = await fetch(url, {method: "POST", body: fd, credentials: "same-origin"});
+  return {status: r.status, url: r.url, text: await r.text()};
+}"""
+
+
+SUBMIT_FORM = """async ({page, selector, action, changes}) => {
+  const html = await (await fetch(page, {credentials: "same-origin"})).text();
+  const form = new DOMParser().parseFromString(html, "text/html").querySelector(selector);
+  if (!form) return {status: 0, url: "", text: "form " + selector + " not found"};
+  const fd = new FormData(form);
+  for (const [k, v] of changes) { if (v === null) fd.delete(k); else fd.set(k, v); }
+  const r = await fetch(action, {method: "POST", body: fd, credentials: "same-origin"});
   return {status: r.status, url: r.url, text: await r.text()};
 }"""
 
@@ -191,6 +215,22 @@ class PlaywrightTransport:
         async with self.page.expect_navigation(timeout=90_000):
             await self.page.locator("#tab_localization_content button[type=submit]").click()
         return Response(200, str(self.page.url), "")
+
+    async def submit_form(
+        self, page: str, selector: str, action: str, changes: list[tuple[str, str | None]]
+    ) -> Response:
+        """Post a page's own form back as the browser would serialize it, with ``changes`` replacing (or, for
+        ``None``, removing) single inputs. The form is read fresh from ``page``; nothing else of it is touched."""
+        guard.check("GET", BASE + page)
+        guard.check("POST", BASE + action)
+        await self._ensure_partner_page()
+        r = await self.page.evaluate(
+            SUBMIT_FORM,
+            {"page": BASE + page, "selector": selector, "action": BASE + action, "changes": [list(c) for c in changes]},
+        )
+        if r["status"] == 0:
+            raise RuntimeError(f"{page}: {r['text']}")
+        return Response(r["status"], r["url"], r["text"])
 
 
 def form_body(form: dict[str, str]) -> str:

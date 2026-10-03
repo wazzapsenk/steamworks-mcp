@@ -110,6 +110,41 @@ What it showed beyond the recordings:
 - The page loads `IStoreCatalogService/GetDevPageLinks` from `api.steampowered.com` with a short-lived
   `access_token`. Treat it like a cookie: never log it.
 
+## Store page form (Edit Store Page)
+
+- **One form for every tab.** `GET /admin/game/edit/{storeItemId}` holds `#gameform`. It posts multipart to
+  `POST /admin/game/save/{storeItemId}`, which answers with a redirect to the edit page carrying "Changes saved".
+  - The fields include `sessionid`, `serialized_app_data` (the whole store item as JSON; the best place to read
+    current values) and about 1,900 inputs.
+  - Field groups:
+    - `app[content][links][website|forums|online_manual|privacy_policy|…]` and `app[content][support_info][url|email|phone]`
+    - `app[content][legal][<lang>]`
+    - `app[content][sysreqs][windows|mac|linux|android][min|rec][…]`: per-language text, `memory`/`diskspace`
+      `[amount|units]`, `directx` (a select), `broadband`
+    - `app[platforms][win|mac|linux|android]`
+    - `app[content][supported_languages][<lang>][supported|full_audio|subtitles]`
+    - `rgGenres[<id>]` and `app[classification][primary_genre]`
+    - `app[classification][category][category_<id>]`
+    - `app[game][3pdrm|3pacc][…]`
+  - Ticked "fancy checkbox" inputs hold `true` and empty ones `""` (some start as `1`). Genre names come from the
+    page's `OnGenreSelect(this, '<id>', '<name>')`.
+- **Saving the form unchanged changes nothing.** Recorded live on a test app:
+  - The tool posts the page's own form back (the browser's `FormData` of `#gameform`) with only the changed inputs
+    replaced.
+  - An unchanged post left `serialized_app_data`, the localization export and the diff page exactly as they were.
+  - Inputs the static form does not carry (About, the social links) kept their values.
+  - Changing two inputs and then writing them back also returned to the exact same state.
+  - In the form, unlike the localization import, an empty value is how a field is cleared.
+- **What saving does not touch.** Saves go into the unpublished store draft (`GET /admin/game/diff/{storeItemId}`
+  shows it). The "View Diffs" button saves first, so the tool only reads the diff URL.
+- **Areas the tool leaves alone:**
+  - Developer and publisher names are autocomplete widgets.
+  - The Controller and Accessibility wizards set categories and also record that the wizard was finished.
+  - The release date has its own endpoint (`/apprelease/ajaxupdatereleaserequest/{appid}`).
+- **Live at once although the name does not say so.** These are on the guard's forbidden list:
+  - Store tags (`/tagdata/forcetagranking`; the page says the changes "have been successfully published").
+  - Package names and contents (`/store/ajaxpackagesave/{packageId}`; renaming publishes right away).
+
 ## Achievements
 
 - `GET /apps/fetchachievements/{appid}` → `{"achievements":[…],"languages":{"english":true,…}}`. `languages` lists the

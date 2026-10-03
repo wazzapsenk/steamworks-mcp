@@ -16,7 +16,7 @@ from mcp import Client
 
 from steamworks_mcp import project as proj
 from steamworks_mcp.config import Config, load_config
-from steamworks_mcp.execute import guard, importer, sync
+from steamworks_mcp.execute import guard, importer, store_page, sync
 from steamworks_mcp.execute.api import DISPLAY_TYPES, PartnerApi, SteamApiError, plan_leaderboards, run_steamcmd
 from steamworks_mcp.execute.apply import ApplyRefused, Consent, apply_section, restore_snapshot, save_snapshot
 from steamworks_mcp.execute.browser import partner as P
@@ -112,6 +112,13 @@ def audit_entries(project: Project) -> list[dict[str, Any]]:
         ("POST", "/admin/game/submit/2000000"),
         ("POST", "/admin/game/release/2000000"),
         ("GET", "/admin/game/publish/2000000"),
+        ("POST", "/admin/game/revert/2000000"),
+        ("POST", "/admin/game/prepare/2000000"),
+        ("POST", "/admin/store/packagerevert/3000000"),
+        ("POST", "/admin/store/packageprepare/3000000"),
+        ("POST", "/apps/retireapp/1000000"),
+        ("POST", "/tagdata/forcetagranking"),  # store tags go live at once
+        ("POST", "/store/ajaxpackagesave/3000000"),  # package names and contents too
     ],
 )
 def test_guard_blocks_publishing(method: str, path: str) -> None:
@@ -128,13 +135,14 @@ def test_guard_allows_only_known_writes_on_steam() -> None:
         "/apps/deleteachievement/1000000/3/0",
         "/images/uploadachievement",
         "/admin/game/uploadloc/2000000",
+        "/admin/game/save/2000000",
         "/apps/diff/1000000",
     ]
     for path in ok:
         guard.check("POST", "https://partner.steamgames.com" + path)
     for url in (
         "https://partner.steamgames.com/apps/setsomethingelse/1000000",
-        "https://partner.steamgames.com/admin/game/save/2000000",
+        "https://partner.steamgames.com/admin/game/savesomething/2000000",
         "https://store.steampowered.com/apps/setufsparameters/1000000",
     ):
         with pytest.raises(guard.GuardError, match="not an endpoint"):
@@ -377,6 +385,101 @@ def test_store_text_comparison_ignores_paragraph_tags() -> None:
     assert sync.normalize_store_text("[p]One[/p][p]Two[/p]") == sync.normalize_store_text("One\n\nTwo")
     # a translation without the editor's [p] tags still has the source's tags
     assert loc_store.tag_signature("[p]One[/p][h2]Two[/h2]") == loc_store.tag_signature("Eins\n[h2]Zwei[/h2]")
+
+
+STORE_FORM = """<script>var g_sessionID = "abc";</script>
+<form id="gameform" method="post" enctype="multipart/form-data">
+<input type="hidden" name="serialized_app_data" value="{}">
+<input type="text" name="app[content][links][website]" value="https://old.example.com">
+<input type="text" name="app[content][support_info][email]" value="">
+<input type="hidden" name="app[content][legal][english]" value="">
+<input type="hidden" name="app[content][sysreqs][windows][min][osversion][english]" value="">
+<input name="app[content][sysreqs][windows][min][memory][amount]" value="">
+<select name="app[content][sysreqs][windows][min][memory][units]"><option value="MB">MB</option>
+<option value="GB" selected>GB</option></select>
+<select name="app[content][sysreqs][windows][min][directx]"><option value="N/A">N/A</option>
+<option value="11">11</option></select>
+<input type="hidden" name="app[content][sysreqs][windows][min][broadband]" value="">
+<input type="hidden" name="app[platforms][win]" value="1"><input type="hidden" name="app[platforms][mac]" value="1">
+<input type="hidden" name="app[content][supported_languages][english][supported]" value="">
+<input type="hidden" name="app[content][supported_languages][english][full_audio]" value="">
+<input type="hidden" name="app[content][supported_languages][english][subtitles]" value="">
+<input type="hidden" name="rgGenres[1]" value="" onchange="OnGenreSelect( this, '1', 'Action');">
+<input type="hidden" name="rgGenres[23]" value="1" onchange="OnGenreSelect( this, '23', 'Indie');">
+<select name="app[classification][primary_genre]"><option value="0">-</option><option value="1">Action</option></select>
+<input type="hidden" name="app[classification][category][category_2]" value="true">
+<input type="hidden" name="app[classification][category][category_38]" value="">
+<input type="text" name="app[content][reviews][0][site]" value="untouched">
+</form>"""
+
+
+def test_store_page_inputs_from_steamworks_yaml() -> None:
+    current = store_page.read(parse(STORE_FORM).forms["gameform"], STORE_FORM)
+    assert "app[content][reviews][0][site]" not in current["form"]  # only the inputs this section manages
+    assert current["genres"] == {"Action": "1", "Indie": "23"}
+    values = {
+        "source_language": "english",
+        "store": {
+            "links": {"website": "https://studio.example.com"},
+            "support": {"email": "", "url": None},  # empty: never sent, never clears Steam's value
+            "legal": {"legal_line": "(c) 2026 Example Studio"},
+            "system_requirements": {
+                "windows": {"minimum": {"os": "Windows 10 64-bit", "memory": "8 GB", "directx": "Version 11"}}
+            },
+            "platforms": ["windows"],
+            "supported_languages": {"english": {"interface": True, "full_audio": False, "subtitles": True}},
+            "primary_genre": "Action",
+            "genres": ["Action", "Indie", "Roguelike"],
+            "categories": ["Single-player", "Online Co-op", "Full controller support"],
+        },
+    }
+    want = store_page.desired(values, current, remove_extra=False)
+    diff = store_page.changes(want["inputs"], current)
+    assert diff == {
+        "app[content][links][website]": "https://studio.example.com",
+        "app[content][legal][english]": "(c) 2026 Example Studio",
+        "app[content][sysreqs][windows][min][osversion][english]": "Windows 10 64-bit",
+        "app[content][sysreqs][windows][min][memory][amount]": "8",
+        "app[content][sysreqs][windows][min][directx]": "11",
+        "app[content][supported_languages][english][supported]": "true",
+        "app[content][supported_languages][english][subtitles]": "true",
+        "rgGenres[1]": "true",
+        "app[classification][primary_genre]": "1",
+        "app[classification][category][category_38]": "true",
+    }  # GB, platforms, Indie and Single-player already match; mac stays ticked without remove_extra
+    assert any("Roguelike" in p for p in want["problems"])
+    assert any("Controller Support wizard" in p for p in want["problems"])
+    extra = store_page.changes(store_page.desired(values, current, remove_extra=True)["inputs"], current)
+    assert extra["app[platforms][mac]"] == ""
+    assert store_page.size("1.5 GB") == ("1536", "MB") and store_page.size("500 MB") == ("500", "MB")
+    assert store_page.size("lots") is None
+
+
+async def test_store_page_save_posts_the_page_form_with_changes() -> None:
+    sent: list[tuple[str, str, list[tuple[str, str | None]]]] = []
+
+    class Recorder:
+        async def submit_form(
+            self, page: str, selector: str, action: str, changes: list[tuple[str, str | None]]
+        ) -> Response:
+            sent.append((page, action, changes))
+            return Response(200, "https://partner.steamgames.com/admin/game/edit/2000000?msg=Changes+saved", "")
+
+    await P.save_store_page(Recorder(), "2000000", {"app[content][links][website]": "https://x.example"})  # type: ignore[arg-type]
+    assert sent == [
+        (
+            "/admin/game/edit/2000000",
+            "/admin/game/save/2000000",
+            [("app[content][links][website]", "https://x.example"), ("activetab", "tab_basic")],
+        )
+    ]
+
+    class Silent(Recorder):
+        async def submit_form(self, *a: Any) -> Response:
+            return Response(200, "https://partner.steamgames.com/admin/game/edit/2000000", "")
+
+    with pytest.raises(RuntimeError, match="Changes saved"):
+        await P.save_store_page(Silent(), "2000000", {"x": "y"})  # type: ignore[arg-type]
 
 
 async def test_store_text_never_sends_an_empty_value() -> None:

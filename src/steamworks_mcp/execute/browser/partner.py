@@ -9,7 +9,7 @@ import html
 import json
 import re
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import unquote_plus, urlsplit
 
 from steamworks_mcp.execute.browser.html import parse
 from steamworks_mcp.execute.browser.transport import NotLoggedInError, Response, Transport
@@ -68,6 +68,30 @@ async def upload_store_localization(t: Transport, appid: int, data: dict[str, An
         return
     raw = json.dumps({**data, "languages": languages}, ensure_ascii=False).encode("utf-8")
     _checked(await t.upload_store_localization(appid, "store_localization.json", raw), "store localization upload")
+
+
+async def read_store_form(t: Transport, item_id: str) -> tuple[dict[str, Any], str]:
+    """The inputs of the store page's form (``#gameform``, the one carrying ``serialized_app_data``) and the page."""
+    res = _checked(await t.get(f"/admin/game/edit/{item_id}"), "store page")
+    form = next((f for f in parse(res.text).forms.values() if "serialized_app_data" in f), None)
+    if form is None:
+        raise FormatError("The store page changed (its form was not found).")
+    return form, res.text
+
+
+async def save_store_page(t: Transport, item_id: str, changes: dict[str, str]) -> None:
+    """Post the store page's own form back with ``changes``; Steamworks redirects with "Changes saved"."""
+    res = _checked(
+        await t.submit_form(
+            f"/admin/game/edit/{item_id}",
+            "#gameform",
+            f"/admin/game/save/{item_id}",
+            [*changes.items(), ("activetab", "tab_basic")],
+        ),
+        "store page save",
+    )
+    if "Changes saved" not in unquote_plus(res.url + res.redirect):
+        raise RuntimeError("store page save: Steamworks did not confirm it (no 'Changes saved').")
 
 
 # ---------------------------------------------------------------------------------------------------- achievements

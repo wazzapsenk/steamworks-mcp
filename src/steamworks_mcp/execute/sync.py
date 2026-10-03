@@ -19,7 +19,20 @@ from steamworks_mcp.localization.store import Localization
 from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.state import State, is_empty
 
-SECTIONS = ("cloud", "installation", "achievements", "store_text")
+SECTIONS = ("cloud", "installation", "achievements", "store_text", "store_page")
+STORE_PAGE_FIELDS = (
+    "store.links.",
+    "store.support.",
+    "store.legal.legal_line",
+    "store.system_requirements.",
+    "store.platforms",
+    "store.supported_languages",
+    "store.genres",
+    "store.primary_genre",
+    "store.categories",
+    "store.third_party.",
+)
+"""What apply(section="store_page") writes (the store page form; see execute/store_page.py)."""
 CLOUD_OS = {"all": "", "windows": "Windows", "macos": "MacOS", "linux": "Linux", "android": "Android"}
 LAUNCH_OS = {"all": "", "windows": "windows", "macos": "macos", "linux": "linux", "android": "android"}
 ARCH = {"all": "", "32": "32", "64": "64"}
@@ -62,6 +75,8 @@ def written(section: str, app: str, path: str, icons: bool = False) -> bool:
         )
     if section == "store_text":
         return path in STORE_FIELDS
+    if section == "store_page":
+        return path.startswith(STORE_PAGE_FIELDS)
     if section == "leaderboards":
         return path.startswith("leaderboards.")
     if section == "build":

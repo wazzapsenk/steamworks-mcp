@@ -22,7 +22,7 @@ Last reviewed: 2026-10-03.
 | Stat definitions | — | ❔ unverified | MANUAL |  |
 | Steam Cloud quota, flags, Auto-Cloud paths and root overrides | — | ✅ verified: apps/setufsparameters, setautocloudpath, setautocloudoverride | MANUAL → BROWSER | Steamworks silently clamps quotas and replaces unknown roots with gameinstall; the tool validates first. Saving an Auto-Cloud path turns "developers only" back on, so quotas and flags are written last. |
 | Store page short description and About This Game, all languages | — | ✅ verified: Localization tab import (admin/game/uploadloc), partial uploads | ARTIFACT → BROWSER | The ARTIFACT is the same JSON file the Localization tab imports. |
-| Other store page fields (system requirements, links, legal line, languages table, genres, categories, tags) | — | ❔ unverified | MANUAL |  |
+| Other store page fields (system requirements, links, legal line, languages table, genres, categories, tags) | — | ⚠️ partial: Store page form (admin/game/save), apply(section='store_page') | MANUAL | Links, support info, legal line and system requirements were written, read back and restored live; the language table, genres, categories, platforms and DRM fields go through the same form. Developer/publisher names, the Controller and Accessibility wizards and the release date stay manual. Tags are never written: Steam publishes them at once. |
 | Capsules, screenshots, trailers, library assets | — | ❔ unverified | ARTIFACT | Images are cropped from the user's own art at the exact sizes; artwork is never generated. |
 | App icon and shortcut icon | — | ❔ unverified | ARTIFACT |  |
 | Install folder and launch options (with localized descriptions) | — | ✅ verified: apps/setappinstallfolder, setlaunchoption | MANUAL → BROWSER |  |

@@ -103,8 +103,13 @@ areas:
   - id: store_other
     name: Other store page fields (system requirements, links, legal line, languages table, genres, categories, tags)
     api: {status: never}
-    browser: {status: unverified}
+    browser: {status: partial, how: "Store page form (admin/game/save), apply(section='store_page')"}
     default_mode: MANUAL
+    notes: >-
+      Links, support info, legal line and system requirements were written, read back and restored live; the
+      language table, genres, categories, platforms and DRM fields go through the same form. Developer/publisher
+      names, the Controller and Accessibility wizards and the release date stay manual. Tags are never written: Steam
+      publishes them at once.
   - id: graphical_assets
     name: Capsules, screenshots, trailers, library assets
     api: {status: never}

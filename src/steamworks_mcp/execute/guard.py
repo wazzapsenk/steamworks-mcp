@@ -18,7 +18,13 @@ from urllib.parse import urlsplit
 
 NAVIGABLE = re.compile(r"(^|\.)(steamgames\.com|steampowered\.com|steamcommunity\.com)$")
 WRITE_HOST = "partner.steamgames.com"
-FORBIDDEN = re.compile(r"publish|/apps/(prepare|revert)/|/admin/game/(submit|release)", re.I)
+FORBIDDEN = re.compile(
+    r"publish|/apps/(prepare|revert|retireapp)/|/admin/game/(submit|release|revert|prepare)"
+    r"|/admin/store/package(revert|prepare)"
+    # live at once although nothing in the name says so: store tags, and package names and contents
+    r"|/tagdata/forcetagranking|/store/ajaxpackagesave",
+    re.I,
+)
 ALLOWED_WRITES = [
     re.compile(
         r"^/apps/(newachievement|saveachievement|setufsparameters|setautocloudpath|setautocloudoverride|setappinstallfolder|setlaunchoption)/\d+$"
@@ -26,6 +32,7 @@ ALLOWED_WRITES = [
     re.compile(r"^/apps/deleteachievement/\d+/\d+/\d+$"),
     re.compile(r"^/images/uploadachievement$"),
     re.compile(r"^/admin/game/uploadloc/\d+$"),
+    re.compile(r"^/admin/game/save/\d+$"),  # the store page form; saved into the unpublished draft
     re.compile(r"^/apps/diff/\d+$"),  # the Publish page's read-only "View Diffs"
 ]
 

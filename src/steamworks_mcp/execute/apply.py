@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from steamworks_mcp.execute import sync
+from steamworks_mcp.execute import store_page, sync
 from steamworks_mcp.execute.browser import partner as P
 from steamworks_mcp.execute.browser.transport import Transport
 from steamworks_mcp.manifest import paths as fp
@@ -88,6 +88,8 @@ async def read_section(t: Transport, section: str, appid: int) -> dict[str, Any]
     if section == "store_text":
         item = await P.store_item_id(t, appid)
         return {"item_id": item, **await P.read_store_localization(t, item)}
+    if section == "store_page":
+        return await store_page.read_section(t, appid)
     raise ValueError(f"section must be one of {', '.join(sync.SECTIONS)}")
 
 
@@ -135,12 +137,22 @@ def _plan(
         return sync.plan_installation(appid, desired, current, remove_extra, force)
     if section == "achievements":
         return sync.plan_achievements(appid, desired, current, remove_extra, icons, force)
+    if section == "store_page":
+        return store_page.plan(current["item_id"], desired, current, force)
     return sync.plan_store(appid, current["item_id"], desired, current, force)
 
 
 def desired_from_values(
-    section: str, values: dict[str, Any], state: State, root: Path, app: str, current: dict[str, Any]
+    section: str,
+    values: dict[str, Any],
+    state: State,
+    root: Path,
+    app: str,
+    current: dict[str, Any],
+    remove_extra: bool = False,
 ) -> Any:
+    if section == "store_page":
+        return store_page.desired(values, current, remove_extra)
     if section == "cloud":
         return sync.desired_cloud(values, app, current)
     if section == "installation":
@@ -177,8 +189,8 @@ async def apply_section(
     appid = fp.get(values, f"apps.{app}.appid")
     if not appid:
         raise ApplyRefused(f"apps.{app}.appid is not set.")
-    if section == "achievements" and app != "main":
-        raise ApplyRefused("Achievements are defined for the main game only.")
+    if section in ("achievements", "store_page") and app != "main":
+        raise ApplyRefused("Achievements and the store page are defined for the main game only.")
     current = await read_section(t, section, int(appid))
     sid = save_snapshot(files, app, int(appid), section, current)
     pending = sync.not_approved(values, state, section, app, icons=upload_icons)
@@ -188,7 +200,7 @@ async def apply_section(
             "refused": NOT_APPROVED,
             "not_approved": pending,
         }
-    desired = desired_from_values(section, values, state, files.root, app, current)
+    desired = desired_from_values(section, values, state, files.root, app, current, remove_extra)
     icons = (
         _icons(values, files.root, files.snapshots_dir / f"{sid}-icons")
         if section == "achievements" and upload_icons
@@ -215,7 +227,11 @@ async def apply_section(
         t, files, section, int(appid), {"action": "apply", "app": app, "snapshot": sid, "done": done, "error": error}
     )
     remaining = _plan(
-        section, int(appid), desired_from_values(section, values, state, files.root, app, after), after, remove_extra
+        section,
+        int(appid),
+        desired_from_values(section, values, state, files.root, app, after, remove_extra),
+        after,
+        remove_extra,
     )
     applied = (
         mark_applied_fields(values, state, lambda p: sync.written(section, app, p, upload_icons))
@@ -333,6 +349,8 @@ async def restore_snapshot(
         ]
     elif section == "store_text":
         desired = {lang: f for lang, f in target["languages"].items() if isinstance(f, dict) and f}
+    elif section == "store_page":
+        desired = {"inputs": target["form"], "problems": []}
     else:
         desired = target
     round_trip = not consent.restore_verified(appid)
