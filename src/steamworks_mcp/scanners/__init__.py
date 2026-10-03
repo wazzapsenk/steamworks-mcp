@@ -1,4 +1,4 @@
-"""Project scanners. Built in: Unity, and the optional Steam Build Pipeline plugin. Others (Godot, Unreal, …) can
+"""Project scanners. Built in: Unity, Godot, Unreal, and the optional Steam Build Pipeline plugin. Others can
 register through the ``steamworks_mcp.scanners`` entry-point group."""
 
 from __future__ import annotations
@@ -7,12 +7,14 @@ from importlib.metadata import entry_points
 from pathlib import Path
 
 from steamworks_mcp.scanners.base import Scanner, ScanResult, ScanWarning
+from steamworks_mcp.scanners.godot import GodotScanner
 from steamworks_mcp.scanners.steam_build_pipeline import SteamBuildPipelineScanner
 from steamworks_mcp.scanners.unity import UnityScanner
+from steamworks_mcp.scanners.unreal import UnrealScanner
 
 
 def all_scanners() -> list[Scanner]:
-    scanners: list[Scanner] = [UnityScanner(), SteamBuildPipelineScanner()]
+    scanners: list[Scanner] = [UnityScanner(), GodotScanner(), UnrealScanner(), SteamBuildPipelineScanner()]
     for ep in entry_points(group="steamworks_mcp.scanners"):
         try:
             obj = ep.load()

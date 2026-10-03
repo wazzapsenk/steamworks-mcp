@@ -205,7 +205,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         project = proj.Project.open(root)
         results = run_scanners(source)
         if not results:
-            return {"scanners": [], "message": f"No supported engine project found in {source} (Unity is supported)."}
+            return {"scanners": [], "message": f"No Unity, Godot or Unreal project found in {source}."}
         report = proj.merge_scan(project, results)
         project.save()
         out = report.as_dict()

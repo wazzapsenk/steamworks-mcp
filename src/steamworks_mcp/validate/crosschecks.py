@@ -51,12 +51,18 @@ def events() -> EventsFile:
     return EventsFile.model_validate(load_yaml("events.yaml"))
 
 
-def scan_facts(root: Path, scanner: str = "unity") -> dict[str, Any]:
-    p = root / ".steam-mcp" / "scan" / f"{scanner}.json"
-    try:
-        return dict(json.loads(p.read_text(encoding="utf-8")).get("facts", {}))
-    except (OSError, ValueError):
-        return {}
+ENGINE_SCANNERS = ("unity", "godot", "unreal")
+
+
+def scan_facts(root: Path, scanner: str | None = None) -> dict[str, Any]:
+    """The facts of the last scan: of ``scanner``, or of the engine scanner that ran (Unity, Godot or Unreal)."""
+    for name in (scanner,) if scanner else ENGINE_SCANNERS:
+        p = root / ".steam-mcp" / "scan" / f"{name}.json"
+        try:
+            return dict(json.loads(p.read_text(encoding="utf-8")).get("facts", {}))
+        except (OSError, ValueError):
+            continue
+    return {}
 
 
 # ---------------------------------------------------------------------------------------------------- checks

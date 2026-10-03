@@ -101,7 +101,7 @@ def code_definitions(values: dict[str, Any], root: Path) -> tuple[list[Finding],
     """Stats and leaderboards used in code; achievements in code vs in steamworks.yaml."""
     facts = scan_facts(root)
     out: list[Finding] = []
-    ev = [Evidence(file=".steam-mcp/scan/unity.json", note="from the last scan")]
+    ev = [Evidence(file=".steam-mcp/scan/", note="from the last scan")]
     for name in facts.get("code_stats") or []:
         if _get(values, f"stats.{name}") is None:
             out.append(Finding(f"stats.{name}", {"name": name}, 0.8, ev, kind="item"))
