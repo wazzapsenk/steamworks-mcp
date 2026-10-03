@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from steamworks_mcp.interview.questions import coerce, unit_ancestor
+from steamworks_mcp.localization.store import Localization
 from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.io import ManifestError, load_drafts, save_draft
 from steamworks_mcp.manifest.state import Source, TransitionError, is_empty
@@ -84,6 +85,14 @@ def set_from_draft(project: Project, field: str, draft_id: str) -> dict[str, Any
     draft = next((d for d in drafts if d.id == draft_id), None)
     if draft is None:
         raise ValueError(f'No draft "{draft_id}" for {field}. Drafts: {", ".join(d.id for d in drafts) or "none"}.')
+    if draft.strategy == "outline":
+        # An approved outline is a plan for the text, not the text: mark it chosen, write nothing.
+        for d in drafts:
+            if d.strategy == "outline":
+                new = "chosen" if d.id == draft_id else ("rejected" if d.status == "chosen" else d.status)
+                if new != d.status:
+                    save_draft(project.files, d.model_copy(update={"status": new}))
+        return {"outline_approved": draft_id, "next": "generate(section='store_long', stage='text')"}
     out = set_fields(project, {field: draft.value}, draft.source)
     project.state.approve(field, fp.get(project.values(), field))
     out["status"][field] = "approved"
@@ -94,6 +103,20 @@ def set_from_draft(project: Project, field: str, draft_id: str) -> dict[str, Any
     return out
 
 
+def _translations(project: Project) -> dict[str, str]:
+    """``localization.<lang>.<key>`` -> translated text, for every target language."""
+    loc = Localization(project.files.root)
+    return {
+        f"localization.{lang}.{key}": text
+        for lang in project.values().get("target_languages") or []
+        for key, text in loc.read(lang).items()
+    }
+
+
+def _value(project: Project, path: str, translations: dict[str, str]) -> Any:
+    return translations.get(path) if path.startswith("localization.") else fp.get(project.values(), path)
+
+
 def _expand(project: Project, patterns: list[str]) -> list[str]:
     values = project.values()
     fields = [p for p, _ in fp.iter_fields(values)]
@@ -101,6 +124,13 @@ def _expand(project: Project, patterns: list[str]) -> list[str]:
     for pat in patterns:
         if pat.startswith("checklist."):
             out.append(pat)
+            continue
+        if pat.startswith("localization."):
+            keys = list(_translations(project))
+            matched = [k for k in keys if k == pat or k.startswith(pat.rstrip("*").rstrip(".") + ".")]
+            if not matched:
+                raise fp.FieldPathError(f'"{pat}" matches no translation')
+            out += [m for m in matched if m not in out]
             continue
         matched = (
             [p for p in fields if fp.matches(pat, p) or p.startswith(pat + ".")]
@@ -114,10 +144,10 @@ def _expand(project: Project, patterns: list[str]) -> list[str]:
 
 
 def approve_fields(project: Project, patterns: list[str]) -> dict[str, Any]:
-    values = project.values()
+    translations = _translations(project)
     approved, skipped = [], {}
     for path in _expand(project, patterns):
-        value = fp.get(values, path)
+        value = _value(project, path, translations)
         if is_empty(value):
             skipped[path] = "empty: nothing to approve"
             continue
@@ -128,14 +158,14 @@ def approve_fields(project: Project, patterns: list[str]) -> dict[str, Any]:
 
 def mark_applied(project: Project, patterns: list[str], notes: str = "") -> dict[str, Any]:
     """The user confirms manual steps are done in Steamworks (``checklist.<rule id>``) or values are entered there."""
-    values = project.values()
+    translations = _translations(project)
     applied, refused = [], {}
     for path in _expand(project, patterns):
         try:
             if path.startswith("checklist."):
                 project.state.confirm_checklist(path, notes)
             else:
-                project.state.mark_applied(path, fp.get(values, path))
+                project.state.mark_applied(path, _value(project, path, translations))
             applied.append(path)
         except TransitionError as exc:
             refused[path] = str(exc)

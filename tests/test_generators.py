@@ -1,0 +1,418 @@
+"""Phase 5: images, localization, deterministic generators, SteamPipe scripts, the rubric, drafts and review.
+
+Every sample text is written for a fictional game.
+"""
+
+from __future__ import annotations
+
+import json
+import shutil
+from pathlib import Path
+from typing import Any
+
+import pytest
+from mcp import Client
+from PIL import Image
+
+from steamworks_mcp.config import Config
+from steamworks_mcp.export.preview import bbcode_to_html, store_preview
+from steamworks_mcp.export.vdf import build_scripts
+from steamworks_mcp.generate import deterministic as det
+from steamworks_mcp.localization import store as loc
+from steamworks_mcp.manifest.io import ManifestFile, ProjectFiles, load_drafts, load_state
+from steamworks_mcp.manifest.models import Manifest
+from steamworks_mcp.manifest.state import State
+from steamworks_mcp.media.images import prepare_achievement_icons, prepare_store_images, screenshot_report
+from steamworks_mcp.server import create_server
+from steamworks_mcp.style_guides import guide
+from steamworks_mcp.validate import rubric
+
+ROOT = Path(__file__).resolve().parents[1]
+EXAMPLE = ROOT / "examples" / "example-game"
+
+GOOD_SHORT = (
+    "A co-op party game for up to four friends: build blanket forts out of every cushion in the house, then hold "
+    "them against waves of midnight pillow raiders before the whole thing collapses."
+)
+GOOD_ABOUT = """[h2]Hold the fort[/h2]
+[p]Grab cushions and stack a fort with up to 4 friends before midnight.[/p]
+[GIF: four players stacking a sofa tower that wobbles]
+[p]Rounds last 15-30 minutes, so one more raid always fits.[/p]
+[GIF: pillow raiders bursting through the wall]
+[p]Play together with Remote Play Together, with a controller or a mouse.[/p]
+[GIF: the fort collapsing on a teammate]
+[list][*]Online co-op for 1-4 players[*]Physics building without a grid[*]15-minute raids[/list]"""
+
+
+def values(**game: Any) -> dict[str, Any]:
+    v = ManifestFile.load(EXAMPLE / "steamworks.yaml").values()
+    v["game"].update(game)
+    return Manifest.model_validate(v).model_dump(mode="json")
+
+
+def png(path: Path, size: tuple[int, int], color: tuple[int, int, int, int] = (200, 60, 60, 255)) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGBA", size, color).save(path)
+
+
+# ------------------------------------------------------------------------------------------------ images
+
+
+def test_store_images_have_exact_sizes_and_are_never_stretched(tmp_path: Path) -> None:
+    png(tmp_path / "store" / "art" / "keyart.png", (3000, 2000))
+    png(tmp_path / "store" / "art" / "logo.png", (800, 300), (255, 255, 255, 255))
+    out = tmp_path / "out"
+    results = {r.id: r for r in prepare_store_images(values(), tmp_path, out)}
+    for asset_id, size in {
+        "header_capsule": (920, 430),
+        "small_capsule": (462, 174),
+        "library_hero": (3840, 1240),
+        "app_icon": (184, 184),
+    }.items():
+        with Image.open(tmp_path / results[asset_id].file) as im:  # type: ignore[operator]
+            assert im.size == size
+    with Image.open(tmp_path / results["library_logo"].file) as im:  # type: ignore[operator]
+        assert im.width == 1280 or im.height == 720
+    assert any("upscaled" in n for n in results["library_hero"].notes)  # 3000 wide art filling 3840
+    assert any("cropped" in n for n in results["header_capsule"].notes)
+    assert (out / "shortcut_icon.ico").exists() and (out / "preview.html").exists()
+    with Image.open(tmp_path / results["app_icon"].file) as im:  # type: ignore[operator]
+        assert im.format == "JPEG"
+
+
+def test_missing_art_is_reported_not_invented(tmp_path: Path) -> None:
+    results = {r.id: r for r in prepare_store_images(values(), tmp_path, tmp_path / "out")}
+    assert results["header_capsule"].status == "skipped" and "assets.key_art" in results["header_capsule"].notes[0]
+
+
+def test_achievement_icons_and_locked_versions(tmp_path: Path) -> None:
+    v = values()
+    png(tmp_path / "achievements" / "first_fort.png", (512, 512), (30, 200, 30, 255))
+    out = {r.id: r for r in prepare_achievement_icons(v, tmp_path, tmp_path / "icons")}
+    assert out["ACH_FIRST_FORT"].status == "generated"
+    with Image.open(tmp_path / "icons" / "ACH_FIRST_FORT_locked.jpg") as im:
+        r, g, b = im.convert("RGB").getpixel((10, 10))  # type: ignore[misc]
+        assert abs(r - g) < 4 and abs(g - b) < 4 and r < 150  # grey and darker
+    assert out["ACH_TEN_FORTS"].status == "skipped"
+
+
+def test_localized_screenshots_do_not_count(tmp_path: Path) -> None:
+    for name in ("a.png", "b.png", "b_german.png"):
+        png(tmp_path / "store" / "screenshots" / name, (1920, 1080))
+    report = screenshot_report(values(), tmp_path)
+    assert report["count"] == 2
+    assert [s["language"] for s in report["screenshots"]] == [None, None, "german"]
+
+
+# ------------------------------------------------------------------------------------------------ localization
+
+
+def test_translation_loop(tmp_path: Path) -> None:
+    v = values()
+    v["store"]["about"] = "[h2]Forts[/h2][p]Build a fort.[/p]"
+    (tmp_path / "localization").mkdir()
+    (tmp_path / "localization" / "glossary.yaml").write_text(
+        "do_not_translate: [Pillow Fort Panic]\nterms:\n  fort: {german: Festung}\n"
+    )
+    state = State()
+    pending = loc.pending(v, tmp_path, "german")
+    assert {p["key"] for p in pending} >= {"store.short_description", "store.about", "achievements.ACH_FIRST_FORT.name"}
+    about = next(p for p in pending if p["key"] == "store.about")
+    assert about["glossary"]["use_terms"] == {"fort": "Festung"}
+    out = loc.set_translations(
+        v,
+        tmp_path,
+        state,
+        "german",
+        {
+            "store.about": "[h2]Festungen[/h2]Baue eine Festung.",  # a tag went missing
+            "store.short_description": "x" * 301,
+            "achievements.ACH_FIRST_FORT.name": "Deckenarchitekt",
+            "achievements.ACH_FIRST_FORT.description": "Überstehe deinen ersten Überfall um Mitternacht.",
+        },
+    )
+    assert "BBCode" in out["rejected"]["store.about"]
+    assert "300" in out["rejected"]["store.short_description"]
+    assert out["saved"] == ["achievements.ACH_FIRST_FORT.name", "achievements.ACH_FIRST_FORT.description"]
+    assert state.get("localization.german.achievements.ACH_FIRST_FORT.name").status == "draft"
+    st = loc.status(v, tmp_path, ["german"])[0]
+    assert "achievements.ACH_FIRST_FORT.name" not in st.missing
+    v["achievements"][0]["name"] = "Blanket Engineer"  # source changed -> translation stale
+    st = loc.status(v, tmp_path, ["german"])[0]
+    assert "achievements.ACH_FIRST_FORT.name" in st.stale
+
+
+def test_glossary_warnings(tmp_path: Path) -> None:
+    v = values()
+    (tmp_path / "localization").mkdir()
+    (tmp_path / "localization" / "glossary.yaml").write_text(
+        "do_not_translate: [Pillow Fort Panic]\nterms:\n  fort: {german: Festung}\n"
+    )
+    v["achievements"][0]["description"] = "Build a fort in Pillow Fort Panic."
+    out = loc.set_translations(
+        v,
+        tmp_path,
+        State(),
+        "german",
+        {"achievements.ACH_FIRST_FORT.description": "Baue eine Burg in Kissenburg Panik."},
+    )
+    warns = " ".join(out["warnings"]["achievements.ACH_FIRST_FORT.description"])
+    assert "Pillow Fort Panic" in warns and "Festung" in warns
+
+
+def test_source_and_unknown_languages_are_refused(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="source language"):
+        loc.set_translations(values(), tmp_path, State(), "english", {})
+    with pytest.raises(ValueError, match="target_languages"):
+        loc.set_translations(values(), tmp_path, State(), "japanese", {})
+
+
+# ------------------------------------------------------------------------------- deterministic generators
+
+
+def test_cloud_builds_requirements(tmp_path: Path) -> None:
+    v = Manifest.model_validate(
+        {"game": {"engine": {"name": "unity"}}, "store": {"platforms": ["windows", "linux"]}}
+    ).model_dump(mode="json")
+    cloud = {f.field: f.value for f in det.cloud(v, tmp_path)}
+    assert cloud["apps.main.cloud.byte_quota"] == det.DEFAULT_BYTE_QUOTA
+    depots = det.builds(v, tmp_path)[0].value
+    assert [d["content_root"] for d in depots] == ["Builds/Windows", "Builds/Linux"]
+    v["apps"]["main"]["builds"]["depots"] = depots
+    (tmp_path / "Builds" / "Windows").mkdir(parents=True)
+    (tmp_path / "Builds" / "Windows" / "game.bin").write_bytes(b"0" * 2_000_000)
+    reqs = {f.field: f.value for f in det.requirements(v, tmp_path)}
+    assert reqs["store.system_requirements.windows.minimum"]["os"].startswith("Windows")
+    assert "storage" in reqs["store.system_requirements.windows.minimum"]
+
+
+def test_steampipe_scripts(tmp_path: Path) -> None:
+    v = values()
+    assert "depot_id" in str(build_scripts(v, tmp_path, tmp_path / ".steam-mcp" / "exports" / "gate_2" / "steam"))
+    v["apps"]["main"]["builds"]["depots"][0]["depot_id"] = 1000002
+    v["apps"]["main"]["builds"]["set_live_on"] = "default"
+    scripts = build_scripts(v, tmp_path, tmp_path / ".steam-mcp" / "exports" / "gate_2" / "steam")
+    assert isinstance(scripts, dict)
+    app = scripts["app_build_1000000.vdf"]
+    assert '"SetLive" ""' in app  # never the default branch from a script
+    depot = scripts["depot_build_1000002.vdf"]
+    assert '"ContentRoot" "../../../../Builds/Windows/"' in depot and '"FileExclusion" "*.pdb"' in depot
+
+
+# ------------------------------------------------------------------------------------------------ rubric
+
+
+def results(section: str, text: str, v: dict[str, Any] | None = None, final: bool = False) -> dict[str, str]:
+    res, _, _ = rubric.evaluate(section, text, v or values(), guide("coop_party"), final=final)  # type: ignore[arg-type]
+    return {r.rule_id: r.outcome for r in res}
+
+
+def test_good_texts_pass_the_rubric() -> None:
+    assert set(results("short", GOOD_SHORT).values()) <= {"pass", "not_applicable"}
+    out = results("long", GOOD_ABOUT)
+    assert {k: v for k, v in out.items() if v not in ("pass", "not_applicable")} == {
+        "long_length_range": "warn"
+    }  # short sample
+
+
+@pytest.mark.parametrize(
+    ("section", "text", "rule"),
+    [
+        ("short", "Welcome to Pillow Fort Panic, a co-op party game for four friends.", "banned_openers"),
+        ("short", "An epic, unique and immersive co-op party adventure for four friends.", "hollow_adjectives"),
+        (
+            "short",
+            "Long ago the cushion kingdoms fell. Now a co-op party game for 4 friends rises.",
+            "short_first_sentence_genre",
+        ),
+        ("short", "A party game about building forts. Up to four friends can join.", "short_first_sentence_players"),
+        ("short", "A co-op party game for 4 friends with full PvP and leaderboards.", "claims_match_store"),
+        ("long", "[p]" + "word " * 80 + "[/p][GIF: x][list][*]a[*]b[*]c[/list]", "long_paragraph_length"),
+        ("long", "[p]Forts.[/p][GIF: x][list][*]a[*]b[/list]", "long_feature_list"),
+        ("long", "[p]Forts for everyone.[/p][GIF: x][list][*]a[*]b[*]c[/list]", "long_mentions_features"),
+        (
+            "long",
+            "[p]" + "Short words only here. " * 30 + "[/p][GIF: x][list][*]a[*]b[*]c[/list]",
+            "long_first_media_early",
+        ),
+        ("long", "[p]Forts with 4 friends.[/p][list][*]a[*]b[*]c[/list]", "long_media_count"),
+    ],
+)
+def test_rubric_rules_catch_bad_texts(section: str, text: str, rule: str) -> None:
+    assert results(section, text)[rule] in ("warn", "fail")
+
+
+def test_placeholders_only_flagged_for_final_text() -> None:
+    assert "long_placeholders_left" not in results("long", GOOD_ABOUT)
+    assert results("long", GOOD_ABOUT, final=True)["long_placeholders_left"] == "warn"
+
+
+def test_genre_guide_overrides_thresholds() -> None:
+    base = {r.id: r for r in rubric.rules_for(None)}
+    genre = {r.id: r for r in rubric.rules_for(guide("coop_party"))}
+    assert base["long_length_range"].params == {"min": 120, "max": 600}
+    assert genre["long_length_range"].params == {"min": 120, "max": 400}
+    assert genre["long_media_count"].params == {"min": 3, "max": 10}
+
+
+def test_preview_html() -> None:
+    html = bbcode_to_html(GOOD_ABOUT + "[url=https://x.example]site[/url]")
+    assert "<h2>" in html and "<li>" in html and 'class="gif"' in html and "hidden-link" in html
+    page = store_preview("Pillow Fort Panic", GOOD_SHORT, GOOD_ABOUT, 700)
+    assert "top:700px" in page and "unverified" in page
+
+
+# ------------------------------------------------------------------------------------------------ tools end to end
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"
+
+
+@pytest.fixture
+def project(tmp_path: Path) -> tuple[Config, Path]:
+    shutil.copytree(EXAMPLE, tmp_path / "game")
+    cache = tmp_path / "cache"
+    (cache / "3527290").mkdir(parents=True)
+    ref = "Gather your crew and climb the frozen mountain before the storm closes in on every last one of you."
+    (cache / "3527290" / "appdetails.json").write_text(
+        json.dumps(
+            {
+                "fetched_at": "2026-10-03T00:00:00+00:00",
+                "source": "x",
+                "data": {"short_description": ref, "about_the_game": ""},
+            }
+        )
+    )
+    return Config(workspace_root=tmp_path, cache_dir=cache), tmp_path / "game"
+
+
+async def call(config: Config, name: str, **args: Any) -> dict[str, Any]:
+    async with Client(create_server(config)) as client:
+        res = await client.call_tool(name, args)
+    if res.is_error:
+        raise AssertionError(getattr(res.content[0], "text", ""))
+    assert res.structured_content is not None
+    return dict(res.structured_content)
+
+
+@pytest.mark.anyio
+async def test_short_description_three_variants_then_pick(project: tuple[Config, Path]) -> None:
+    config, game = project
+    b = await call(config, "generate", path="game", section="store_short")
+    assert b["status"] == "ready" and set(b["strategies"]) == {"fantasy", "mechanic", "situation_humor"}
+    assert b["references"] and "short_description" in b["references"][0] and "text" not in json.dumps(b["references"])
+    ids = []
+    for strategy in b["strategies"]:
+        out = await call(
+            config, "save_draft", path="game", field="store.short_description", value=GOOD_SHORT, strategy=strategy
+        )
+        ids.append(out["draft_id"])
+        assert out["rubric_score"] == 1.0 and "judge_these" in out
+    assert ids == ["fantasy-1", "mechanic-1", "situation_humor-1"]
+    with pytest.raises(AssertionError, match="copied from a reference"):
+        await call(
+            config,
+            "save_draft",
+            path="game",
+            field="store.short_description",
+            strategy="fantasy",
+            value="Our game: gather your crew and climb the frozen mountain before the storm closes in.",
+        )
+    with pytest.raises(AssertionError, match="Valve"):
+        await call(
+            config,
+            "save_draft",
+            path="game",
+            field="store.short_description",
+            strategy="fantasy",
+            value="Out now! Visit www.example.com",
+        )
+    chosen = await call(config, "set_field", path="game", field="store.short_description", from_draft="mechanic-1")
+    assert chosen["status"]["store.short_description"] == "approved"
+    drafts = {d.id: d.status for d in load_drafts(ProjectFiles(game), "store.short_description")}
+    assert drafts == {"fantasy-1": "candidate", "mechanic-1": "chosen", "situation_humor-1": "candidate"}
+
+
+@pytest.mark.anyio
+async def test_long_description_outline_first(project: tuple[Config, Path]) -> None:
+    config, game = project
+    before = await call(config, "generate", path="game", section="store_long", stage="text")
+    assert before["status"] == "needs_outline"
+    o = await call(
+        config,
+        "save_draft",
+        path="game",
+        field="store.about",
+        value="1. hook line\n2. [GIF: stacking]\n3. list: a; b; c",
+        strategy="outline",
+    )
+    approved = await call(config, "set_field", path="game", field="store.about", from_draft=o["draft_id"])
+    assert approved["outline_approved"] == o["draft_id"]
+    assert ManifestFile.load(game / "steamworks.yaml").manifest.store.about != "1. hook line"  # outline not written
+    b = await call(config, "generate", path="game", section="store_long", stage="text")
+    assert b["status"] == "ready" and "hook line" in b["outline"]
+    t = await call(config, "save_draft", path="game", field="store.about", value=GOOD_ABOUT, strategy="text")
+    assert t["gif_shotlist"] and (game / t["gif_shotlist"]).read_text("utf-8").count(". ") >= 3
+
+
+@pytest.mark.anyio
+async def test_review_never_overwrites(project: tuple[Config, Path]) -> None:
+    config, game = project
+    original = ManifestFile.load(game / "steamworks.yaml").manifest.store.short_description
+    first = await call(config, "validate", path="game", section="store")
+    assert first["store"]["rubric"]["short"]["score"] is not None
+    questions = first["store"]["judge_these"]["questions"]
+    judged = [{"rule_id": q["rule_id"], "field": q["field"], "outcome": "pass", "note": "ok"} for q in questions]
+    second = await call(
+        config,
+        "validate",
+        path="game",
+        section="store",
+        llm_judgements=[*judged, {"rule_id": "made_up", "outcome": "pass"}],
+    )
+    assert len(second["store"]["llm_judged"]) == len(questions) and second["store"]["llm_judged_unmatched"] == [
+        "made_up"
+    ]
+    await call(
+        config, "save_draft", path="game", field="store.short_description", value=GOOD_SHORT, strategy="revision"
+    )
+    assert ManifestFile.load(game / "steamworks.yaml").manifest.store.short_description == original
+
+
+@pytest.mark.anyio
+async def test_needs_game_inputs_before_writing(tmp_path: Path) -> None:
+    (tmp_path / "g").mkdir()
+    config = Config(workspace_root=tmp_path, cache_dir=tmp_path / "cache")
+    await call(config, "init_project", path="g", scan=False)
+    out = await call(config, "generate", path="g", section="store_short")
+    assert out["status"] == "needs_input" and "game.pitch" in out["missing"]
+
+
+@pytest.mark.anyio
+async def test_deterministic_generate_and_localization_tools(project: tuple[Config, Path]) -> None:
+    config, game = project
+    builds = await call(config, "generate", path="game", section="builds")
+    assert builds["scripts"] == {"not_yet": "apps.main.builds.depots has no depot with a depot_id"}
+    await call(config, "set_field", path="game", values={"store.platforms": ["windows", "linux"]})
+    reqs = await call(config, "generate", path="game", section="requirements")
+    assert any(a["field"] == "store.system_requirements.linux.minimum" for a in reqs["applied"])
+    state = load_state(ProjectFiles(game))
+    assert state.get("store.system_requirements.linux.minimum").status == "draft"
+    pending = await call(config, "localization_pending", path="game", language="german", limit=2)
+    assert len(pending["entries"]) == 2
+    saved = await call(
+        config,
+        "localization_set",
+        path="game",
+        language="german",
+        translations={"achievements.ACH_FIRST_FORT.name": "Deckenarchitekt"},
+    )
+    assert saved["saved"] == ["achievements.ACH_FIRST_FORT.name"]
+    ok = await call(config, "approve_fields", path="game", fields=["localization.german.*"])
+    assert ok["approved"] == ["localization.german.achievements.ACH_FIRST_FORT.name"]
+    status = await call(config, "localization_status", path="game")
+    assert {s["language"] for s in status["languages"]} == {"german", "french", "schinese"}
+    preview = await call(config, "preview_store", path="game")
+    assert (game / preview["file"]).exists() and preview["fold_verified"] is False

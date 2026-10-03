@@ -21,7 +21,7 @@ from steamworks_mcp.manifest.io import (
     new_manifest_text,
     save_state,
 )
-from steamworks_mcp.manifest.state import Evidence, State, Status, is_empty
+from steamworks_mcp.manifest.state import Evidence, Source, State, Status, is_empty
 from steamworks_mcp.scanners.base import Finding, ScanResult
 
 USER_OWNED: set[Status] = {"approved", "applied", "needs_review"}
@@ -166,7 +166,7 @@ def _normalized(project: Project, path: str, value: Any) -> Any:
     return fp.get(probe.values(), path)
 
 
-def _merge_one(project: Project, f: Finding, report: MergeReport) -> None:
+def _merge_one(project: Project, f: Finding, report: MergeReport, source: Source = "scan") -> None:
     values = project.values()
     if f.kind == "item":
         leaf = _item_leaf(f.field)
@@ -229,3 +229,14 @@ def _add_evidence(project: Project, path: str, evidence: list[Evidence]) -> None
 def describe_values(values: dict[str, Any]) -> int:
     """Number of tracked fields that have a value (for summaries)."""
     return sum(1 for _, v in fp.iter_fields(values) if not is_empty(v))
+
+
+def propose(project: Project, findings: list[Finding], source: Source = "generated") -> MergeReport:
+    """Write generated values as drafts, with the same rules as scans: values the user owns are never overwritten."""
+    report = MergeReport()
+    for f in _combine(findings):
+        try:
+            _merge_one(project, f, report, source)
+        except (ManifestError, fp.FieldPathError) as exc:
+            report.rejected.append({"field": f.field, "value": f.value, "reason": str(exc)})
+    return report

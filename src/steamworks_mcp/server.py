@@ -17,18 +17,34 @@ from steamworks_mcp import __version__
 from steamworks_mcp import fields as fields_ops
 from steamworks_mcp import project as proj
 from steamworks_mcp.config import Config, WorkspaceError, resolve_in_workspace
+from steamworks_mcp.export import preview, vdf
 from steamworks_mcp.gates.engine import evaluate_gates
 from steamworks_mcp.gates.report import gap_report as gap_report_fn
+from steamworks_mcp.generate import deterministic as gen_det
+from steamworks_mcp.generate import text as gen_text
 from steamworks_mcp.interview.forms import field_id, form_model
 from steamworks_mcp.interview.questions import Question, next_questions
-from steamworks_mcp.manifest.io import ManifestError
+from steamworks_mcp.localization import store as loc
+from steamworks_mcp.manifest.io import ManifestError, atomic_write, load_drafts
 from steamworks_mcp.manifest.paths import FieldPathError, iter_fields
 from steamworks_mcp.manifest.state import TransitionError, is_empty
+from steamworks_mcp.media import images
+from steamworks_mcp.references.analyze import analyze
+from steamworks_mcp.references.fetch import FetchError, ReferenceFetcher
 from steamworks_mcp.scanners import run_scanners
 from steamworks_mcp.spec_info import spec_info
+from steamworks_mcp.validate.report import validate_project
 
 F = TypeVar("F", bound=Callable[..., Any])
-USER_ERRORS = (WorkspaceError, ManifestError, FieldPathError, TransitionError, ValueError, FileNotFoundError)
+USER_ERRORS = (
+    WorkspaceError,
+    ManifestError,
+    FieldPathError,
+    TransitionError,
+    ValueError,
+    FileNotFoundError,
+    FetchError,
+)
 
 
 def user_errors(fn: F) -> F:
@@ -285,6 +301,178 @@ def create_server(config: Config) -> MCPServer:
         (derived analysis of a reference game), "references" (catalog).
         """
         return spec_info(kind)
+
+    # ------------------------------------------------------------------ generators & validators
+
+    @server.tool()
+    @user_errors
+    def generate(path: str, section: str, stage: str | None = None) -> dict[str, Any]:
+        """Produce drafts for a part of the release.
+
+        Text sections return a brief for YOU to write from (the server never invents marketing text itself):
+          - "store_short": write 3 variants (strategies fantasy, mechanic, situation_humor), save each with save_draft.
+          - "store_long": stage "outline" first; after the user approved an outline, stage "text".
+          - "achievements": names, descriptions and icon briefs for achievements that lack them.
+        Deterministic sections write drafts into steamworks.yaml directly (never over approved values):
+          - "cloud" (quotas, enable), "builds" (a depot per OS; returns the SteamPipe scripts when depot ids exist),
+            "requirements" (minimum system requirements from the engine, always to review), "code" (stats,
+            leaderboards and achievements used in code).
+        """
+        project = open_project(path)
+        values, root = project.values(), project.files.root
+        if section in ("store_short", "store_long", "achievements"):
+            return gen_text.brief(values, project.files, section, stage)
+        if section == "code":
+            findings, code_report = gen_det.code_definitions(values, root)
+            report = proj.propose(project, findings)
+            project.save()
+            return {**report.as_dict(), "code_vs_manifest": code_report}
+        makers = {"cloud": gen_det.cloud, "builds": gen_det.builds, "requirements": gen_det.requirements}
+        if section not in makers:
+            raise ValueError("section: store_short, store_long, achievements, cloud, builds, requirements or code.")
+        report = proj.propose(project, makers[section](values, root))
+        project.save()
+        out = report.as_dict()
+        if section == "builds":
+            scripts = vdf.build_scripts(project.values(), root, project.files.export_dir(2) / "steam")
+            out["scripts"] = scripts if isinstance(scripts, dict) else {"not_yet": scripts}
+        return out
+
+    @server.tool()
+    @user_errors
+    def save_draft(path: str, field: str, value: str, strategy: str | None = None, notes: str = "") -> dict[str, Any]:
+        """Store a text YOU wrote as a draft (it does not change steamworks.yaml). The server rejects text that breaks
+        Valve's store rules or copies 8+ consecutive words from a reference game, scores it against the rubric, and
+        returns rubric findings plus questions for you to judge. strategy: fantasy | mechanic | situation_humor |
+        outline | text | revision | … . The user picks a draft with set_field(path, field, from_draft=<id>)."""
+        project = open_project(path)
+        return gen_text.save_text_draft(
+            project.values(), project.files, field, value, strategy, config.cache_dir, notes=notes
+        )
+
+    @server.tool()
+    @user_errors
+    def validate(path: str, section: str = "all", llm_judgements: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        """Review what is in steamworks.yaml (and the translations) without changing it.
+
+        section: "store" (Valve's rules in every language, the rubric, questions for you to judge), "achievements",
+        "localization" or "all" (adds every failing gate rule). For store text, judge the returned questions and call
+        again with llm_judgements=[{rule_id, field, outcome: pass|warn|fail, note}]; deterministic and judged results
+        are reported separately. To propose a fix, save a new version with save_draft(strategy="revision").
+        """
+        project = open_project(path)
+        return validate_project(
+            project.values(),
+            project.state,
+            project.files.root,
+            section,
+            browser=config.browser_enabled,
+            llm_judgements=llm_judgements,
+        )
+
+    @server.tool()
+    @user_errors
+    def preview_store(
+        path: str, short_draft: str | None = None, about_draft: str | None = None, fold_px: int = preview.FOLD_PX
+    ) -> dict[str, Any]:
+        """Write an HTML preview of the store text (current values, or the given drafts) to .steam-mcp/exports/,
+        with the estimated end of the first screen marked (an estimate; Steam's cut-off height is not documented)."""
+        project = open_project(path)
+        values = project.values()
+        short, about = values["store"].get("short_description") or "", values["store"].get("about") or ""
+        for draft_id, field in ((short_draft, "store.short_description"), (about_draft, "store.about")):
+            if draft_id:
+                d = next((d for d in load_drafts(project.files, field) if d.id == draft_id), None)
+                if d is None:
+                    raise ValueError(f"No draft {draft_id} for {field}.")
+                short, about = (str(d.value), about) if field == "store.short_description" else (short, str(d.value))
+        out = project.files.state_dir / "exports" / "store_preview.html"
+        atomic_write(out, preview.store_preview(values["game"].get("name") or "Your game", short, about, fold_px))
+        return {"file": out.relative_to(project.files.root).as_posix(), "fold_px": fold_px, "fold_verified": False}
+
+    @server.tool()
+    @user_errors
+    def prepare_images(path: str, only: list[str] | None = None, achievement_icons: bool = True) -> dict[str, Any]:
+        """Make every store, library and icon image from assets.key_art + assets.logo (or hand-made
+        assets.overrides) at the exact sizes Steam wants, plus achievement icons (256x256 JPG, with greyscale locked
+        versions). Crops around assets.key_art_focus, never stretches, reports upscaling, never generates artwork.
+        Output and a preview page go to .steam-mcp/exports/images/ for the user to upload."""
+        project = open_project(path)
+        out_dir = project.files.state_dir / "exports" / "images"
+        values, root = project.values(), project.files.root
+        result: dict[str, Any] = {
+            "images": [r.__dict__ for r in images.prepare_store_images(values, root, out_dir, only)]
+        }
+        if achievement_icons:
+            result["achievement_icons"] = [
+                r.__dict__ for r in images.prepare_achievement_icons(values, root, out_dir / "achievements")
+            ]
+        result["screenshots"] = images.screenshot_report(values, root)
+        result["preview"] = (out_dir / "preview.html").relative_to(root).as_posix()
+        return result
+
+    @server.tool()
+    @user_errors
+    def fetch_reference(appid: int, tags: list[str] | None = None, refresh: bool = False) -> dict[str, Any]:
+        """Fetch a successful Steam game's public data (on this machine, cached) and return derived measurements
+        only: description structure and length, media counts, categories, achievement count/style/distribution.
+        Its raw texts stay in the local cache, where the anti-copy check uses them."""
+        fetcher = ReferenceFetcher(config.cache_dir, web_api_key=config.web_api_key)
+        details = fetcher.appdetails(appid, refresh=refresh)
+        pct = fetcher.achievement_percentages(appid, refresh=refresh)
+        texts = fetcher.achievement_texts(appid, refresh=refresh)
+        schema = fetcher.schema(appid, refresh=refresh)
+        result = analyze(
+            appid,
+            details.data,
+            pct.data,
+            texts.data,
+            schema.data if schema else None,
+            details.fetched_at.date(),
+            tags or [],
+        )
+        return result.model_dump(mode="json")
+
+    @server.tool()
+    @user_errors
+    def localization_status(path: str) -> dict[str, Any]:
+        """Per target language: how many player-facing texts are translated, missing, or stale (the source changed
+        after translating). Stale translations are marked needs_review."""
+        project = open_project(path)
+        statuses = loc.status(project.values(), project.files.root)
+        for st in statuses:
+            for key in st.stale:
+                fs = project.state.fields.get(f"localization.{st.language}.{key}")
+                if fs is not None and fs.status != "needs_review":
+                    fs.status = "needs_review"
+        project.save()
+        return {"languages": [s.__dict__ for s in statuses]}
+
+    @server.tool()
+    @user_errors
+    def localization_pending(path: str, language: str, limit: int = 30) -> dict[str, Any]:
+        """Texts YOU should translate into `language` (Steam API code), with context, length limits and glossary terms
+        (localization/glossary.yaml). Translate them, then call localization_set."""
+        project = open_project(path)
+        items = loc.pending(project.values(), project.files.root, language, limit)
+        return {
+            "language": language,
+            "entries": items,
+            "submit": "localization_set(path, language, translations={key: text})",
+        }
+
+    @server.tool()
+    @user_errors
+    def localization_set(
+        path: str, language: str, translations: dict[str, str], source: Literal["generated", "user"] = "generated"
+    ) -> dict[str, Any]:
+        """Save translations ({key: text}). Rejected: BBCode tags that differ from the source, a short description over
+        300 characters, store text breaking Valve's rules. Your translations are drafts until the user approves them
+        (approve_fields(["localization.<language>.*"]))."""
+        project = open_project(path)
+        out = loc.set_translations(project.values(), project.files.root, project.state, language, translations, source)
+        project.save()
+        return out
 
     @server.tool()
     def server_info() -> dict[str, Any]:

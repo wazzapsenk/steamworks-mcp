@@ -30,6 +30,7 @@ from steamworks_mcp.gates.models import (
     Screenshots,
     StoreRules,
 )
+from steamworks_mcp.languages import is_api_code
 from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.state import ExecutionMode, State, is_empty
 from steamworks_mcp.validate.crosschecks import CHECKS, CheckContext
@@ -300,6 +301,8 @@ class Evaluator:
         folder = self.root / str(fp.get(self.values, "assets.screenshots_dir") or "store/screenshots")
         res.fields = ["assets.screenshots_dir"]
         files = sorted(p for p in folder.glob("*") if p.suffix.lower() in IMAGE_EXT) if folder.is_dir() else []
+        # Localized variants (shot1_japanese.png) replace a base screenshot in one language; they do not count.
+        files = [p for p in files if not ("_" in p.stem and is_api_code(p.stem.rsplit("_", 1)[1]))]
         good, small = 0, []
         for p in files:
             size = _image_size(p)

@@ -286,6 +286,9 @@
           "description": "Large art without text, used for capsules, library hero and page background.",
           "title": "Key Art"
         },
+        "key_art_focus": {
+          "$ref": "#/$defs/Focus"
+        },
         "logo": {
           "anyOf": [
             {
@@ -877,6 +880,29 @@
       },
       "title": "Engine",
       "type": "object"
+    },
+    "Focus": {
+      "additionalProperties": false,
+      "description": "Point of the key art that crops keep in view (0-1 from the left / top).",
+      "properties": {
+        "x": {
+          "default": 0.5,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "default": 0.5,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "title": "Focus",
+      "type": "object",
+      "x-unit": true
     },
     "Game": {
       "additionalProperties": false,

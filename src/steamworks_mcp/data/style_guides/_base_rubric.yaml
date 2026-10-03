@@ -1,0 +1,122 @@
+# Layer 2 of the store text checks: genre-independent good practice. Edit freely.
+#   Layer 1 = Valve's rules (data/store_rules.yaml): breaking one is an error.
+#   Layer 3 = genre guides (style_guides/<genre>.md front matter) override the thresholds below.
+# check: deterministic (code, with kind + params) | llm_judged (the host model answers `question`).
+# applies_to: short | long | both.  stage: final = only when validating the text in steamworks.yaml, not drafts.
+rules:
+  - id: short_first_sentence_genre
+    applies_to: short
+    check: deterministic
+    kind: first_sentence_mentions_genre
+    severity: warning
+    rationale: Shoppers decide in seconds; the first sentence should say what kind of game this is.
+    fix: Name the genre in the first sentence, in the words players use for it.
+  - id: short_first_sentence_players
+    applies_to: short
+    check: deterministic
+    kind: first_sentence_mentions_players
+    severity: warning
+    rationale: For multiplayer games the player count is the first filter a group of friends applies.
+    fix: Put the player count or mode in the first sentence (for example "with up to four friends").
+  - id: short_main_action
+    applies_to: short
+    check: llm_judged
+    severity: warning
+    question: Does the first sentence say what the player actually does (the core action), with a concrete verb?
+    rationale: A concrete action is easier to picture than a genre label alone.
+    fix: Lead with the verb the player spends the game doing.
+  - id: short_no_lore_opening
+    applies_to: short
+    check: llm_judged
+    severity: warning
+    question: Does the text open with lore, a world name or backstory instead of the game itself?
+    rationale: Lore means nothing to someone who has not decided to care yet.
+    fix: Move the setting after the action and the hook.
+  - id: banned_openers
+    applies_to: both
+    check: deterministic
+    kind: regex_start_forbidden
+    params:
+      patterns: ['^welcome to\b', '^this game is\b', '^in this game\b', '^(a|an|the) game (where|about|in which)\b']
+    severity: warning
+    rationale: Stock openings waste the most-read words on the page.
+    fix: Start with what the player does or the situation that makes the game fun.
+  - id: hollow_adjectives
+    applies_to: both
+    check: deterministic
+    kind: word_list_max
+    params:
+      max: 1
+      words: [unique, immersive, epic, innovative, stunning, amazing, incredible, ultimate, revolutionary, breathtaking, awesome, exciting, engaging, captivating, unforgettable, groundbreaking, addictive]
+    severity: warning
+    rationale: Adjectives every store page uses tell the reader nothing about this game.
+    fix: Replace them with a concrete detail that shows the quality instead of claiming it.
+  - id: claims_match_store
+    applies_to: both
+    check: deterministic
+    kind: claims_match_store
+    severity: warning
+    rationale: The text, the tags and the categories must tell the same story, or the page looks careless.
+    fix: Either add the feature to steamworks.yaml (players, categories, platform features) or remove the claim.
+  - id: long_hook
+    applies_to: long
+    check: llm_judged
+    severity: warning
+    question: Do the first two or three lines hook the reader with a concrete moment of play (not lore, not a genre list)?
+    rationale: Most readers never scroll past the first screen of the description.
+    fix: Open with the funniest, tensest or most surprising thing that happens in a session.
+  - id: long_paragraph_length
+    applies_to: long
+    check: deterministic
+    kind: paragraph_max_words
+    params: {max: 60}
+    severity: warning
+    rationale: Paragraphs longer than about four lines turn into walls of text next to the clips.
+    fix: Split it, or let a GIF carry part of the message.
+  - id: long_feature_list
+    applies_to: long
+    check: deterministic
+    kind: list_items_range
+    params: {min: 3, max: 6}
+    severity: warning
+    rationale: A short bullet list is what skimmers read; long lists stop being read.
+    fix: Keep one list of three to six concrete features.
+  - id: long_mentions_features
+    applies_to: long
+    check: deterministic
+    kind: mentions_features
+    severity: warning
+    rationale: Player count, session length and platform features (Remote Play Together, Steam Deck, controller) are what groups check before buying.
+    fix: Mention each one the game has, in plain words.
+  - id: long_length_range
+    applies_to: long
+    check: deterministic
+    kind: words_range
+    params: {min: 120, max: 600}
+    severity: warning
+    rationale: Comparable successful pages fall in this range; much shorter looks unfinished, much longer goes unread.
+    fix: Cut or add to land in the range of comparable games.
+  - id: long_media_count
+    applies_to: long
+    check: deterministic
+    kind: media_range
+    params: {min: 2, max: 10}
+    severity: warning
+    rationale: Clips show the game faster than words; successful pages alternate text and motion.
+    fix: 'Add [GIF: what it shows] placeholders between short paragraphs.'
+  - id: long_first_media_early
+    applies_to: long
+    check: deterministic
+    kind: first_media_within_words
+    params: {max: 80}
+    severity: warning
+    rationale: The first clip should appear before the reader has to scroll.
+    fix: Put a GIF after the opening line.
+  - id: long_placeholders_left
+    applies_to: long
+    check: deterministic
+    kind: no_placeholders
+    stage: final
+    severity: warning
+    rationale: '[GIF: …] placeholders must be replaced by the real clips before the page goes to review.'
+    fix: Upload the GIFs in the store editor and replace each placeholder with its [img] tag.

@@ -40,7 +40,7 @@ shows up in gap reports.
 | `apps` (`main`, `demo`, `playtest`) | One profile per Steam app: `appid`, `installation` (install folder, launch options), `cloud` (quotas, Auto-Cloud paths, root overrides), `builds` (depots, branches) | scan + interview |
 | `prerequisites` | Gate 0: partner account, Steam Direct fee (+ date), tax, bank, identity, restricted automation account | interview (never scanned) |
 | `store` | Main store page: short description, About This Game (BBCode), developers, publishers, platforms, genres, tags, categories, languages table, system requirements, links, legal line | generators + interview |
-| `assets` | Source art (key art, logo, screenshots folder, hand-made overrides, trailers); store images are cropped from these, never generated | user |
+| `assets` | Source art (key art and its focus point, logo, screenshots folder, hand-made overrides, trailers); store images are cropped from these, never generated | user |
 | `content` | Content survey, mature content descriptors, AI disclosure, ratings | interview (never assumed) |
 | `achievements`, `stats`, `leaderboards` | Main game's definitions, keyed by API name | scan + generators |
 | `pricing` | F2P, base price (USD), regional pricing, launch discount, submitted | interview |

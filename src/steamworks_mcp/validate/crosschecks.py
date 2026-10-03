@@ -10,8 +10,6 @@ from functools import cache
 from pathlib import Path
 from typing import Any, Literal
 
-from ruamel.yaml import YAML
-
 from steamworks_mcp.data import load_yaml
 from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.state import is_empty
@@ -181,20 +179,20 @@ def store_categories_match_config(ctx: CheckContext) -> CheckResult:
 
 
 def store_translations_complete(ctx: CheckContext) -> CheckResult:
-    missing = []
-    for lang in _get(ctx, "target_languages") or []:
-        path = ctx.root / "localization" / f"{lang}.yaml"
-        data: dict[str, Any] = {}
-        if path.exists():
-            data = YAML(typ="safe", pure=True).load(path.read_text(encoding="utf-8")) or {}
-        for key in ("store.short_description", "store.about"):
-            if not is_empty(_get(ctx, key)) and is_empty(data.get(key)):
-                missing.append(f"{lang}: {key}")
-    if missing:
+    from steamworks_mcp.localization.store import status  # local import: localization imports validate
+
+    problems = []
+    for st in status(ctx.values, ctx.root):
+        store_keys = [k for k in st.missing + st.stale if k.startswith("store.")]
+        if store_keys:
+            stale = [k for k in store_keys if k in st.stale]
+            problems.append(
+                f"{st.language}: {len(store_keys)} store text(s) "
+                + ("stale" if stale and len(stale) == len(store_keys) else "missing or stale")
+            )
+    if problems:
         return CheckResult(
-            "fail",
-            f"Missing translations: {', '.join(missing[:10])}{' …' if len(missing) > 10 else ''}.",
-            ["target_languages"],
+            "fail", "; ".join(problems[:10]) + ". Use localization_pending / localization_set.", ["target_languages"]
         )
     return CheckResult("pass")
 

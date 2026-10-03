@@ -241,11 +241,19 @@ class Trailer(Model):
     title: str | None = None
 
 
+class Focus(Unit):
+    """Point of the key art that crops keep in view (0-1 from the left / top)."""
+
+    x: float = Field(default=0.5, ge=0.0, le=1.0)
+    y: float = Field(default=0.5, ge=0.0, le=1.0)
+
+
 class Assets(Model):
     """Source art. Store images are derived from these (cropped, never stretched); artwork is never generated."""
 
     key_art: RelPath | None = None
     """Large art without text, used for capsules, library hero and page background."""
+    key_art_focus: Focus = Field(default_factory=Focus)
     logo: RelPath | None = None
     """Transparent logo PNG, placed on capsules and used as the library logo."""
     screenshots_dir: RelPath = "store/screenshots"
