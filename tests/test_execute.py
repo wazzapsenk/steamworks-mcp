@@ -3,6 +3,7 @@ the hard rules (never publish, dry run first, restore first, approved values onl
 
 from __future__ import annotations
 
+import html
 import json
 import subprocess
 from collections.abc import Callable
@@ -389,7 +390,11 @@ def test_store_text_comparison_ignores_paragraph_tags() -> None:
 
 STORE_FORM = """<script>var g_sessionID = "abc";</script>
 <form id="gameform" method="post" enctype="multipart/form-data">
-<input type="hidden" name="serialized_app_data" value="{}">
+<input type="hidden" name="serialized_app_data" value="SAD">
+<input type="text" name="app[game][developers][1][name]_compl" value="">
+<input type="hidden" name="app[game][developers][1][name]" value="">
+<input type="text" name="app[game][publishers][0]_compl" value="">
+<input type="hidden" name="app[game][publishers][0]" value="">
 <input type="text" name="app[content][links][website]" value="https://old.example.com">
 <input type="text" name="app[content][support_info][email]" value="">
 <input type="hidden" name="app[content][legal][english]" value="">
@@ -410,7 +415,7 @@ STORE_FORM = """<script>var g_sessionID = "abc";</script>
 <input type="hidden" name="app[classification][category][category_2]" value="true">
 <input type="hidden" name="app[classification][category][category_38]" value="">
 <input type="text" name="app[content][reviews][0][site]" value="untouched">
-</form>"""
+</form>""".replace("SAD", html.escape(json.dumps({"game": {"developers": [{"name": "Example Studio"}]}})))
 
 
 def test_store_page_inputs_from_steamworks_yaml() -> None:
@@ -451,6 +456,16 @@ def test_store_page_inputs_from_steamworks_yaml() -> None:
     assert any("Controller Support wizard" in p for p in want["problems"])
     extra = store_page.changes(store_page.desired(values, current, remove_extra=True)["inputs"], current)
     assert extra["app[platforms][mac]"] == ""
+    # names already on Steam stay; new ones go into the form's empty "add another" row
+    assert current["developers"] == ["Example Studio"]
+    people = {"store": {"developers": ["Example Studio", "Second Studio"], "publishers": ["Example Publishing"]}}
+    added = store_page.changes(store_page.desired(people, current, False)["inputs"], current)
+    assert added == {
+        "app[game][developers][1][name]": "Second Studio",
+        "app[game][developers][1][name]_compl": "Second Studio",
+        "app[game][publishers][0]": "Example Publishing",
+        "app[game][publishers][0]_compl": "Example Publishing",
+    }
     assert store_page.size("1.5 GB") == ("1536", "MB") and store_page.size("500 MB") == ("500", "MB")
     assert store_page.size("lots") is None
 
@@ -492,8 +507,8 @@ async def test_store_assets_fill_only_empty_slots(tmp_path: Path) -> None:
     for slot in ("header_capsule", "library_hero"):
         (tmp_path / f"{slot}.jpg").write_bytes(b"\xff\xd8 jpg")
     (tmp_path / "page_background.png").write_bytes(b"\x89PNG")
-    want = store_assets.desired(tmp_path)
-    assert set(want) == {"header_capsule", "library_hero", "page_background"}
+    want = store_assets.desired(tmp_path, {})
+    assert set(want["images"]) == {"header_capsule", "library_hero", "page_background"}
     steam = {
         "header_image": {"image": {"english": "abc/header.jpg"}},
         "library_hero": {"image": {}},
@@ -502,7 +517,7 @@ async def test_store_assets_fill_only_empty_slots(tmp_path: Path) -> None:
     current = {"item_id": "2000000", "slots": {s: store_assets.present(steam, s) for s in store_assets.SLOTS}}
     ops = store_assets.plan("2000000", want, current)
     assert [(op.action, op.target) for op in ops] == [
-        ("skip", "header_capsule"),  # Steam has an image there: never replaced
+        ("skip", "header_capsule"),  # Steam has an image there: never replaced (all such slots in one line)
         ("upload", "page_background"),
         ("upload", "library_hero"),
     ]
@@ -521,6 +536,27 @@ async def test_store_assets_fill_only_empty_slots(tmp_path: Path) -> None:
     assert list(sent[0][1]) == ["page_background|page_bg_raw|assets|page_background_raw"]  # not localized
     assert sent[0][1]["page_background|page_bg_raw|assets|page_background_raw"][2] == "image/png"
     assert list(sent[1][1]) == ["library_hero|library_hero|assets|library_hero|image|english"]
+
+    position = {"pinned_position": "BottomLeft", "width_pct": 52.4, "height_pct": 70.5}
+    placed = store_assets.plan("2000000", {"images": {}, "logo_position": position}, {**current, "logo_position": None})
+    assert [(op.action, op.target) for op in placed] == [("set", "library logo position")]
+    fields: list[dict[str, str]] = []
+
+    class Fields(Recorder):
+        async def post_multipart(
+            self, path: str, f: dict[str, str], files: dict[str, tuple[str, bytes, str]]
+        ) -> Response:
+            fields.append(f)
+            return Response(200, "https://partner.steamgames.com" + path, "")
+
+    await placed[0].run(Fields())  # type: ignore[arg-type]
+    assert fields[0]["app[assets][library_logo][logo_position][pinned_position]"] == "BottomLeft"
+    assert fields[0]["app[assets][library_logo][logo_position][width_pct]"] == "52.4"
+    same = {"pinned_position": "BottomLeft", "width_pct": "52.40001", "height_pct": "70.5"}
+    assert (
+        store_assets.plan("2000000", {"images": {}, "logo_position": position}, {**current, "logo_position": same})
+        == []
+    )
 
 
 async def test_store_text_never_sends_an_empty_value() -> None:

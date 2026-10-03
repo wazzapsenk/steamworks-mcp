@@ -21,6 +21,8 @@ from steamworks_mcp.manifest.state import State, is_empty
 
 SECTIONS = ("cloud", "installation", "achievements", "store_text", "store_page", "store_assets")
 STORE_PAGE_FIELDS = (
+    "store.developers",
+    "store.publishers",
     "store.links.",
     "store.support.",
     "store.legal.legal_line",
@@ -78,7 +80,9 @@ def written(section: str, app: str, path: str, icons: bool = False) -> bool:
     if section == "store_page":
         return path.startswith(STORE_PAGE_FIELDS)
     if section == "store_assets":  # the images come from prepare_images: key art, logo and per-slot overrides
-        return path in ("assets.key_art", "assets.logo") or path.startswith("assets.overrides.")
+        return path in ("assets.key_art", "assets.logo") or path.startswith(
+            ("assets.overrides.", "assets.library_logo_position")
+        )
     if section == "leaderboards":
         return path.startswith("leaderboards.")
     if section == "build":

@@ -158,7 +158,7 @@ def desired_from_values(
     if section == "store_page":
         return store_page.desired(values, current, remove_extra)
     if section == "store_assets":
-        return store_assets.desired(ProjectFiles(root).state_dir / "exports" / "images")
+        return store_assets.desired(ProjectFiles(root).state_dir / "exports" / "images", values)
     if section == "cloud":
         return sync.desired_cloud(values, app, current)
     if section == "installation":
@@ -236,7 +236,14 @@ async def apply_section(
         uploaded = {op["target"] for op in done if op["action"] == "upload"}
         remaining = [op for op in ops if op.action == "upload" and not after["slots"].get(op.target)]
         filled = {f"assets.overrides.{s}" for s in uploaded if after["slots"].get(s)}
-        applied = mark_applied_fields(values, state, lambda p: p in filled)
+        position = desired["logo_position"]
+        if position and store_assets.same_position(after["logo_position"], position):
+            filled.add("assets.library_logo_position")
+        elif position:
+            remaining += [op for op in ops if op.target == "library logo position"]
+        applied = mark_applied_fields(
+            values, state, lambda p: p in filled or p.startswith(tuple(f + "." for f in filled))
+        )
     else:
         remaining = _plan(
             section,

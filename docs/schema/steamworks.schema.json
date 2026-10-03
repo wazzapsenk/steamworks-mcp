@@ -318,6 +318,18 @@
           "title": "Overrides",
           "type": "object"
         },
+        "library_logo_position": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LogoPosition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Set with the library images; until it is set, Steamworks keeps the Library Assets checklist item open."
+        },
         "trailers": {
           "items": {
             "$ref": "#/$defs/Trailer"
@@ -1415,6 +1427,44 @@
       },
       "title": "Legal",
       "type": "object"
+    },
+    "LogoPosition": {
+      "additionalProperties": false,
+      "description": "Where the library logo sits on the library hero (Steamworks' Library Logo position tool).",
+      "properties": {
+        "pinned_position": {
+          "default": "BottomLeft",
+          "enum": [
+            "BottomLeft",
+            "UpperLeft",
+            "UpperCenter",
+            "CenterCenter",
+            "BottomCenter"
+          ],
+          "title": "Pinned Position",
+          "type": "string"
+        },
+        "width_pct": {
+          "description": "Size of the logo box, in percent, as the position tool stores it.",
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "title": "Width Pct",
+          "type": "number"
+        },
+        "height_pct": {
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "title": "Height Pct",
+          "type": "number"
+        }
+      },
+      "required": [
+        "width_pct",
+        "height_pct"
+      ],
+      "title": "LogoPosition",
+      "type": "object",
+      "x-unit": true
     },
     "PlatformFeatures": {
       "additionalProperties": false,

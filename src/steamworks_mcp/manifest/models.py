@@ -341,6 +341,15 @@ class Focus(Unit):
     y: float = Field(default=0.5, ge=0.0, le=1.0)
 
 
+class LogoPosition(Unit):
+    """Where the library logo sits on the library hero (Steamworks' Library Logo position tool)."""
+
+    pinned_position: Literal["BottomLeft", "UpperLeft", "UpperCenter", "CenterCenter", "BottomCenter"] = "BottomLeft"
+    width_pct: float = Field(gt=0, le=100)
+    """Size of the logo box, in percent, as the position tool stores it."""
+    height_pct: float = Field(gt=0, le=100)
+
+
 class Assets(Model):
     """Source art. Store images are derived from these (cropped, never stretched); artwork is never generated."""
 
@@ -352,6 +361,8 @@ class Assets(Model):
     screenshots_dir: RelPath = "store/screenshots"
     overrides: dict[str, RelPath] = Field(default_factory=dict)
     """Hand-made images that replace derived ones, keyed by asset id (e.g. "header_capsule", "library_hero")."""
+    library_logo_position: LogoPosition | None = None
+    """Set with the library images; until it is set, Steamworks keeps the Library Assets checklist item open."""
     trailers: list[Trailer] = Field(default_factory=list)
 
 

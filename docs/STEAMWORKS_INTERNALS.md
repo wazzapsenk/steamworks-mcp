@@ -151,8 +151,21 @@ What it showed beyond the recordings:
   - The image rules dialog is only in the page; the server never sees it.
   - The images then show up in `serialized_app_data.assets` (`<slot>.image.<lang>`, `page_background_raw`).
   - Recorded live: nine empty slots of a game filled this way, into the store draft.
-- **Library logo position.** After the library images, the Library Assets checklist item stayed incomplete;
-  setting the library logo's position in Steamworks is probably what it waits for.
+- **Library logo position.** The position tool posts the fields below to the same save URL as the image uploads:
+  - `json=1`
+  - `app[assets][library_logo][logo_position][pinned_position]`: one of `BottomLeft`, `UpperLeft`, `UpperCenter`,
+    `CenterCenter`, `BottomCenter`
+  - `app[assets][library_logo][logo_position][width_pct]` and `[height_pct]`
+
+  After the library images were uploaded, the Library Assets checklist item stayed incomplete. It was completed
+  once the logo position was set. Recorded live.
+- **Developer and publisher names.** The form only carries one empty "add another" row:
+  - Developer: `app[game][developers][<n>][name]` (hidden) plus a `…_compl` text box.
+  - Publisher: `app[game][publishers][<n>]` plus its `…_compl` text box.
+  - The names already set are only in `serialized_app_data.game` (`developers: [{name}]`, `publishers: [name]`).
+  - Filling the empty row with a plain name (no link to a developer homepage) added it and completed the
+    "Developer and Publisher Names" checklist item. Recorded live.
+  - Removing a name needs the page's own remove control; the tool only adds.
 - **Live at once although the name does not say so.** These are on the guard's forbidden list:
   - Store tags (`/tagdata/forcetagranking`; the page says the changes "have been successfully published").
   - Package names and contents (`/store/ajaxpackagesave/{packageId}`; renaming publishes right away).

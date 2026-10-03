@@ -11,9 +11,6 @@ remove an uploaded image, so there is nothing to restore (the user deletes image
 
 from __future__ import annotations
 
-import html
-import json
-import re
 from pathlib import Path
 from typing import Any
 
@@ -46,47 +43,48 @@ def present(assets: dict[str, Any], slot: str) -> bool:
     return bool(((assets.get(key) or {}).get("image") or {}).get(LANGUAGE))
 
 
-def serialized_app_data(page: str) -> dict[str, Any]:
-    m = re.search(r'name="serialized_app_data"[^>]*value="([^"]*)"', page) or re.search(
-        r'value="([^"]*)"[^>]*name="serialized_app_data"', page
-    )
-    if not m:
-        raise P.FormatError("The store page changed (serialized_app_data not found).")
-    return dict(json.loads(html.unescape(m.group(1))))
-
-
 async def read_section(t: Transport, appid: int) -> dict[str, Any]:
     item = await P.store_item_id(t, appid)
     _, page = await P.read_store_form(t, item)
-    assets = serialized_app_data(page).get("assets") or {}
-    return {"item_id": item, "slots": {slot: present(assets, slot) for slot in SLOTS}}
+    assets = P.serialized_app_data(page).get("assets") or {}
+    position = (assets.get("library_logo") or {}).get("logo_position") or None
+    return {"item_id": item, "slots": {slot: present(assets, slot) for slot in SLOTS}, "logo_position": position}
 
 
-def desired(images_dir: Path) -> dict[str, Path]:
-    """The prepared image of each slot (``.steam-mcp/exports/images/<slot>.jpg|png``)."""
-    out = {}
+def desired(images_dir: Path, values: dict[str, Any]) -> dict[str, Any]:
+    """The prepared image of each slot (``.steam-mcp/exports/images/<slot>.jpg|png``) and the library logo's
+    position from steamworks.yaml."""
+    images = {}
     for slot in SLOTS:
         for ext in (".jpg", ".png"):
             if (images_dir / f"{slot}{ext}").is_file():
-                out[slot] = images_dir / f"{slot}{ext}"
+                images[slot] = images_dir / f"{slot}{ext}"
                 break
-    return out
+    return {"images": images, "logo_position": (values.get("assets") or {}).get("library_logo_position")}
 
 
-def plan(item_id: str, want: dict[str, Path], current: dict[str, Any]) -> list[sync.Op]:
+def same_position(steam: dict[str, Any] | None, want: dict[str, Any]) -> bool:
+    if not steam or steam.get("pinned_position") != want["pinned_position"]:
+        return False
+    return all(abs(float(steam.get(k) or 0) - float(want[k])) < 0.01 for k in ("width_pct", "height_pct"))
+
+
+def plan(item_id: str, want: dict[str, Any], current: dict[str, Any]) -> list[sync.Op]:
     ops: list[sync.Op] = []
-    for slot, file in want.items():
-        if current["slots"].get(slot):
-            ops.append(
-                sync.Op(
-                    SECTION,
-                    "skip",
-                    slot,
-                    "Steam has an image",
-                    "Not replaced: this tool only fills empty slots. Replace it on the Graphical Assets tab.",
-                    sync._nothing,
-                )
+    kept = [slot for slot in want["images"] if current["slots"].get(slot)]
+    if kept:
+        ops.append(
+            sync.Op(
+                SECTION,
+                "skip",
+                ", ".join(kept),
+                "Steam has an image",
+                "Not replaced: this tool only fills empty slots. Replace them on the Graphical Assets tab.",
+                sync._nothing,
             )
+        )
+    for slot, file in want["images"].items():
+        if slot in kept:
             continue
 
         async def upload(t: Transport, s: str = slot, f: Path = file) -> None:
@@ -100,4 +98,11 @@ def plan(item_id: str, want: dict[str, Path], current: dict[str, Any]) -> list[s
             )
 
         ops.append(sync.Op(SECTION, "upload", slot, None, file.name, upload))
+    position = want["logo_position"]
+    if position and not same_position(current.get("logo_position"), position):
+
+        async def place(t: Transport, p: dict[str, Any] = position) -> None:
+            await P.set_library_logo_position(t, item_id, p["pinned_position"], p["width_pct"], p["height_pct"])
+
+        ops.append(sync.Op(SECTION, "set", "library logo position", current.get("logo_position"), position, place))
     return ops

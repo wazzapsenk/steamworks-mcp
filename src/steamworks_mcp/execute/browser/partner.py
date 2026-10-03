@@ -70,6 +70,16 @@ async def upload_store_localization(t: Transport, appid: int, data: dict[str, An
     _checked(await t.upload_store_localization(appid, "store_localization.json", raw), "store localization upload")
 
 
+def serialized_app_data(page: str) -> dict[str, Any]:
+    """The whole store item as the edit page embeds it (``<input name="serialized_app_data" value="{...}">``)."""
+    m = re.search(r'name="serialized_app_data"[^>]*value="([^"]*)"', page) or re.search(
+        r'value="([^"]*)"[^>]*name="serialized_app_data"', page
+    )
+    if not m:
+        raise FormatError("The store page changed (serialized_app_data not found).")
+    return dict(json.loads(html.unescape(m.group(1))))
+
+
 async def read_store_form(t: Transport, item_id: str) -> tuple[dict[str, Any], str]:
     """The inputs of the store page's form (``#gameform``, the one carrying ``serialized_app_data``) and the page."""
     res = _checked(await t.get(f"/admin/game/edit/{item_id}"), "store page")
@@ -112,6 +122,23 @@ async def upload_store_image(t: Transport, item_id: str, part: str, file_name: s
         answer = {}
     if isinstance(answer, dict) and (answer.get("success") in (False, 0) or answer.get("error")):
         raise RuntimeError(f"image upload: {answer.get('error') or answer.get('message') or 'refused'}")
+
+
+async def set_library_logo_position(
+    t: Transport, item_id: str, pinned: str, width_pct: float, height_pct: float
+) -> None:
+    """What Steamworks' Library Logo position tool posts when the user clicks OK (into the unpublished draft)."""
+    base = "app[assets][library_logo][logo_position]"
+    fields = {
+        "json": "1",
+        f"{base}[pinned_position]": pinned,
+        f"{base}[width_pct]": str(width_pct),
+        f"{base}[height_pct]": str(height_pct),
+    }
+    _checked(
+        await t.post_multipart(f"/admin/game/save/{item_id}?activetab=tab_graphicalassets&json=1", fields, {}),
+        "library logo position",
+    )
 
 
 # ---------------------------------------------------------------------------------------------------- achievements

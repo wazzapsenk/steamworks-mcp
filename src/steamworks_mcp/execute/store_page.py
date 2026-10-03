@@ -21,8 +21,13 @@ from steamworks_mcp.execute.browser.transport import Transport
 SECTION = "store_page"
 MANAGED = re.compile(
     r"^(app\[content\]\[(links|support_info|legal|sysreqs|supported_languages)\]|app\[platforms\]|rgGenres\["
-    r"|app\[classification\]\[(category|primary_genre)\]|app\[game\]\[(3pdrm|3pacc)\])"
+    r"|app\[classification\]\[(category|primary_genre)\]|app\[game\]\[(3pdrm|3pacc|developers|publishers)\])"
 )
+NEW_ROW = {
+    "developers": re.compile(r"^app\[game\]\[developers\]\[(\d+)\]\[name\]$"),
+    "publishers": re.compile(r"^app\[game\]\[publishers\]\[(\d+)\]$"),
+}
+"""The form only carries an empty "add another" row for these; the names already set live in serialized_app_data."""
 OS = {"windows": "windows", "macos": "mac", "linux": "linux"}
 PLATFORMS = {"windows": "win", "macos": "mac", "linux": "linux"}
 LEVELS = {"minimum": "min", "recommended": "rec"}
@@ -94,13 +99,17 @@ def directx(text: str) -> str | None:
 
 
 def read(form: dict[str, Any], page: str) -> dict[str, Any]:
-    """The managed inputs of the store form, plus the page's genre names (``OnGenreSelect(this, '1', 'Action')``)."""
+    """The managed inputs of the store form, the page's genre names (``OnGenreSelect(this, '1', 'Action')``), and the
+    developer and publisher names already set (from serialized_app_data)."""
     genres = {name: gid for gid, name in re.findall(r"OnGenreSelect\(\s*this,\s*'(\d+)',\s*'([^']+)'\)", page)}
+    game = P.serialized_app_data(page).get("game") or {} if "serialized_app_data" in page else {}
     return {
         "form": {
             k: ("true" if v is True else "" if v is False else str(v)) for k, v in form.items() if MANAGED.match(k)
         },
         "genres": genres,
+        "developers": [d.get("name") for d in game.get("developers") or [] if isinstance(d, dict) and d.get("name")],
+        "publishers": [p for p in game.get("publishers") or [] if isinstance(p, str) and p],
     }
 
 
@@ -195,6 +204,21 @@ def desired(values: dict[str, Any], current: dict[str, Any], remove_extra: bool)
             key = f"app[classification][category][category_{cid}]"
             if name not in wanted_categories and ticked(form.get(key)):
                 put(key, "")
+    for kind in ("developers", "publishers"):
+        have = {n.lower() for n in current.get(kind) or []}
+        rows = sorted(int(m.group(1)) for k in form if (m := NEW_ROW[kind].match(k)))
+        missing = [n for n in store.get(kind) or [] if n.lower() not in have]
+        if missing and not rows:
+            problems.append(f"store.{kind}: the store page has no field to add one")
+            continue
+        for offset, name in enumerate(missing):
+            i = rows[0] + offset if rows else 0
+            field = f"app[game][developers][{i}][name]" if kind == "developers" else f"app[game][publishers][{i}]"
+            out[field] = name
+            out[f"{field}_compl"] = name
+        extra = [n for n in current.get(kind) or [] if n.lower() not in {w.lower() for w in store.get(kind) or []}]
+        if store.get(kind) and extra and remove_extra:
+            problems.append(f"store.{kind}: remove {', '.join(extra)} on the store page; this tool only adds names")
     third = store.get("third_party") or {}
     if third.get("drm"):
         put("app[game][3pdrm][provider]", third["drm"])
