@@ -48,6 +48,7 @@ from steamworks_mcp.scanners import run_scanners
 from steamworks_mcp.spec_info import spec_info
 from steamworks_mcp.status import project as project_status
 from steamworks_mcp.status import workspace as workspace_status
+from steamworks_mcp.validate.code import check_code as check_code_fn
 from steamworks_mcp.validate.report import validate_project
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -400,7 +401,8 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         """Reference data (the tool equivalent of this server's resources, for clients that only use tools).
 
         kind: "schema" (steamworks.yaml fields), "gates" (overview), "gate:<0-3>" (all rules of a gate),
-        "capabilities", "store_rules", "asset_specs", "events", "style_guide:<id>", "reference:<appid>"
+        "capabilities", "store_rules", "asset_specs", "events", "code_rules" (what check_code checks), "estimates"
+        (the rules of thumb of estimate_sales), "style_guide:<id>", "reference:<appid>"
         (derived analysis of a reference game), "references" (catalog), "store_patterns" (what the store pages of
         popular new releases look like, per Steam genre; numbers only), "store_patterns:<Steam genre>".
         """
@@ -479,6 +481,25 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
                 llm_judgements=llm_judgements,
             )
         )
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True))
+    @user_errors
+    def check_code(path: str, source_dir: str | None = None, rules: list[str] | None = None) -> dict[str, Any]:
+        """Check the game's own code, engine settings and SteamPipe scripts against Steamworks rules (read-only):
+        app ids (480, mismatches), the SDK start (result checked, restart through Steam, callbacks, shutdown),
+        stats and achievements (StoreStats, names that steamworks.yaml does not define), keys and Steam login files
+        in the project, build scripts (setlive default, missing paths, steam_appid.txt in builds), Steam Deck (fixed
+        resolution, no gamepad input, anti-cheat), saves (PlayerPrefs, Windows paths, BinaryFormatter) and networking
+        (old P2P API, unverified auth tickets). Every finding has a file, a line and a fix; a secret is never shown.
+
+        Args:
+            path: The game's folder (with steamworks.yaml).
+            source_dir: The engine project folder, when it is not `path` itself.
+            rules: Only these rule or group ids (get_spec_info("code_rules") lists them).
+        """
+        project = open_project(path)
+        source = project_dir(source_dir) if source_dir else project.files.root
+        return present.check_code(check_code_fn(source, project.values(), rules))
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors

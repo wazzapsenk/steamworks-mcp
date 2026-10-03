@@ -113,6 +113,7 @@ async def test_every_result_starts_with_the_same_four_keys(workspace: Path) -> N
         ("generate", {"path": "game", "section": "cloud"}),
         ("generate", {"path": "game", "section": "store_short"}),
         ("validate", {"path": "game"}),
+        ("check_code", {"path": "game"}),
         ("localization_status", {"path": "game"}),
         ("export_package", {"path": "game", "gate": 1}),
         ("get_spec_info", {"kind": "gates"}),

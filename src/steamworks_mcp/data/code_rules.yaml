@@ -1,0 +1,239 @@
+# Checks that check_code runs over a game project's own code and files (never over third-party plugins), read-only.
+# The logic of each rule is in validate/code.py; the texts are here. scripts/gen_rules.py turns the groups into
+# Cursor rules (rules/<group>.mdc) so the same advice shows up while the code is written.
+last_reviewed: '2026-10-03'
+
+groups:
+  - id: steamworks-app-id
+    title: Steam app id
+    globs: ["**/steam_appid.txt", "**/*.vdf", "**/*.cs", "**/*.cpp", "**/*.h", "**/*.gd", "**/project.godot", "**/*.ini"]
+    guidance: >-
+      Use one app id everywhere: steam_appid.txt, the SDK init call, engine settings and SteamPipe scripts must match
+      the app in Steamworks. 480 (Spacewar) is Valve's test app and never belongs in a release build.
+  - id: steamworks-sdk-lifecycle
+    title: Steamworks SDK start, callbacks and shutdown
+    globs: ["**/*.cs", "**/*.cpp", "**/*.h", "**/*.gd"]
+    guidance: >-
+      Check the result of SteamAPI_Init/InitEx and handle a failed start; call SteamAPI_RestartAppIfNecessary before
+      it so the game relaunches through Steam; run callbacks every frame (SteamAPI_RunCallbacks) unless the wrapper
+      does it for you; call SteamAPI_Shutdown on exit.
+  - id: steamworks-stats-achievements
+    title: Stats and achievements
+    globs: ["**/*.cs", "**/*.cpp", "**/*.h", "**/*.gd"]
+    guidance: >-
+      Every SetAchievement/SetStat needs a StoreStats afterwards or nothing reaches Steam. Use exactly the API names
+      defined in Steamworks (steamworks.yaml lists them); a typo fails silently.
+  - id: steamworks-secrets
+    title: Keys and Steam credentials
+    globs: ["**/*"]
+    guidance: >-
+      The publisher Web API key and the build account's password never go into the game, its repository or build
+      scripts: keep the key on a server or in an untracked .env, log steamcmd in once by hand, and never commit
+      ssfn or config.vdf files.
+  - id: steamworks-build-scripts
+    title: SteamPipe build scripts
+    globs: ["**/*.vdf"]
+    guidance: >-
+      app_build and depot_build scripts must point to folders that exist, list depots that have a script, never set
+      the default branch live (Valve only allows that by hand in Steamworks) and never ship steam_appid.txt.
+  - id: steamworks-steam-deck
+    title: Steam Deck and controllers
+    globs: ["**/*.cs", "**/*.cpp", "**/*.gd", "**/project.godot", "**/*.ini"]
+    guidance: >-
+      Steam Deck runs at 1280x800 (16:10) with a controller: do not force a fixed resolution, support gamepads for
+      everything a mouse does, and turn on Proton support in anti-cheat services.
+  - id: steamworks-saves-cloud
+    title: Save files and Steam Cloud
+    globs: ["**/*.cs", "**/*.cpp", "**/*.gd"]
+    guidance: >-
+      Keep saves in files under the engine's per-user folder (Application.persistentDataPath, user://,
+      FPaths::ProjectSavedDir) so Steam Auto-Cloud can sync them on every OS. Not in the Windows registry
+      (PlayerPrefs), not at hard-coded Windows paths, and not with BinaryFormatter.
+  - id: steamworks-networking
+    title: Networking and authentication
+    globs: ["**/*.cs", "**/*.cpp", "**/*.h", "**/*.gd"]
+    guidance: >-
+      Use ISteamNetworkingMessages or ISteamNetworkingSockets instead of the old ISteamNetworking P2P API, and have a
+      server verify every auth ticket before trusting the player it names.
+
+rules:
+  - id: appid_spacewar
+    group: steamworks-app-id
+    severity: warning
+    title: The test app id 480 (Spacewar) is still set
+    why: >-
+      480 is Valve's public test app. A build that starts with it shows up as Spacewar, and its achievements and
+      stats go to Spacewar instead of your game.
+    fix: Replace 480 with your game's app id (apps.main.appid in steamworks.yaml) before uploading a build.
+    source: https://partner.steamgames.com/doc/sdk/api#SteamAPI_RestartAppIfNecessary
+  - id: appid_mismatch
+    group: steamworks-app-id
+    severity: error
+    title: An app id differs from the game's app ids
+    why: >-
+      The SDK, the build scripts and Steamworks must agree on the app id, or the game starts as another app and
+      builds land in the wrong place.
+    fix: Use the app id of the main game, its demo or its playtest (apps.*.appid in steamworks.yaml) everywhere.
+    source: https://partner.steamgames.com/doc/sdk/api#SteamAPI_RestartAppIfNecessary
+  - id: steam_appid_txt_in_build
+    group: steamworks-build-scripts
+    severity: warning
+    title: steam_appid.txt is in a build folder
+    why: >-
+      steam_appid.txt is for development. In a shipped build it makes SteamAPI_RestartAppIfNecessary skip the
+      relaunch through Steam, so the game can start without Steam's checks.
+    fix: Leave steam_appid.txt out of the build folders and depots you upload.
+    source: https://partner.steamgames.com/doc/sdk/api#SteamAPI_RestartAppIfNecessary
+  - id: init_result_unchecked
+    group: steamworks-sdk-lifecycle
+    severity: error
+    title: The result of the Steam API start is not checked
+    why: >-
+      SteamAPI_Init fails when Steam is not running or the app id is wrong; the game then crashes or loses
+      achievements silently at the first Steam call.
+    fix: Check the result (if (!SteamAPI_Init()) ...) and show a message or quit when Steam could not start.
+    source: https://partner.steamgames.com/doc/sdk/api#initialization_and_shutdown
+  - id: callbacks_not_run
+    group: steamworks-sdk-lifecycle
+    severity: error
+    title: Steam callbacks are never run
+    why: Without SteamAPI_RunCallbacks no Steam event arrives (overlay, lobbies, stats received, purchases).
+    fix: Call SteamAPI_RunCallbacks (SteamAPI.RunCallbacks in Steamworks.NET, Steam.run_callbacks in GodotSteam) once per frame.
+    source: https://partner.steamgames.com/doc/sdk/api#callbacks
+  - id: no_restart_check
+    group: steamworks-sdk-lifecycle
+    severity: warning
+    title: SteamAPI_RestartAppIfNecessary is not called
+    why: >-
+      Without it, a player who starts the executable directly gets a game without Steam (no overlay, no
+      achievements) instead of a relaunch through Steam.
+    fix: Call SteamAPI_RestartAppIfNecessary(<app id>) first and quit when it returns true.
+    source: https://partner.steamgames.com/doc/sdk/api#SteamAPI_RestartAppIfNecessary
+  - id: no_shutdown
+    group: steamworks-sdk-lifecycle
+    severity: info
+    title: SteamAPI_Shutdown is not called
+    why: Shutting the API down on exit lets Steam know the game stopped and releases its resources.
+    fix: Call SteamAPI_Shutdown (SteamAPI.Shutdown, SteamClient.Shutdown) when the game quits.
+    source: https://partner.steamgames.com/doc/sdk/api#initialization_and_shutdown
+  - id: stats_not_stored
+    group: steamworks-stats-achievements
+    severity: error
+    title: Achievements or stats are set but never stored
+    why: SetAchievement and SetStat only change the local copy; nothing reaches Steam until StoreStats is called.
+    fix: Call StoreStats after setting achievements or stats (SteamUserStats.StoreStats(), Steam.storeStats()).
+    source: https://partner.steamgames.com/doc/features/achievements
+  - id: achievement_unknown
+    group: steamworks-stats-achievements
+    severity: error
+    title: The code uses an achievement that is not defined
+    why: Steam ignores an API name it does not know, so the achievement can never be unlocked.
+    fix: Use an API name from steamworks.yaml, or add the achievement there (and to Steamworks).
+    source: https://partner.steamgames.com/doc/features/achievements
+  - id: stat_unknown
+    group: steamworks-stats-achievements
+    severity: warning
+    title: The code uses a stat that is not defined
+    why: Steam ignores a stat API name it does not know.
+    fix: Use a stat name from steamworks.yaml (stats), or add the stat there and in Steamworks.
+    source: https://partner.steamgames.com/doc/features/achievements
+  - id: achievement_never_unlocked
+    group: steamworks-stats-achievements
+    severity: info
+    title: An achievement is defined but no code unlocks it
+    why: Players see it on the store and in the library but can never earn it.
+    fix: Unlock it in code, or remove it before release. (Achievements unlocked through a stat's progress are fine.)
+    source: https://partner.steamgames.com/doc/features/achievements
+  - id: web_api_key_in_game
+    group: steamworks-secrets
+    severity: error
+    title: A Web API key is in the game's files
+    why: >-
+      A publisher Web API key in a game or its repository can be read by anyone who has a copy, and it can change
+      your apps.
+    fix: Remove the key, create a new one in Steamworks (the old one is exposed), and call the Web API from a server.
+    source: https://partner.steamgames.com/doc/webapi_overview/auth
+  - id: steamcmd_password
+    group: steamworks-secrets
+    severity: error
+    title: A build script logs steamcmd in with a password
+    why: The build account's password in a script or CI file can be read by anyone with access to it.
+    fix: Log steamcmd in once by hand (steamcmd +login <account>) and use only the account name in scripts.
+    source: https://partner.steamgames.com/doc/sdk/uploading#automating_steampipe
+  - id: steam_credential_files
+    group: steamworks-secrets
+    severity: error
+    title: Steam login files are in the project
+    why: ssfn and config.vdf files hold a Steam login session; with them someone else can sign in as that account.
+    fix: Delete them from the project (and its history), and keep them out with .gitignore.
+    source: https://partner.steamgames.com/doc/sdk/uploading#automating_steampipe
+  - id: setlive_default
+    group: steamworks-build-scripts
+    severity: error
+    title: A build script sets the default branch live
+    why: Valve does not let build scripts set the default branch live; that is done by hand in Steamworks.
+    fix: Set a beta branch in "setlive" (or leave it empty) and set the default branch live in Steamworks.
+    source: https://partner.steamgames.com/doc/sdk/uploading
+  - id: build_script_paths
+    group: steamworks-build-scripts
+    severity: error
+    title: A build script points to something that does not exist
+    why: steamcmd stops, or uploads an empty or wrong depot, when a content root, file mapping or depot script is missing.
+    fix: Fix the path in the script, or build the game into that folder first.
+    source: https://partner.steamgames.com/doc/sdk/uploading
+  - id: fixed_resolution
+    group: steamworks-steam-deck
+    severity: warning
+    title: The game forces a fixed resolution
+    why: Steam Deck's screen is 1280x800 (16:10); a forced resolution looks blurry or stretched and fails Deck review.
+    fix: Default to the display's native resolution and let players change it in the settings.
+    source: https://partner.steamgames.com/doc/steamdeck/recommendations
+  - id: no_gamepad_input
+    group: steamworks-steam-deck
+    severity: warning
+    title: No gamepad input found
+    why: Steam Deck and most living-room players use a controller; a mouse-only game cannot be Deck Verified.
+    fix: Map every action to a gamepad as well (Unity Input System, Godot joypad events, Unreal gamepad keys) or support Steam Input.
+    source: https://partner.steamgames.com/doc/steamdeck/recommendations
+  - id: anticheat_proton
+    group: steamworks-steam-deck
+    severity: info
+    title: An anti-cheat service is used
+    why: Easy Anti-Cheat and BattlEye only run on Steam Deck and Linux when Proton support is turned on for the game.
+    fix: Turn on Proton/Linux support in the anti-cheat service's dashboard and test the game on Steam Deck.
+    source: https://partner.steamgames.com/doc/steamdeck/recommendations
+  - id: registry_saves
+    group: steamworks-saves-cloud
+    severity: warning
+    title: Progress is kept in PlayerPrefs
+    why: On Windows PlayerPrefs live in the registry, which Steam Auto-Cloud cannot sync.
+    fix: Save progress to files under Application.persistentDataPath (keep PlayerPrefs for settings only).
+    source: https://partner.steamgames.com/doc/features/cloud
+  - id: windows_paths
+    group: steamworks-saves-cloud
+    severity: warning
+    title: Hard-coded Windows paths
+    why: Paths like C:\ or %APPDATA% break on Steam Deck, Linux and macOS and on other Windows setups.
+    fix: Build paths from the engine's per-user folder (Application.persistentDataPath, user://, FPaths).
+    source: https://partner.steamgames.com/doc/features/cloud
+  - id: binary_formatter
+    group: steamworks-saves-cloud
+    severity: warning
+    title: Saves use BinaryFormatter
+    why: BinaryFormatter is obsolete and unsafe; a tampered save file (e.g. shared through Steam Cloud) can run code.
+    fix: Save with JsonUtility, System.Text.Json or another plain serializer.
+    source: https://learn.microsoft.com/dotnet/standard/serialization/binaryformatter-security-guide
+  - id: old_p2p_api
+    group: steamworks-networking
+    severity: warning
+    title: The old ISteamNetworking P2P API is used
+    why: Valve deprecated ISteamNetworking; ISteamNetworkingMessages and ISteamNetworkingSockets replace it with relayed, encrypted connections.
+    fix: Move SendP2PPacket/ReadP2PPacket to ISteamNetworkingMessages (closest) or ISteamNetworkingSockets.
+    source: https://partner.steamgames.com/doc/api/ISteamNetworking
+  - id: auth_ticket_unverified
+    group: steamworks-networking
+    severity: info
+    title: Auth tickets are created but not verified in this project
+    why: A ticket proves who a player is only after a server checks it; trusting the client's word allows spoofing.
+    fix: Verify tickets on the server (BeginAuthSession, or ISteamUserAuth/AuthenticateUserTicket from a backend).
+    source: https://partner.steamgames.com/doc/features/auth

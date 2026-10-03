@@ -977,3 +977,44 @@ def launch_watch(data: dict[str, Any]) -> dict[str, Any]:
         rows.append(["Last check", since["last_check"]])
     steps = ["To see what players say, call study_reviews(path, appids=[<the game's app id>])."]
     return result(data, summary + ".", next=steps, display=table(["", g.get("name") or "Game"], rows, width=200))
+
+
+# ---------------------------------------------------------------------------------------------------- code checks
+
+
+def check_code(data: dict[str, Any]) -> dict[str, Any]:
+    c = data.get("counts") or {}
+    findings = data.get("findings") or []
+    files = (data.get("files_checked") or {}).get("own_code", 0)
+    if not findings:
+        summary = f"No problems in {plural(files, 'code file')} of the game ({data.get('rules_run')} rules checked)."
+    else:
+        parts = [plural(c.get("error", 0), "problem") + " to fix"]
+        if c.get("warning"):
+            parts.append(plural(c["warning"], "warning"))
+        if c.get("info"):
+            parts.append(plural(c["info"], "note"))
+        summary = ", ".join(parts) + f" in the game's code and files ({data.get('rules_run')} rules checked)."
+    rows = [
+        [
+            f["severity"],
+            f["title"],
+            f"{f['file']}:{f['line']}" if f.get("line") else (f.get("file") or "—"),
+            f["found"],
+        ]
+        for f in findings
+    ]
+    fixes: dict[str, str] = {}
+    for f in findings:
+        fixes.setdefault(f["title"], f["fix"])
+    display = join(
+        table(["Severity", "Rule", "Where", "Found"], rows, limit=40, width=90),
+        section("How to fix", "\n".join(f"- **{title}**: {fix}" for title, fix in fixes.items())),
+    )
+    steps = []
+    if findings:
+        steps.append(
+            "Explain the problems to the user in plain words, errors first. This tool never edits the game; offer to "
+            "fix them in the code only if the user asks."
+        )
+    return result(data, summary, outcome="ok", next=steps, display=display)

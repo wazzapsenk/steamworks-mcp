@@ -134,6 +134,13 @@ def test_generated_skills_are_current() -> None:
     assert res.returncode == 0, res.stdout + res.stderr
 
 
+def test_generated_cursor_rules_are_current() -> None:
+    res = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "gen_rules.py"), "--check"], capture_output=True, text=True
+    )
+    assert res.returncode == 0, res.stdout + res.stderr
+
+
 def test_handwritten_skills_name_every_tool_of_their_prompt() -> None:
     spec = importlib.util.spec_from_file_location("gen_skills", ROOT / "scripts" / "gen_skills.py")
     assert spec is not None and spec.loader is not None
@@ -173,4 +180,4 @@ def test_plugin_manifests_agree() -> None:
             root_var,
             "steamworks-mcp",
         ]
-    assert (ROOT / cursor["skills"]).is_dir()
+    assert (ROOT / cursor["skills"]).is_dir() and any((ROOT / cursor["rules"]).glob("*.mdc"))

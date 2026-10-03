@@ -14,7 +14,7 @@ from steamworks_mcp.style_guides import guide
 
 KINDS = (
     "schema, gates, gate:<0-3>, capabilities, store_rules, asset_specs, events, references, reference:<appid>, "
-    "style_guide:<id>, store_patterns, store_patterns:<Steam genre>"
+    "style_guide:<id>, store_patterns, store_patterns:<Steam genre>, code_rules, estimates"
 )
 
 
@@ -36,7 +36,7 @@ def spec_info(kind: str) -> dict[str, Any]:
         return g.model_dump(mode="json", by_alias=True, exclude_none=True)
     if kind == "capabilities":
         return capabilities().model_dump(mode="json")
-    if kind in ("store_rules", "asset_specs", "events"):
+    if kind in ("store_rules", "asset_specs", "events", "code_rules", "estimates"):
         return dict(load_yaml(f"{kind}.yaml"))
     if kind == "references":
         return {"games": [g.model_dump() for g in catalog()]}

@@ -10,6 +10,7 @@
   "keywords": ["steam", "steamworks", "gamedev", "release", "store-page", "achievements", "localization", "mcp"],
   "category": "developer-tools",
   "skills": "./skills/",
+  "rules": "./rules/",
   "mcpServers": {
     "steamworks": {
       "command": "uv",
