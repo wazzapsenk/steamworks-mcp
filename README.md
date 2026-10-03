@@ -11,14 +11,37 @@ client.
 
 > Not affiliated with or endorsed by Valve. "Steam" and "Steamworks" are trademarks of Valve Corporation.
 
-> **Status: 0.2 in development.** This is the Python rewrite of the TypeScript v0.1, which stays in the git
-> history.
+> **Status: 0.2.** Every write path was tried on real Steamworks apps, with nothing published;
+> [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md) shows how well each area is verified. The TypeScript v0.1 stays in
+> the git history.
+
+**Contents:** [Quick start](#quick-start) · [What it does](#what-it-does) ·
+[How things get done in Steamworks](#how-things-get-done-in-steamworks) · [Install](#install) ·
+[Configure](#configure) · [Connect it](#connect-it) · [A typical session](#a-typical-session) ·
+[Writing to Steam](#writing-to-steam-the-protocol) · [BROWSER mode](#browser-mode-read-this-first) ·
+[What this tool never does](#what-this-tool-never-does) · [Known limits](#known-limits) · [Files](#files) ·
+[Development](#development)
+
+## Quick start
+
+```bash
+git clone https://github.com/wazzapsenk/steamworks-mcp.git
+cd steamworks-mcp
+uv sync
+claude mcp add steamworks -e STEAMWORKS_MCP_ROOT=/path/to/your/games -- uv --directory "$PWD" run steamworks-mcp
+```
+
+Then ask your assistant: *"Help me get my game in `MyGame/` onto Steam."* No keys or Steam login are needed for
+that: the gap report, interview, drafts, validation, images and export packages work on your machine, and the market
+study reads only public store pages. Keys and the BROWSER mode come in when you want the tool to read or write
+Steamworks itself ([Configure](#configure)). Other clients:
+[Connect it](#connect-it).
 
 ## What it does
 
 | Step | Tools |
 |---|---|
-| Start tracking a game; read what the Unity project already says (name, platforms, input, saves, achievements and stats in code, SteamPipe settings) | `init_project`, `scan_project` |
+| Start tracking a game; read what the Unity project already says (name, platforms, input, saves, achievements and stats in code, SteamPipe settings). Other engines skip the scan and answer the interview instead | `init_project`, `scan_project` |
 | Game already in Steamworks? Fill the empty fields from what Steam has (store texts in every language, achievements, Steam Cloud, installation, leaderboards, finished checklist items); never overwrites | `import_from_steamworks` |
 | See what is missing before each release gate (0 prerequisites, 1 store page, 2 build review, 3 release), with Valve's source for every rule | `gap_report` |
 | Answer short batches of questions (shown as a form when your client supports it) | `start_interview`, `set_field`, `approve_fields` |
@@ -29,8 +52,9 @@ client.
 | Learn from successful games without copying them (derived measurements only) | `fetch_reference` |
 | Study the store pages of the game's closest popular games (by its store tags, on Popular New Releases and Top Sellers): your assistant labels how each page opens and is built, the briefs then suggest strategies from it | `study_market`, `save_market_study` |
 | Get every file plus a checklist that says which Steamworks page and field it goes to | `export_package` |
-| Apply approved values to Steam, look at what Steam has: Steam Cloud, installation, achievements, store text, the store page form (links, support, system requirements, languages, genres, categories, developer/publisher), store and library images, depot settings, store tags, leaderboards, builds | `apply`, `steamworks_inspect`, `set_build_live`, `restore_snapshot` |
+| Apply approved values to Steam, look at what Steam has: Steam Cloud, installation, achievements, store text, the store page form (links, support, system requirements, languages, genres, categories, developer/publisher), store and library images, depot settings, store tags, leaderboards, builds | `steamworks_open`, `apply`, `steamworks_inspect`, `set_build_live`, `restore_snapshot` |
 | Confirm manual steps | `mark_applied` |
+| Check the server: version, which keys and modes are configured (never their values) | `server_info` |
 
 Text is never invented by the server: `generate` returns a brief, your assistant writes, and the server validates and
 stores the result as a draft until you approve it. Every value in `steamworks.yaml` has a status in
@@ -334,6 +358,19 @@ export packages and checklists.
 - Generate artwork. Images are cropped from your own art; missing art is reported.
 - Send your texts to a translation or AI service. Your own assistant translates; the server only checks the result.
 
+## Known limits
+
+- **Unity only, for the scan.** Other engines get no automatic findings; everything after the scan works the same.
+- **Still manual in Steamworks:** pricing, the content survey and ratings, the Controller and Accessibility wizards,
+  the release date, stat definitions, screenshots and trailers, creating depots, packages, and setting a build live
+  on the default branch.
+- **Not verified live:** writing store tags, setting a beta branch live, the beta branch list (`GetAppBetas` answers
+  HTTP 500 on unreleased apps), the app and shortcut icons, and the Auto-Cloud root overrides suggested for macOS and
+  Linux saves.
+- **Images:** the tool fills empty image slots only; it never replaces or removes an image in Steamworks.
+- **The BROWSER mode follows the Steamworks site as it was on 2026-10-03.** When a page changes, the tool stops
+  before writing; `scripts/live/validate.py` on a test app shows whether it still matches.
+
 ## Files
 
 ```
@@ -374,4 +411,4 @@ most 80 games); like `scripts/build_references.py` it commits derived numbers on
 
 ## License
 
-MIT
+[MIT](LICENSE)

@@ -118,8 +118,8 @@ areas:
     default_mode: ARTIFACT
     notes: >-
       Images are cropped from the user's own art at the exact sizes; artwork is never generated. Capsules, page
-      background and library images were uploaded live into empty slots; existing images are never replaced.
-      Screenshots, trailers and the library logo position are still uploaded by hand.
+      background and library images were uploaded live into empty slots, and the library logo position was set and
+      read back; existing images are never replaced. Screenshots and trailers are still uploaded by hand.
   - id: icons
     name: App icon and shortcut icon
     api: {status: never}
