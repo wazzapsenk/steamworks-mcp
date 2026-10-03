@@ -33,6 +33,8 @@ below is a candidate. The maintainer accepts, edits or rejects it.
 
 ## Proposals at a glance
 
+The maintainer decided on every proposal on 2026-10-03; each section starts with the decision.
+
 | # | id | applies_to | check | severity | evidence |
 |---|----|-----------|-------|----------|----------|
 | 1 | `short_states_hook` | short | llm_judged | warning | 2+ independent (Valve, Zukowski, Clark) |
@@ -55,6 +57,8 @@ Proposals 10 and 11 come from Valve requirements or explicit Valve advice. Propo
 ---
 
 ## 1. `short_states_hook`
+
+**Decision (2026-10-03):** accepted as a warning (`short_states_hook`, llm_judged).
 
 - **applies_to:** short
 - **check:** llm_judged
@@ -81,6 +85,8 @@ Proposals 10 and 11 come from Valve requirements or explicit Valve advice. Propo
 - **Evidence:** 2+ independent.
 
 ## 2. `short_no_mood_filler`
+
+**Decision (2026-10-03):** accepted as info (`short_no_mood_filler`, kind `phrase_list_max`).
 
 - **applies_to:** short
 - **check:** deterministic
@@ -118,6 +124,8 @@ Proposals 10 and 11 come from Valve requirements or explicit Valve advice. Propo
 
 ## 3. `short_genre_specific`
 
+**Decision (2026-10-03):** accepted as info (`short_genre_specific`, kind `genre_specificity`).
+
 - **applies_to:** short
 - **check:** deterministic
 - **How to check:** a *new* kind `genre_specificity`. Use the genre words from `_genre_words()` (manifest genres plus
@@ -146,6 +154,8 @@ Proposals 10 and 11 come from Valve requirements or explicit Valve advice. Propo
 - **Evidence:** single author (Zukowski, two documents). This is why the suggested severity is info.
 
 ## 4. `short_no_future_promises`
+
+**Decision (2026-10-03):** accepted as a warning (`short_no_future_promises`, kind `regex_forbidden`).
 
 - **applies_to:** short
 - **check:** deterministic, with an optional llm_judged confirmation to rule out false positives
@@ -186,6 +196,8 @@ Proposals 10 and 11 come from Valve requirements or explicit Valve advice. Propo
 
 ## 5. `long_opening_not_copy_of_short`
 
+**Decision (2026-10-03):** accepted as info (`long_opening_not_copy_of_short`, kind `overlap_with_short`).
+
 - **applies_to:** long (it also reads the short description)
 - **check:** deterministic
 - **How to check:** a *new* kind `overlap_with_short`. Compare the first N words of About This Game with the short
@@ -213,6 +225,8 @@ Proposals 10 and 11 come from Valve requirements or explicit Valve advice. Propo
   show the same thing twice" point about GIFs.
 
 ## 6. `long_headers_are_core_loop_beats`
+
+**Decision (2026-10-03):** accepted as info (precheck `long_headers_min`, kind `headers_min`, off when a genre guide makes headings optional; question `long_headers_are_core_loop_beats`).
 
 - **applies_to:** long
 - **check:** llm_judged, with a deterministic precheck
@@ -244,6 +258,8 @@ Proposals 10 and 11 come from Valve requirements or explicit Valve advice. Propo
 
 ## 7. `long_uses_genre_vocabulary`
 
+**Decision (2026-10-03):** accepted as info (`long_uses_genre_vocabulary`, kind `genre_keyword_coverage`; keywords come from the game's own genres and top tags).
+
 - **applies_to:** long
 - **check:** deterministic
 - **How to check:** a *new* kind `genre_keyword_coverage`. Build a keyword set per genre from the top-5 tags plus
@@ -273,6 +289,8 @@ Proposals 10 and 11 come from Valve requirements or explicit Valve advice. Propo
 - **Evidence:** single author (Zukowski, two documents). The threshold is ours.
 
 ## 8. `plain_language_no_jargon`
+
+**Decision (2026-10-03):** accepted as info (`plain_language_no_jargon`, kind `unexplained_acronyms`).
 
 - **applies_to:** both
 - **check:** deterministic
@@ -304,6 +322,8 @@ Proposals 10 and 11 come from Valve requirements or explicit Valve advice. Propo
 
 ## 9. `store_text_localized_for_supported_languages`
 
+**Decision (2026-10-03):** accepted as a warning (`store_text_localized_for_supported_languages`, kind `localized_text_coverage`, checked on the final text).
+
 - **applies_to:** both
 - **check:** deterministic
 - **How to check:** a *new* kind `localized_text_coverage`. For every language that `steamworks.yaml` declares with
@@ -330,6 +350,8 @@ Proposals 10 and 11 come from Valve requirements or explicit Valve advice. Propo
 
 ## 10. `demo_text_matches_demo_content`
 
+**Decision (2026-10-03):** accepted as a Valve rule (`demo_text_matches_demo_content` in `store_rules.yaml`, error).
+
 - **applies_to:** both, only when the app is a demo with its own store page
 - **check:** deterministic + llm_judged
 - **How to check:**
@@ -353,6 +375,8 @@ Proposals 10 and 11 come from Valve requirements or explicit Valve advice. Propo
 
 ## 11. `long_editions_explained`
 
+**Decision (2026-10-03):** accepted as info (`long_editions_explained`, llm_judged until steamworks.yaml holds edition data).
+
 - **applies_to:** long
 - **check:** deterministic, with an llm_judged fallback
 - **How to check:** a *new* kind `editions_mentioned`. When the manifest lists two or more purchase options for the
@@ -370,6 +394,8 @@ Proposals 10 and 11 come from Valve requirements or explicit Valve advice. Propo
 - **Evidence:** single source (Valve advice, not a rule).
 
 ## 12. `long_no_stale_time_text`
+
+**Decision (2026-10-03):** not taken.
 
 - **applies_to:** long
 - **check:** deterministic
@@ -401,6 +427,8 @@ Proposals 10 and 11 come from Valve requirements or explicit Valve advice. Propo
 - **Evidence:** Valve only, extrapolated from the short-description rule.
 
 ## 13. `product_focused_not_studio`
+
+**Decision (2026-10-03):** accepted as info (precheck `product_focused_not_studio`, kind `studio_talk`; question `product_focused_not_studio_review`).
 
 - **applies_to:** both
 - **check:** deterministic precheck + llm_judged

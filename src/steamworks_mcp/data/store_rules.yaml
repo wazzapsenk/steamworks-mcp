@@ -549,6 +549,17 @@ rules:
     rule: The Tag Wizard requires the Edit App Metadata and Publish App Changes to Steam permissions. Tag publishing is separate from store page publishing.
     source_doc: https://partner.steamgames.com/doc/store/tags
     quote: requires that a developer have Edit App Metadata and Publish App Changes to Steam permissions
+  - id: demo_text_matches_demo_content
+    area: text
+    applies_to:
+      - demo_short_description
+      - demo_about_this_game
+    check: llm_judged
+    severity: error
+    rule: A demo's store text describes what the demo contains (levels, modes, roughly how long it lasts) and leaves out features, languages and player modes only the full game has, unless clearly marked as full-game content.
+    source_doc: https://partner.steamgames.com/doc/store/application/demos
+    quote: If certain features, languages, or player modes are supported in the base game but not in the demo, do not include them
+    notes: Applies to a demo with its own store page. Accepted from docs/RUBRIC_PROPOSALS.md (proposal 10) as a Valve rule.
   - id: tags_demo_inherits
     area: tags
     applies_to:

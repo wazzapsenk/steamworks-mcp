@@ -76,7 +76,7 @@ def validate_store(
         if not current:
             rub[section] = {"status": "missing", "next": f"generate(section='store_{section}')"}
             continue
-        results, qs, score = rubric.evaluate(section, current, values, guide, final=True)  # type: ignore[arg-type]
+        results, qs, score = rubric.evaluate(section, current, values, guide, final=True, root=root)  # type: ignore[arg-type]
         rub[section] = {
             "score": score,
             "findings": [r.model_dump() for r in results if r.outcome in ("fail", "warn")],

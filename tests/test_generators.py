@@ -255,6 +255,104 @@ def test_genre_guide_overrides_thresholds() -> None:
     assert genre["long_media_count"].params == {"min": 3, "max": 10}
 
 
+# Rules accepted from docs/RUBRIC_PROPOSALS.md
+
+
+@pytest.mark.parametrize(
+    ("section", "text", "rule"),
+    [
+        (
+            "short",
+            "A co-op party game for four friends. Embark on a journey through a beautiful world.",
+            "short_no_mood_filler",
+        ),
+        ("short", "A casual indie title for four friends who like to build.", "short_genre_specific"),
+        ("short", "A co-op party game for four friends building forts. More maps to come.", "short_no_future_promises"),
+        ("long", GOOD_SHORT + " [GIF: x][list][*]a[*]b[*]c[/list]", "long_opening_not_copy_of_short"),
+        (
+            "long",
+            "[p]Pillows and blankets for four friends.[/p][GIF: x][list][*]a[*]b[*]c[/list]",
+            "long_uses_genre_vocabulary",
+        ),
+        (
+            "short",
+            "A co-op party game for four friends: lower your TTK and stack DPS buffs.",
+            "plain_language_no_jargon",
+        ),
+        (
+            "long",
+            "[p]We are a small indie team from a tiny town.[/p][GIF: x][list][*]a[*]b[*]c[/list]",
+            "product_focused_not_studio",
+        ),
+    ],
+)
+def test_accepted_proposals_catch_bad_texts(section: str, text: str, rule: str) -> None:
+    v = values()
+    v["store"]["short_description"] = GOOD_SHORT
+    assert results(section, text, v)[rule] == "warn"
+
+
+def test_accepted_proposals_let_good_texts_pass() -> None:
+    v = values()
+    v["store"]["short_description"] = GOOD_SHORT
+    short, long = results("short", GOOD_SHORT, v), results("long", GOOD_ABOUT, v)
+    for rule in (
+        "short_no_mood_filler",
+        "short_genre_specific",
+        "short_no_future_promises",
+        "plain_language_no_jargon",
+    ):
+        assert short[rule] == "pass", rule
+    for rule in ("long_opening_not_copy_of_short", "long_uses_genre_vocabulary", "product_focused_not_studio"):
+        assert long[rule] == "pass", rule
+    assert (
+        results("short", "Duel online in PvP or team up in PvE; time to kill (TTK) is short.", v)[
+            "plain_language_no_jargon"
+        ]
+        == "pass"
+    )
+
+
+def test_headers_rule_and_its_genre_switch() -> None:
+    text = "[p]" + "Stack cushions with friends. " * 40 + "[/p]"
+    base, _, _ = rubric.evaluate("long", text, values(), None)
+    assert {r.rule_id: r.outcome for r in base}["long_headers_min"] == "warn"
+    with_headers = "[h2]Build the fort[/h2]" + text + "[h2]Survive the raid[/h2][p]Hold on.[/p]"
+    ok, _, _ = rubric.evaluate("long", with_headers, values(), None)
+    assert {r.rule_id: r.outcome for r in ok}["long_headers_min"] == "pass"
+    assert "long_headers_min" not in results("long", text)  # coop_party: headings are optional
+
+
+def test_judged_proposals_become_questions() -> None:
+    _, short_q, _ = rubric.evaluate("short", GOOD_SHORT, values(), None)
+    _, long_q, _ = rubric.evaluate("long", GOOD_ABOUT, values(), None)
+    asked = {q["rule_id"] for q in short_q + long_q}
+    assert {
+        "short_states_hook",
+        "long_headers_are_core_loop_beats",
+        "long_editions_explained",
+        "product_focused_not_studio_review",
+    } <= asked
+
+
+def test_store_text_must_exist_in_supported_languages(tmp_path: Path) -> None:
+    v = values()
+    v["store"]["short_description"] = GOOD_SHORT
+    res, _, _ = rubric.evaluate("short", GOOD_SHORT, v, None, final=True, root=tmp_path)
+    found = {r.rule_id: r for r in res}["store_text_localized_for_supported_languages"]
+    assert found.outcome == "warn" and "german" in found.message
+    loc.Localization(tmp_path).write("german", {"store.short_description": GOOD_SHORT})
+    res, _, _ = rubric.evaluate("short", GOOD_SHORT, v, None, final=True, root=tmp_path)
+    assert (
+        "untranslated in german" in {r.rule_id: r for r in res}["store_text_localized_for_supported_languages"].message
+    )
+    loc.Localization(tmp_path).write(
+        "german", {"store.short_description": "Ein Koop-Partyspiel für bis zu vier Freunde."}
+    )
+    res, _, _ = rubric.evaluate("short", GOOD_SHORT, v, None, final=True, root=tmp_path)
+    assert {r.rule_id: r.outcome for r in res}["store_text_localized_for_supported_languages"] == "pass"
+
+
 def test_preview_html() -> None:
     html = bbcode_to_html(GOOD_ABOUT + "[url=https://x.example]site[/url]")
     assert "<h2>" in html and "<li>" in html and 'class="gif"' in html and "hidden-link" in html

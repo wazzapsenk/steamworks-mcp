@@ -120,3 +120,115 @@ rules:
     severity: warning
     rationale: '[GIF: …] placeholders must be replaced by the real clips before the page goes to review.'
     fix: Upload the GIFs in the store editor and replace each placeholder with its [img] tag.
+  # ---- accepted from docs/RUBRIC_PROPOSALS.md (maintainer's decisions of 2026-10-03; #12 was not taken)
+  - id: short_states_hook
+    applies_to: short
+    check: llm_judged
+    severity: warning
+    question: Apart from the genre and the core action, does the short description say what makes this game different from other games in its genre (its hook or twist)?
+    rationale: The genre tells shoppers what kind of game this is; the hook tells them why to pick this one. Valve frames the short description around what sets the game apart.
+    fix: Add one clause that names the twist only your game has.
+  - id: short_no_mood_filler
+    applies_to: short
+    check: deterministic
+    kind: phrase_list_max
+    params:
+      max: 0
+      phrases: [beautiful world, war-torn, vast world, rich lore, rich story, mysterious world, ancient evil, dark secrets, fate of the world, save the world, battle evil, forces of evil, epic journey, embark on a journey, adventure awaits, a world where, long-forgotten]
+    severity: info
+    rationale: Shoppers scan the short description for verbs; the setting comes across better in screenshots and the trailer.
+    fix: Cut the setting phrase and spend the characters on what the player does.
+  - id: short_genre_specific
+    applies_to: short
+    check: deterministic
+    kind: genre_specificity
+    params:
+      umbrella: [action, adventure, action-adventure, action adventure, indie, casual, simulation, strategy, rpg, arcade, sports, racing, singleplayer, multiplayer, game, games, online]
+    severity: info
+    rationale: Shoppers look for the subgenres they already like; "action adventure" tells a roguelite fan nothing.
+    fix: Name the subgenre players search for (for example Roguelite, Deckbuilder, Metroidvania), not only the umbrella genre.
+  - id: short_no_future_promises
+    applies_to: short
+    check: deterministic
+    kind: regex_forbidden
+    params:
+      patterns: ['\b(?:planned|future|upcoming) (?:update|content|feature|mode|character|map)s?\b', '\bin (?:a|an|the) (?:future|upcoming|later) (?:update|patch|release)\b', '\bwill be added\b', '\b(?:roadmap|post-launch|full release)\b', '\bmore \w+ (?:to come|on the way)\b']
+    severity: warning
+    rationale: Valve expects the store page to describe what the game has at launch; the short description has no room to mark plans.
+    fix: Describe what is in the game today. Move plans to an event or the Early Access questionnaire.
+  - id: long_opening_not_copy_of_short
+    applies_to: long
+    check: deterministic
+    kind: overlap_with_short
+    params: {window_words: 60, max_shared_run: 7, max_4gram_ratio: 0.5}
+    severity: info
+    rationale: Readers of About This Game have just read the short description; the opening is a second hook, not a repeat.
+    fix: Don't repeat the short description. Open with a moment of play it doesn't mention.
+  - id: long_headers_min
+    applies_to: long
+    check: deterministic
+    kind: headers_min
+    params: {min: 2, min_words: 150}
+    severity: info
+    rationale: Readers skim the section headers to see how the game is played. Genre guides with optional headings turn this off.
+    fix: Split the text into sections with a short header each.
+  - id: long_headers_are_core_loop_beats
+    applies_to: long
+    check: llm_judged
+    severity: info
+    question: If About This Game has section headers, does each name one beat of the core gameplay loop as a player action (like Valve's example "Build Beautiful Bouquets") rather than a generic label such as "Features", "Story" or "About"?
+    rationale: Header text is the most-read text of the section; a verb-led header next to its gameplay shows the loop at a glance.
+    fix: Give each section a short verb-led header naming one thing the player does.
+  - id: long_uses_genre_vocabulary
+    applies_to: long
+    check: deterministic
+    kind: genre_keyword_coverage
+    params:
+      min: 2
+      umbrella: [action, adventure, indie, casual, simulation, strategy, arcade, sports, racing, singleplayer, multiplayer, game, games]
+    severity: info
+    rationale: Shoppers look for proof that a game plays like the ones they like, using the genre's own words.
+    fix: Use the words fans of the genre use for its mechanics (runs, decks, permadeath, base building…).
+  - id: plain_language_no_jargon
+    applies_to: both
+    check: deterministic
+    kind: unexplained_acronyms
+    params:
+      max: 0
+      allow: [PC, AI, UI, HD, 4K, 2D, 3D, VR, RPG, FPS, RTS, MMO, PvP, PvE, DLC, NPC, USB, DRM, HDR, GPU, CPU, RAM, OK]
+      jargon: [meta, ttk, dps, i-frames, procgen, min-max]
+    severity: info
+    rationale: Many readers are new to the game or even its genre; Valve asks to minimize insider jargon and acronyms.
+    fix: Spell out the term or replace it with what the player experiences.
+  - id: store_text_localized_for_supported_languages
+    applies_to: both
+    check: deterministic
+    kind: localized_text_coverage
+    stage: final
+    severity: warning
+    rationale: A game that supports a language should show its store text in it; untranslated pages lose those players.
+    fix: Add the short description and About text for every language the game supports (localization_pending).
+  - id: long_editions_explained
+    applies_to: long
+    check: llm_judged
+    severity: info
+    question: If the game is sold in more than one edition (for example Standard and Deluxe), does About This Game name each edition with at least one thing it includes? Answer pass when there is only one edition.
+    rationale: Valve suggests About This Game as the place to explain what each purchase option includes.
+    fix: Add a short "Editions" block listing what each edition adds.
+  - id: product_focused_not_studio
+    applies_to: both
+    check: deterministic
+    kind: studio_talk
+    params:
+      start_patterns: ['^(?:we are|we''re|our (?:small |tiny |indie )?(?:team|studio)|i am|i''m|as a solo dev(?:eloper)?|hi,? (?:i''m|we''re))']
+      anywhere: ['\b(?:kickstarter|patreon) backers\b', '\bspecial thanks\b', '\bthank you\b']
+    severity: info
+    rationale: Valve asks store text to stay on the product and why a customer should buy it.
+    fix: Move studio story and credits to the developer homepage or an event. Keep the page about the game.
+  - id: product_focused_not_studio_review
+    applies_to: both
+    check: llm_judged
+    severity: info
+    question: Is any paragraph about the developers, their history, crowdfunding thanks or credits rather than about what the player gets from the game?
+    rationale: Valve asks store text to stay on the product and why a customer should buy it.
+    fix: Move studio story and credits to the developer homepage or an event. Keep the page about the game.

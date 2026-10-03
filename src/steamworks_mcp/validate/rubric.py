@@ -9,6 +9,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import cache
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -27,6 +28,9 @@ BB_TAG = re.compile(r"\[/?[a-z0-9*]+(?:=[^\]]*)?\]", re.I)
 GIF = re.compile(r"\[GIF:[^\]]*\]", re.I)
 MEDIA = re.compile(r"\[img[^\]]*\]|\[GIF:[^\]]*\]|\[video[^\]]*\]", re.I)
 SENTENCE_END = re.compile(r"(?<=[.!?])\s")
+HEADER = re.compile(r"\[h[1-3]\][^\[]+\[/h[1-3]\]|^\s*\[b\][^\[\n]+\[/b\]\s*$", re.I | re.M)
+ACRONYM = re.compile(r"\b(?=[A-Za-z0-9]*[A-Z][A-Za-z0-9]*[A-Z])[A-Z0-9][A-Za-z0-9]{1,5}\b")
+"""Short tokens with at least two capitals: DPS, TTK, PvPvE."""
 
 
 class RubricRule(BaseModel):
@@ -63,6 +67,8 @@ def rules_for(guide: StyleGuide | None) -> list[RubricRule]:
     rules = {r.id: r.model_copy(deep=True) for r in base_rules()}
     if guide is not None:
         meta = guide.meta.model_dump()
+        if (meta.get("long_description") or {}).get("headings") == "optional":
+            rules = {k: r for k, r in rules.items() if r.kind != "headers_min"}
         for (section, key), (rule_id, param) in GUIDE_OVERRIDES.items():
             value = (meta.get(section) or {}).get(key)
             if value is None or rule_id not in rules:
@@ -102,6 +108,8 @@ def list_items(text: str) -> list[int]:
 @dataclass
 class Context:
     values: dict[str, Any]
+    root: Path | None = None
+    """Project folder, for the checks that read translations; None skips them."""
 
     def get(self, *path: str) -> Any:
         cur: Any = self.values
@@ -157,6 +165,19 @@ CLAIMS: list[tuple[re.Pattern[str], Callable[[Context], bool], str]] = [
     (re.compile(r"\bleaderboards?\b", re.I), lambda c: bool(c.get("leaderboards")), "leaderboards"),
     (re.compile(r"\bachievements?\b", re.I), lambda c: bool(c.get("achievements")), "achievements"),
 ]
+
+
+def _longest_shared_run(a: list[str], b: list[str]) -> int:
+    best = 0
+    prev = [0] * (len(b) + 1)
+    for x in a:
+        cur = [0] * (len(b) + 1)
+        for j, y in enumerate(b, 1):
+            if x == y:
+                cur[j] = prev[j - 1] + 1
+                best = max(best, cur[j])
+        prev = cur
+    return best
 
 
 def _number_words(n: int) -> set[str]:
@@ -289,6 +310,123 @@ def check_rule(rule: RubricRule, section: Section, text: str, ctx: Context) -> R
             if n <= int(p["max"])
             else res("warn", f"The first clip comes after {n} words; aim for {p['max']} or fewer.")
         )
+    if k == "phrase_list_max":
+        lower = body.lower()
+        found = [x for x in p.get("phrases", []) if re.search(rf"\b{re.escape(x.lower())}\b", lower)]
+        return (
+            res("pass")
+            if len(found) <= int(p.get("max", 0))
+            else res("warn", f"Stock phrases: {', '.join(found)}.")
+        )
+    if k == "regex_forbidden":
+        for pattern in p.get("patterns", []):
+            m = re.search(pattern, body, re.I)
+            if m:
+                return res("warn", f'"{m.group(0)}"')
+        return res("pass")
+    if k == "genre_specificity":
+        umbrella = {u.lower() for u in p.get("umbrella", [])}
+        specific = {g for g in _genre_words(ctx) if g not in umbrella}
+        if not specific:
+            return res("not_applicable", "No tags more specific than the umbrella genres.")
+        lower = body.lower()
+        return (
+            res("pass")
+            if any(re.search(rf"\b{re.escape(g)}", lower) for g in specific)
+            else res("warn", f"Only umbrella genres; none of: {', '.join(sorted(specific)[:6])}.")
+        )
+    if k == "overlap_with_short":
+        short = ctx.get("store", "short_description") or ""
+        if not short:
+            return res("not_applicable", "No short description yet.")
+        head = words(" ".join(words(body)[: int(p.get("window_words", 60))]))
+        short_words = words(short)
+        run = _longest_shared_run(head, short_words)
+        grams = {tuple(short_words[i : i + 4]) for i in range(len(short_words) - 3)}
+        head_grams = {tuple(head[i : i + 4]) for i in range(len(head) - 3)}
+        ratio = len(grams & head_grams) / len(grams) if grams else 0.0
+        if run > int(p.get("max_shared_run", 7)) or ratio > float(p.get("max_4gram_ratio", 0.5)):
+            return res("warn", f"The opening repeats the short description ({run} words in a row).")
+        return res("pass")
+    if k == "headers_min":
+        if len(words(text)) < int(p.get("min_words", 150)):
+            return res("not_applicable")
+        n = len(HEADER.findall(text))
+        need = int(p.get("min", 2))
+        return res("pass") if n >= need else res("warn", f"{n} section header(s); use at least {need}.")
+    if k == "genre_keyword_coverage":
+        umbrella = {u.lower() for u in p.get("umbrella", [])}
+        keys = {w for t in (ctx.get("store", "tags") or [])[:5] + (ctx.get("game", "genres") or []) for w in words(t)}
+        keys = {w for w in keys if len(w) >= 4 and w not in umbrella}
+        if not keys:
+            return res("not_applicable", "No genre words in steamworks.yaml yet.")
+        used = sorted(keys & set(words(text)))
+        need = min(int(p.get("min", 2)), len(keys))
+        return (
+            res("pass")
+            if len(used) >= need
+            else res("warn", f"Uses {len(used)} of the genre words players look for ({', '.join(sorted(keys)[:6])}).")
+        )
+    if k == "unexplained_acronyms":
+        allow = {a.lower() for a in p.get("allow", [])}
+        title = {w.lower() for w in re.findall(r"\w+", str(ctx.get("game", "name") or ""))}
+        flagged = []
+        for m in ACRONYM.finditer(body):
+            tok = m.group(0)
+            if tok.lower() in allow or tok.lower() in title or tok in flagged:
+                continue
+            around = body[max(0, m.start() - 2) : m.end() + 2]
+            if "(" in around:  # expanded on first use: "time to kill (TTK)" or "TTK (time to kill)"
+                continue
+            flagged.append(tok)
+        lower = body.lower()
+        for j in p.get("jargon", []):
+            term = re.escape(j)
+            explained = re.search(rf"\(\s*{term}\s*\)|\b{term}\s*\(", lower)
+            if re.search(rf"\b{term}\b", lower) and not explained and j.upper() not in flagged:
+                flagged.append(j)
+        return (
+            res("pass")
+            if len(flagged) <= int(p.get("max", 0))
+            else res("warn", f"Unexplained terms: {', '.join(flagged)}.")
+        )
+    if k == "localized_text_coverage":
+        if ctx.root is None:
+            return res("not_applicable")
+        from steamworks_mcp.localization.store import Localization
+
+        source = str(ctx.get("source_language") or "english")
+        own = ctx.get("store", "short_description" if section == "short" else "about") or ""
+        key = FIELD[section]
+        langs = ctx.get("store", "supported_languages") or {}
+        missing, copied = [], []
+        for lang, support in langs.items():
+            if lang == source or not isinstance(support, dict):
+                continue
+            if not (support.get("interface") or support.get("subtitles")):
+                continue
+            text_l = Localization(ctx.root).read(lang).get(key, "")
+            if not text_l.strip():
+                missing.append(lang)
+            elif plain(text_l).strip() == plain(own).strip():
+                copied.append(lang)
+        if not missing and not copied:
+            return res("pass")
+        parts = [f"missing in {', '.join(missing)}"] if missing else []
+        parts += [f"untranslated in {', '.join(copied)}"] if copied else []
+        return res("warn", "; ".join(parts) + ".")
+    if k == "studio_talk":
+        for para in paragraphs(text):
+            start = plain(para).strip().lower()
+            for pattern in p.get("start_patterns", []):
+                if re.match(pattern, start):
+                    return res("warn", f'A paragraph is about the studio ("{plain(para).strip()[:40]}…").')
+        lower = body.lower()
+        for pattern in p.get("anywhere", []):
+            m = re.search(pattern, lower)
+            if m:
+                return res("warn", f'"{m.group(0)}"')
+        return res("pass")
     if k == "no_placeholders":
         n = len(GIF.findall(text))
         return res("pass") if n == 0 else res("warn", f"{n} [GIF: …] placeholder(s) left.")
@@ -296,10 +434,16 @@ def check_rule(rule: RubricRule, section: Section, text: str, ctx: Context) -> R
 
 
 def evaluate(
-    section: Section, text: str, values: dict[str, Any], guide: StyleGuide | None, *, final: bool = False
+    section: Section,
+    text: str,
+    values: dict[str, Any],
+    guide: StyleGuide | None,
+    *,
+    final: bool = False,
+    root: Path | None = None,
 ) -> tuple[list[RubricResult], list[dict[str, str]], float | None]:
     """(deterministic results, llm_judged questions, score 0-1 over the deterministic rules that apply)."""
-    ctx = Context(values)
+    ctx = Context(values, root)
     results: list[RubricResult] = []
     questions: list[dict[str, str]] = []
     for rule in rules_for(guide):
