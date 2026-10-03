@@ -27,6 +27,7 @@ client.
 | Write every text once in your language; your assistant translates it into every target language (no paid translation API), and translations of a changed text go back to review | `localization_status`, `localization_pending`, `localization_set` |
 | Cut every capsule, library image and icon from one key art and one logo | `prepare_images` |
 | Learn from successful games without copying them (derived measurements only) | `fetch_reference` |
+| Study the store pages of the game's closest popular games (by its store tags, on Popular New Releases and Top Sellers): your assistant labels how each page opens and is built, the briefs then suggest strategies from it | `study_market`, `save_market_study` |
 | Get every file plus a checklist that says which Steamworks page and field it goes to | `export_package` |
 | Apply approved values to Steam, look at what Steam has: Steam Cloud, installation, achievements, store text, the store page form (links, support, system requirements, languages, genres, categories, developer/publisher), store and library images, depot settings, store tags, leaderboards, builds | `apply`, `steamworks_inspect`, `set_build_live`, `restore_snapshot` |
 | Confirm manual steps | `mark_applied` |
@@ -38,11 +39,27 @@ stores the result as a draft until you approve it. Every value in `steamworks.ya
 Resources: `steam://capabilities`, `steam://gates/{n}`, `steam://style-guide/{genre}`, `steam://references/{appid}`,
 `steam://store-patterns` (what the store pages of popular new releases look like, per genre; numbers only),
 `steam://manifest/{project}` (and `get_spec_info` returns the same for clients that only use tools). Prompts:
-`release_assistant`, `write_store_page`, `localize_everything`, `design_achievements`, `review_gate`.
+`release_assistant`, `market_research`, `write_store_page`, `localize_everything`, `design_achievements`,
+`review_gate`.
 
-Skill: [`skills/steam-store-page/SKILL.md`](skills/steam-store-page/SKILL.md) is the store-page workflow (interview,
-brief, draft, validate, save, translate) as a portable skill, for clients that don't show MCP prompts. Copy the
-folder to `~/.claude/skills/` for Claude Code, or add it as a skill in Claude's settings.
+Skills: every prompt is also a skill in [`skills/`](skills/), for clients that don't show MCP prompts (the Code tab of
+Claude Desktop lists skills under `/`, not MCP prompts): `steam-release`, `steam-market-research`,
+`steam-store-page` (the whole store-page workflow: interview, market study, brief, draft, validate, save,
+translate), `steam-localize`, `steam-achievements`, `steam-review-gate`. Copy the folders to `~/.claude/skills/` for
+Claude Code, or add them as skills in Claude's settings. `scripts/gen_skills.py` writes them from the server's
+prompts (a test keeps them in step); `steam-store-page` is written by hand.
+
+### Market study
+
+`study_market` finds the game's closest popular games: Steam's Popular New Releases and Top Sellers lists, filtered
+by the game's store tags (`store.tags`, most important first; genre tags such as "Physics" + "Building" before mode
+tags such as "Co-op"), released in the last three years, English store text. It returns their short descriptions and
+About texts to your assistant, which labels each page with a fixed vocabulary (how the short description opens, the
+job of each sentence, how About is built and in what order, the tone) and one technique sentence in its own words.
+`save_market_study` rejects notes that repeat the page and saves `.steam-mcp/market/study.json`: labels, notes and
+numbers, never page text. From then on `generate("store_short")` adds two strategies built on it, `market_common`
+(what most of these games do) and `market_contrast` (an opening few of them use that your answers support), and the
+briefs show the study. Drafts are checked against the studied pages as well.
 
 ## How things get done in Steamworks
 
@@ -246,7 +263,8 @@ a narrow root folder, and stop the tunnel when you're done. The BROWSER mode sta
 1. `init_project` creates `steamworks.yaml` and scans the Unity project. Found values are drafts with evidence.
    If the game already exists in Steamworks, `import_from_steamworks` fills the empty fields with what Steam has.
 2. `gap_report` shows what gate 1 still needs; `start_interview` asks for the rest, three questions at a time.
-3. `generate("store_short")`: the assistant writes three variants, the server checks them, you pick one.
+3. Optionally `study_market` first (the `market_research` prompt). Then `generate("store_short")`: the assistant
+   writes one variant per strategy, the server checks them, you pick one.
    The same for the long description (outline first), achievements, Steam Cloud and depots.
 4. `validate`, then `localization_pending` / `localization_set` for every language (the `localize_everything`
    prompt walks through all of them), then `prepare_images`.
@@ -325,6 +343,7 @@ my-game/
 └── .steam-mcp/
     ├── state.json           ← per-field status (commit it)
     ├── drafts/              ← text drafts (commit them)
+    ├── market/              ← the market study: labels and numbers, no page text
     ├── exports/gate_<n>/    ← files to upload and CHECKLIST.md
     ├── snapshots/           ← what Steam had before each write
     └── audit.jsonl          ← every write
@@ -340,6 +359,7 @@ uv run pytest                     # unit, replay and in-memory MCP tests; no net
 uv run ruff check src tests && uv run ruff format --check src tests
 uv run mypy
 uv run python scripts/gen_docs.py --check   # docs/CAPABILITIES.md and docs/schema/ are generated
+uv run python scripts/gen_skills.py --check # skills/ (all but steam-store-page) come from the server's prompts
 ```
 
 The BROWSER-mode tests replay real, sanitized Steamworks traffic from

@@ -1,14 +1,16 @@
 """Text generation: the server writes a brief, the host model writes the text, the server checks and stores it.
 
-* ``store_short``: three variants, each with its own hook strategy (fantasy, mechanic, situation_humor).
+* ``store_short``: one variant per hook strategy (fantasy, mechanic, situation_humor, and with a market study
+  market_common and market_contrast).
 * ``store_long``: ``stage="outline"`` first; ``stage="text"`` only after the user approved an outline. The text uses
   ``[GIF: what it shows]`` placeholders, which also become a shot list.
 * ``achievements``: names, descriptions and icon briefs for achievements that lack them.
 
 Briefs carry the interview answers with how to use each one (hook, fantasy, core loop in player verbs, modes,
 lengths, progression, launch content, tone, comparable games), Valve's rules (layer 1), the rubric (layer 2) with
-the genre guide's overrides (layer 3), and only *derived* measurements of matching reference games, never their
-text. Texts are written in the source language only; the localization tools translate them afterwards.
+the genre guide's overrides (layer 3), only *derived* measurements of matching reference games, never their
+text, and the market study's labels when there is one (``references.market``). Texts are written in the source
+language only; the localization tools translate them afterwards.
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.drafts import DRAFT_ID, Draft, RubricResult
 from steamworks_mcp.manifest.io import ProjectFiles, atomic_write, load_drafts, save_draft
 from steamworks_mcp.manifest.state import Source, is_empty
-from steamworks_mcp.references import bundled_analysis, cached_texts, catalog, matching, tags_for_game
+from steamworks_mcp.references import bundled_analysis, cached_texts, catalog, market, matching, tags_for_game
 from steamworks_mcp.references.anticopy import MIN_RUN, find_overlaps
 from steamworks_mcp.references.patterns import brief_section
 from steamworks_mcp.style_guides import StyleGuide, for_tags
@@ -231,11 +233,13 @@ def brief(values: dict[str, Any], files: ProjectFiles, section: str, stage: str 
         "style_guide": {"id": guide.meta.id, "guide": guide.body} if guide else None,
         "anti_copy": f"Never reuse {MIN_RUN} or more consecutive words from another game's store page or achievements.",
     }
+    study = market.load_study(files)
     if section == "store_short":
+        strategies = {**STRATEGIES, **market.strategies(study, values)}
         return {
             "status": "ready",
-            "task": "Write three short descriptions for the Steam store page, one per strategy.",
-            "strategies": STRATEGIES,
+            "task": f"Write {len(strategies)} short descriptions for the Steam store page, one per strategy.",
+            "strategies": strategies,
             "use_the_answers": use_the_answers(values, "short"),
             **_recommended(values),
             "format": "Plain text, 160-300 characters, 2-3 sentences, no formatting, no links.",
@@ -243,6 +247,7 @@ def brief(values: dict[str, Any], files: ProjectFiles, section: str, stage: str 
             "rubric": _rubric_rules("short", guide),
             "references": _reference_summaries(values, "short"),
             "recent_successful_pages": brief_section(values, "short"),
+            "market": market.brief_section(study, "short"),
             **common,
             "submit": "save_draft(path, field='store.short_description', value=<text>, strategy=<strategy>) "
             "once per variant.",
@@ -258,6 +263,7 @@ def brief(values: dict[str, Any], files: ProjectFiles, section: str, stage: str 
             "rubric": _rubric_rules("long", guide),
             "references": _reference_summaries(values, "long"),
             "recent_successful_pages": brief_section(values, "long"),
+            "market": market.brief_section(study, "long"),
             **common,
             "submit": "save_draft(path, field='store.about', value=<outline>, strategy='outline'). The user approves "
             "it with set_field(path, field='store.about', from_draft=<id>); then "
@@ -281,6 +287,7 @@ def brief(values: dict[str, Any], files: ProjectFiles, section: str, stage: str 
             "rubric": _rubric_rules("long", guide),
             "references": _reference_summaries(values, "long"),
             "recent_successful_pages": brief_section(values, "long"),
+            "market": market.brief_section(study, "long"),
             **common,
             "submit": "save_draft(path, field='store.about', value=<bbcode>, strategy='text').",
         }
@@ -341,7 +348,7 @@ def save_text_draft(
             raise ValueError(
                 "Rejected, breaks Valve's store rules: " + "; ".join(f"[{e.rule_id}] {e.message}" for e in errors)
             )
-    references = cached_texts(cache_dir)
+    references = cached_texts(cache_dir, [g.appid for g in catalog()] + market.studied_appids(files))
     overlaps = find_overlaps(value, references)
     if overlaps:
         o = overlaps[0]

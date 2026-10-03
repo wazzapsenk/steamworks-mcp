@@ -2,19 +2,25 @@
 
 from __future__ import annotations
 
+import importlib.util
+import re
 import subprocess
 import sys
 from pathlib import Path
 
+import anyio
 import pytest
+from mcp import Client
 
 from steamworks_mcp.capabilities import capabilities
+from steamworks_mcp.config import Config
 from steamworks_mcp.data import data_files, load_yaml
 from steamworks_mcp.gates.models import AssetCheck, GateFile, StoreRules
 from steamworks_mcp.languages import all_languages, find_language
 from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.io import ManifestFile
 from steamworks_mcp.manifest.models import Manifest
+from steamworks_mcp.server import create_server
 from steamworks_mcp.validate.rules_data import AssetSpecsFile, EventsFile, StoreRulesFile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -117,3 +123,30 @@ def test_generated_docs_are_current() -> None:
         [sys.executable, str(ROOT / "scripts" / "gen_docs.py"), "--check"], capture_output=True, text=True
     )
     assert res.returncode == 0, res.stdout + res.stderr
+
+
+def test_generated_skills_are_current() -> None:
+    res = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "gen_skills.py"), "--check"], capture_output=True, text=True
+    )
+    assert res.returncode == 0, res.stdout + res.stderr
+
+
+def test_handwritten_skills_name_every_tool_of_their_prompt() -> None:
+    spec = importlib.util.spec_from_file_location("gen_skills", ROOT / "scripts" / "gen_skills.py")
+    assert spec is not None and spec.loader is not None
+    gen = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gen)
+
+    async def tools_and_prompts() -> tuple[set[str], dict[str, str]]:
+        async with Client(create_server(Config(workspace_root=ROOT))) as client:
+            tools = {t.name for t in (await client.list_tools()).tools}
+            found = await gen.prompts()
+        return tools, {name: text for name, _, _, _, text in found}
+
+    tools, prompts = anyio.run(tools_and_prompts)
+    assert set(prompts) == set(gen.NAMES)
+    for name in gen.HANDWRITTEN:
+        skill = (ROOT / "skills" / gen.NAMES[name] / "SKILL.md").read_text(encoding="utf-8")
+        used = {t for t in tools if re.search(rf"\b{t}\b", prompts[name])}
+        assert used and not {t for t in used if not re.search(rf"\b{t}\b", skill)}, name

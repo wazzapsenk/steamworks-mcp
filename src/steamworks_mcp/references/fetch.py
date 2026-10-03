@@ -6,7 +6,9 @@ Sources (no key needed unless noted):
 * ``ISteamUserStats/GetGlobalAchievementPercentagesForApp`` - achievement API names and global unlock rates.
 * ``steamcommunity.com/stats/<appid>/achievements`` - achievement display names and descriptions (public page).
 * ``ISteamUserStats/GetSchemaForGame`` - needs a Steam Web API key; adds the hidden flags.
-* ``store.steampowered.com/search/results`` - the "Popular New Releases" list, for the store patterns.
+* ``store.steampowered.com/search/results`` - the "Popular New Releases" and "Top Sellers" lists, optionally filtered
+  by store tags, for the store patterns and the market study.
+* ``store.steampowered.com/tagdata/populartags`` - the store tags with their ids.
 
 Raw responses (other games' texts) only ever live in the cache, never in the repository. Each cache entry records
 when and from where it was fetched. Requests are spaced out and retried with backoff.
@@ -22,12 +24,15 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 
 STORE_API = "https://store.steampowered.com/api/appdetails"
 STORE_SEARCH = "https://store.steampowered.com/search/results/"
+STORE_TAGS = "https://store.steampowered.com/tagdata/populartags/english"
+GAMES_ONLY = 998
+"""The search's "Games" type filter (``category1``): no DLC, software, soundtracks or videos."""
 WEB_API = "https://api.steampowered.com"
 COMMUNITY = "https://steamcommunity.com/stats/{appid}/achievements/"
 USER_AGENT = "steamworks-mcp (reference research; https://github.com/wazzapsenk/steamworks-mcp)"
@@ -171,19 +176,41 @@ class ReferenceFetcher:
 
     def popular_new_releases(self, count: int = 100) -> list[int]:
         """App ids on the store's "Popular New Releases" list, newest first (not cached: it changes every day)."""
-        params = {
-            "filter": "popularnew",
-            "sort_by": "Released_DESC",
-            "json": 1,
-            "count": count,
-            "cc": "us",
-            "l": "english",
-        }
+        return self.search("popularnew", count=count)
+
+    def search(
+        self, list_filter: Literal["popularnew", "topsellers"], *, tags: list[int] | None = None, count: int = 100
+    ) -> list[int]:
+        """App ids of a store list: "popularnew" (Popular New Releases, newest first) or "topsellers" (Top Sellers,
+        best first). With ``tags`` only games that have all of them (store tag ids, see :meth:`store_tags`). Not
+        cached: the lists change every day."""
+        params: dict[str, Any] = {"filter": list_filter, "json": 1, "count": count, "cc": "us", "l": "english"}
+        if list_filter == "popularnew":
+            params["sort_by"] = "Released_DESC"
+        if tags:
+            params["tags"] = ",".join(str(t) for t in tags)
+            params["category1"] = GAMES_ONLY
         res = self._get(STORE_SEARCH, params)
         if res.status_code != 200:
-            raise FetchError(f"popular new releases: HTTP {res.status_code}")
+            raise FetchError(f"store search ({list_filter}): HTTP {res.status_code}")
         ids = [_APP_IN_URL.search(str(item.get("logo", ""))) for item in res.json().get("items", [])]
         return list(dict.fromkeys(int(m.group(1)) for m in ids if m))  # bundles and packages have no /apps/ url
+
+    def store_tags(self, *, refresh: bool = False) -> dict[str, int]:
+        """Store tag names (lowercase) to their ids, e.g. {"co-op": 1685}. Cached like the store data."""
+        p = self.cache_dir / "_store" / "tags.json"
+        if not refresh and p.exists():
+            raw = json.loads(p.read_text(encoding="utf-8"))
+            if dt.datetime.now(dt.UTC) - dt.datetime.fromisoformat(raw["fetched_at"]) <= self.max_age:
+                return {str(k): int(v) for k, v in raw["data"].items()}
+        res = self._get(STORE_TAGS, {})
+        if res.status_code != 200:
+            raise FetchError(f"store tags: HTTP {res.status_code}")
+        data = {str(t["name"]).lower(): int(t["tagid"]) for t in res.json() if t.get("name") and t.get("tagid")}
+        now = dt.datetime.now(dt.UTC).replace(microsecond=0)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps({"fetched_at": now.isoformat(), "source": STORE_TAGS, "data": data}), "utf-8")
+        return data
 
 
 _APP_IN_URL = re.compile(r"/apps/(\d+)/")

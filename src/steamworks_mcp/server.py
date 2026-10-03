@@ -40,6 +40,7 @@ from steamworks_mcp.manifest.paths import FieldPathError, iter_fields
 from steamworks_mcp.manifest.state import TransitionError, is_empty
 from steamworks_mcp.media import images
 from steamworks_mcp.oauth import LocalOAuth
+from steamworks_mcp.references import market
 from steamworks_mcp.references.analyze import analyze
 from steamworks_mcp.references.fetch import FetchError, ReferenceFetcher
 from steamworks_mcp.scanners import run_scanners
@@ -353,7 +354,8 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         """Produce drafts for a part of the release.
 
         Text sections return a brief for YOU to write from (the server never invents marketing text itself):
-          - "store_short": write 3 variants (strategies fantasy, mechanic, situation_humor), save each with save_draft.
+          - "store_short": write one variant per strategy the brief lists (fantasy, mechanic, situation_humor, and
+            after a market study market_common and market_contrast), save each with save_draft.
           - "store_long": stage "outline" first; after the user approved an outline, stage "text".
           - "achievements": names, descriptions and icon briefs for achievements that lack them.
         Deterministic sections write drafts into steamworks.yaml directly (never over approved values):
@@ -387,7 +389,8 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         """Store a text YOU wrote as a draft (it does not change steamworks.yaml). The server rejects text that breaks
         Valve's store rules or copies 8+ consecutive words from a reference game, scores it against the rubric, and
         returns rubric findings plus questions for you to judge. strategy: fantasy | mechanic | situation_humor |
-        outline | text | revision | … . The user picks a draft with set_field(path, field, from_draft=<id>)."""
+        market_common | market_contrast | outline | text | revision | … . The user picks a draft with
+        set_field(path, field, from_draft=<id>)."""
         project = open_project(path)
         return gen_text.save_text_draft(
             project.values(), project.files, field, value, strategy, config.cache_dir, notes=notes
@@ -475,6 +478,35 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             tags or [],
         )
         return result.model_dump(mode="json")
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True))
+    @user_errors
+    def study_market(path: str, tags: list[str] | None = None, games: int = market.DEFAULT_PEERS) -> dict[str, Any]:
+        """Start a market study before writing the store text: find the game's closest popular Steam games (its most
+        specific store tags, on the Popular New Releases and Top Sellers lists, released in the last 3 years) and
+        return their short descriptions and About texts for YOU to read and label with the returned vocabulary.
+        Only their app ids are saved; the texts stay in the local cache, and drafts are checked against them. Then
+        call save_market_study.
+
+        Args:
+            path: Folder that holds steamworks.yaml.
+            tags: Steam store tag names to search with instead of store.tags, most specific first.
+            games: How many games to study (3-15, default 10).
+        """
+        project = open_project(path)
+        fetcher = ReferenceFetcher(config.cache_dir, web_api_key=config.web_api_key)
+        return market.start(fetcher, project.values(), project.files, tags, games)
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
+    @user_errors
+    def save_market_study(path: str, notes: list[dict[str, Any]]) -> dict[str, Any]:
+        """Save your labels for the pages study_market returned: one note per page with appid, short_opening,
+        short_moves, about_shape, about_sections, tone (all from its vocabulary) and technique (one sentence in your
+        own words; a note that repeats 4+ consecutive words of the page is rejected). The study keeps labels, notes
+        and numbers, never page text; generate(store_short / store_long) builds on it from then on."""
+        project = open_project(path)
+        fetcher = ReferenceFetcher(config.cache_dir, web_api_key=config.web_api_key)
+        return market.save(fetcher, project.files, notes)
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
@@ -727,7 +759,8 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "1. init_project (or scan_project if steamworks.yaml exists), then gap_report.\n"
             "2. start_interview: ask me the questions in small batches and save my answers with set_field.\n"
             "3. generate the drafts (store_short, store_long, achievements, cloud, builds, requirements, code); show "
-            "me each one and approve_fields only what I agree with.\n"
+            "me each one and approve_fields only what I agree with. Before the store text, offer a market study "
+            "(the market_research prompt).\n"
             "4. validate, translate every text into every target language (the localize_everything prompt: "
             "localization_pending / localization_set), prepare_images.\n"
             "5. export_package for the next gate; with the publisher key or the BROWSER mode, apply section by section "
@@ -740,21 +773,41 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
     def write_store_page(path: str) -> str:
         """Short description and About This Game, from brief to approved text."""
         return (
-            f"Write the Steam store text for the game in `{path}`. Call generate(section='store_short') and write the "
-            "three variants it asks for, each saved with save_draft. Then generate(section='store_long', "
-            "stage='outline'), let me pick an outline, and write the text with stage='text'. Run validate("
-            "section='store') after each draft, judge its questions, fix what fails, and show me preview_store "
-            "before I pick drafts with set_field(from_draft=...).\n"
+            f"Write the Steam store text for the game in `{path}`. Call generate(section='store_short'). If its "
+            "`market` says not_studied, offer me a market study first (study_market, then save_market_study). "
+            "Write one variant per strategy the brief lists, each saved with save_draft. Then "
+            "generate(section='store_long', stage='outline'), let me pick an outline, and write the text with "
+            "stage='text'. Run validate(section='store') after each draft, judge its questions, fix what fails, and "
+            "show me preview_store before I pick drafts with set_field(from_draft=...).\n"
             "If a brief lists missing_recommended answers, ask me those first (start_interview). Build on its "
             "use_the_answers, and use recent_successful_pages (also steam://store-patterns) as what successful "
             "recent pages in this genre look like: lengths, structure, headers, lists, media. Numbers only, never "
-            "a text to imitate. Write in the source language only; when I approved the texts, translate them with "
+            "a text to imitate. Its `market` is what the game's closest popular games do: labels and techniques, "
+            "never their wording. Write in the source language only; when I approved the texts, translate them with "
             "the localize_everything prompt."
+        )
+
+    @server.prompt(title="Study the market")
+    def market_research(path: str) -> str:
+        """What the store pages of the game's closest popular Steam games do, before writing its store text."""
+        return (
+            f"Study the Steam store pages of the games closest to the game in `{path}` before we write its store "
+            "text.\n"
+            "1. Call study_market. If it finds no usable tags, ask me which Steam tags describe the game best "
+            "(most specific first) and call it again with tags=[...].\n"
+            "2. Read every page it returns and label it with its vocabulary: how the short description opens, the "
+            "job of each sentence, how About is built and in what order, the tone, and one technique sentence in "
+            "your own words. Save all notes with save_market_study; fix and resend rejected ones.\n"
+            "3. Tell me in a few lines what these games do: the most common opening, the usual About order, the "
+            "tones, two or three techniques worth using and one thing to avoid. Never quote their pages and never "
+            "suggest naming them on our page.\n"
+            "4. Offer to write the store text now (the write_store_page prompt): its briefs include the study and "
+            "two strategies built on it, market_common and market_contrast."
         )
 
     @server.prompt(title="Localize everything")
     def localize_everything(path: str) -> str:
-        """Translate every pending text into every target language, batch by batch."""
+        """Translate the Steam store page, achievements and other player-facing texts into every target language."""
         return (
             f"Translate the game in `{path}` into all of its target languages. Every text is written once in the "
             "source language; you translate it, the server checks it.\n"
@@ -773,7 +826,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
 
     @server.prompt(title="Design achievements")
     def design_achievements(path: str) -> str:
-        """Achievement names, descriptions and icon briefs that fit the game."""
+        """Steam achievement names, descriptions and icon briefs that fit the game."""
         return (
             f"Design the Steam achievements for the game in `{path}`. Start with generate(section='code') to see "
             "which achievements and stats the code already uses, then generate(section='achievements') and write "
@@ -784,7 +837,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
 
     @server.prompt(title="Review a gate")
     def review_gate(path: str, gate: str) -> str:
-        """Everything still open before one release gate."""
+        """Everything still open before one Steam release gate, and the next three steps."""
         return (
             f"Review release gate {gate} for the game in `{path}`: call gap_report(gate={gate}) and validate, then "
             "explain what blocks the gate, what I have to approve, which steps are manual (with the Steamworks page "
