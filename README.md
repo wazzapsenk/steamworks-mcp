@@ -4,8 +4,7 @@
 your store page with you, checks everything against Valve's rules, and fills in Steamworks only after you say yes.
 It never publishes anything: you press Publish.
 
-Works with **Claude** (Desktop, Code, claude.ai), **Cursor**, **Codex**, **ChatGPT** and any other app that supports
-MCP. Free and open source ([MIT](LICENSE)).
+Works with **Claude** (Desktop, Code and claude.ai) and **ChatGPT**. Free and open source ([MIT](LICENSE)).
 
 **37 tools · 36 skills · 24 code rules · 124 release checks · 114 store-text rules · Unity, Godot and Unreal**
 
@@ -47,8 +46,19 @@ it is right), or **done in Steamworks**.
 
 ## Install
 
-You need an AI app (above) and [uv](https://docs.astral.sh/uv/getting-started/installation/), a small tool that runs
-Python programs (one command to install). You do **not** need Steam keys or a Steam login to start.
+You need [uv](https://docs.astral.sh/uv/getting-started/installation/), a small tool that runs Python programs (one
+command to install), and Claude or ChatGPT. You do **not** need Steam keys or a Steam login to start.
+
+### Claude Desktop
+
+In a terminal:
+
+```bash
+uvx --from git+https://github.com/wazzapsenk/steamworks-mcp steamworks-mcp setup
+```
+
+It asks where your games are and connects Claude Desktop (and Claude Code, if you have it). Restart Claude Desktop.
+To use the [skills](#skills) there too, add the folders in [`skills/`](skills/) as skills in Claude's settings.
 
 ### Claude Code: the plugin (server and skills in one step)
 
@@ -61,43 +71,34 @@ In Claude Code, type:
 
 It asks for your games folder. That's it.
 
-### Any app: the setup command
+### ChatGPT and claude.ai
 
-In a terminal:
+These apps reach the server over the internet, through a secure address on your computer. Install
+[cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) once (free,
+from Cloudflare; on Windows `winget install --id Cloudflare.cloudflared`, on a Mac `brew install cloudflared`), then:
 
 ```bash
-uvx --from git+https://github.com/wazzapsenk/steamworks-mcp steamworks-mcp setup
+uvx --from git+https://github.com/wazzapsenk/steamworks-mcp steamworks-mcp remote
 ```
 
-It asks where your games are and which apps to connect (Claude Desktop, Claude Code, Cursor, Codex), then sets them
-up. Restart the apps. To check everything later:
+It asks where your games are (the first time), opens the address and prints what to paste:
+
+- **ChatGPT**: Settings > Apps & Connectors > Advanced settings > Developer mode, then create a connector (in the
+  desktop app: Settings > Plugins > MCPs > Add). Custom connectors need developer mode; check that your plan has it.
+- **claude.ai**: Settings > Connectors > Add custom connector.
+
+Paste the address, choose OAuth, and type the access code it shows when a steamworks-mcp page asks for it. Keep the
+window open while you work. The address changes every time you start it (update the connector then);
+[a fixed address](docs/ADVANCED.md#remote-clients-chatgpt-claudeai) needs a little more setup.
+
+### Check the installation
 
 ```bash
 uvx --from git+https://github.com/wazzapsenk/steamworks-mcp steamworks-mcp doctor
 ```
 
-### Cursor: the plugin
-
-Clone the repository into Cursor's local plugin folder and reload the window (Developer: Reload Window):
-
-```bash
-git clone https://github.com/wazzapsenk/steamworks-mcp ~/.cursor/plugins/local/steamworks
-```
-
-The plugin brings the server, the skills and the [code rules](#code-rules) as Cursor rules. Tell it once where
-your games are:
-
-```bash
-uvx --from git+https://github.com/wazzapsenk/steamworks-mcp steamworks-mcp setup --only-settings
-```
-
-### ChatGPT and claude.ai (remote)
-
-These connect over the internet, so the server has to be reachable through a secure address. See
-[Remote clients](docs/ADVANCED.md#remote-clients-chatgpt-claudeai).
-
-Skills for other apps: copy the folders in [`skills/`](skills/) to `~/.claude/skills/` (Claude Code) or add them as
-skills in your app. More options, keys and accounts: [docs/ADVANCED.md](docs/ADVANCED.md).
+Other apps (Codex, Cursor and anything else that supports MCP) and connecting by hand:
+[docs/ADVANCED.md](docs/ADVANCED.md).
 
 ## Your first conversation
 
@@ -209,8 +210,7 @@ Each skill uses the server's tools where one fits and links Valve's documentatio
 ## Code rules
 
 `check_code` reads your game's own code (plugins and the SDK wrappers are skipped) and reports each problem with the
-file, the line, why it matters and the fix. A key or password it finds is never shown. In Cursor the same rules come
-as Cursor rules (`rules/*.mdc`) and show while you edit the matching files.
+file, the line, why it matters and the fix. A key or password it finds is never shown.
 
 | Group | What it catches |
 |---|---|

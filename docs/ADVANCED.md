@@ -114,7 +114,16 @@ in the client's configuration. `--env-file <path>` points to another file.
 
 ### Cursor
 
-`~/.cursor/mcp.json` (or `.cursor/mcp.json` in a project):
+The repository is also a local Cursor plugin (server, skills, and the code rules as Cursor rules in `rules/*.mdc`).
+Clone it into Cursor's local plugin folder, reload the window (Developer: Reload Window), and set the games folder
+once:
+
+```bash
+git clone https://github.com/wazzapsenk/steamworks-mcp ~/.cursor/plugins/local/steamworks
+uvx --from git+https://github.com/wazzapsenk/steamworks-mcp steamworks-mcp setup --only-settings
+```
+
+Or only the server, in `~/.cursor/mcp.json` (or `.cursor/mcp.json` in a project):
 
 ```json
 {
@@ -147,7 +156,17 @@ prompts, so there it needs `"approve"`.
 
 ### Remote clients: ChatGPT, claude.ai
 
-Remote clients use the Streamable HTTP transport, reachable over HTTPS (for example through a tunnel):
+**The easy way:** `steamworks-mcp remote` ([README](../README.md#chatgpt-and-claudeai)). It keeps an access code
+in `~/.steamworks-mcp/settings.env` (made once), opens a Cloudflare quick tunnel to the local server, starts the HTTP
+server with OAuth sign-in on that address and prints what to paste into ChatGPT and claude.ai. Ctrl+C stops both.
+The BROWSER mode stays off over the internet unless `STEAM_MCP_BROWSER_REMOTE=1` is set.
+
+**A fixed address:** a quick tunnel gets a new address on every start. For one that stays, point a
+[named Cloudflare tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) (or any
+https reverse proxy) at `http://127.0.0.1:8787` and start the server with
+`steamworks-mcp remote --url https://steam.example.com`: it then opens no tunnel of its own.
+
+**By hand:** remote clients use the Streamable HTTP transport, reachable over HTTPS (for example through a tunnel):
 
 ```bash
 STEAMWORKS_MCP_TOKEN=$(openssl rand -hex 24) \
