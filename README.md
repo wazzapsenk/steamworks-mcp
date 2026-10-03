@@ -86,37 +86,46 @@ It asks for your games folder. That's it.
 
 ### ChatGPT (web or desktop app) and claude.ai
 
-These apps reach the server over the internet, through a secure address on your computer. Install
-[cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) once (free,
-from Cloudflare; on Windows `winget install --id Cloudflare.cloudflared`, on a Mac `brew install cloudflared`), then:
+These apps reach the server over the internet, through a secure address on your computer.
 
-```bash
-uvx steamworks-mcp remote
-```
+1. Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)
+   once (free, from Cloudflare). On Windows: `winget install --id Cloudflare.cloudflared`; on a Mac:
+   `brew install cloudflared`.
+2. In a terminal:
 
-It asks where your games are (the first time), opens the address and prints what to paste:
+   ```bash
+   uvx steamworks-mcp remote
+   ```
 
-- **ChatGPT on the web**: Settings > Apps & Connectors > Advanced settings > Developer mode, then create a connector.
-- **ChatGPT desktop app** (Windows, macOS): Settings > Plugins > MCPs > Add.
-- **claude.ai**: Settings > Connectors > Add custom connector.
+   The first time, it asks where your games are. Then it prints an address that ends in `/mcp` and an access code.
+3. Add the address in your app, with **OAuth** as the authentication:
+   - **ChatGPT on the web**: Settings > Apps & Connectors > Advanced settings: turn on Developer mode, then create a
+     connector.
+   - **ChatGPT desktop app** (Windows, macOS): Settings > Plugins > MCPs > Add.
+   - **claude.ai**: Settings > Connectors > Add custom connector.
+4. A steamworks-mcp page opens and asks for the access code: type the one from step 2.
+5. Ask your assistant: "Where are my games on Steam?"
 
-Paste the address, choose OAuth, and type the access code it shows when a steamworks-mcp page asks for it. Custom
-connectors in ChatGPT need developer mode; check that your plan has it. Keep the window open while you work. The
-address changes every time you start it (update the connector then);
+Keep the terminal from step 2 open while you work. Custom connectors in ChatGPT need developer mode; check that your
+plan has it. The address changes every time you start `remote` (update the connector's URL then);
 [a fixed address](docs/ADVANCED.md#remote-clients-chatgpt-claudeai) needs a little more setup.
 
 ### Codex (app, CLI and IDE extension)
 
-The same command as for Claude Desktop:
+1. In a terminal (the same command as for Claude Desktop):
 
-```bash
-uvx steamworks-mcp setup
-```
+   ```bash
+   uvx steamworks-mcp setup
+   ```
 
-It asks where your games are and which apps to connect; say yes to Codex. The server goes into
-`~/.codex/config.toml`, which the Codex app, the CLI and the IDE extension all read, so one setup covers all three.
-Codex starts the server on your computer: no tunnel and no access code. Tools that only read run without asking;
-Codex asks before every tool that changes something. Restart Codex.
+2. Type the folder that holds your games (Enter keeps the one shown). The keys it offers are optional: Enter skips
+   them.
+3. When it asks `Codex?`, answer `y`. If it says "not found", Codex has not run on this computer yet; `y` still works.
+4. Restart Codex (the app, or a new CLI session) and ask: "Where are my games on Steam?"
+
+The server goes into `~/.codex/config.toml`, which the Codex app, the CLI and the IDE extension all read, so one setup
+covers all three. Codex starts the server on your computer: no tunnel and no access code. Tools that only read run
+without asking; Codex asks before every tool that changes something.
 
 ### Check the installation
 
