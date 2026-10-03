@@ -28,7 +28,7 @@ client.
 | Cut every capsule, library image and icon from one key art and one logo | `prepare_images` |
 | Learn from successful games without copying them (derived measurements only) | `fetch_reference` |
 | Get every file plus a checklist that says which Steamworks page and field it goes to | `export_package` |
-| Apply approved values to Steam, look at what Steam has | `apply`, `steamworks_inspect`, `set_build_live`, `restore_snapshot` |
+| Apply approved values to Steam, look at what Steam has: Steam Cloud, installation, achievements, store text, the store page form (links, support, system requirements, languages, genres, categories, developer/publisher), store and library images, depot settings, store tags, leaderboards, builds | `apply`, `steamworks_inspect`, `set_build_live`, `restore_snapshot` |
 | Confirm manual steps | `mark_applied` |
 
 Text is never invented by the server: `generate` returns a brief, your assistant writes, and the server validates and
@@ -220,8 +220,9 @@ any standard remote MCP server:
 - **Bearer token** for clients that send a header: `Authorization: Bearer <STEAMWORKS_MCP_TOKEN>`. Tokens in the URL
   are never accepted (they end up in logs).
 
-**ChatGPT:** Settings → Apps & Connectors → Advanced → Developer mode, then create a connector with the URL
-`https://your-tunnel.example.com/mcp` and OAuth authentication.
+**ChatGPT:** add a server with the URL `https://your-tunnel.example.com/mcp` and OAuth authentication. On the web,
+that is Settings → Apps & Connectors → Advanced → Developer mode, then create a connector. In the desktop app, it is
+Settings → Plugins → MCPs → Add. Then approve on the page that opens by typing `STEAMWORKS_MCP_TOKEN`.
 
 ChatGPT connects from OpenAI's servers, so it cannot reach `localhost`: it needs the public address above. Local
 clients (Claude Code and Desktop, Codex) don't.
@@ -243,6 +244,7 @@ a narrow root folder, and stop the tunnel when you're done. The BROWSER mode sta
 > **You:** Help me get my game in `PillowFort/` onto Steam. Coming Soon page first.
 
 1. `init_project` creates `steamworks.yaml` and scans the Unity project. Found values are drafts with evidence.
+   If the game already exists in Steamworks, `import_from_steamworks` fills the empty fields with what Steam has.
 2. `gap_report` shows what gate 1 still needs; `start_interview` asks for the rest, three questions at a time.
 3. `generate("store_short")`: the assistant writes three variants, the server checks them, you pick one.
    The same for the long description (outline first), achievements, Steam Cloud and depots.
@@ -271,8 +273,9 @@ Every write, through the API or the BROWSER mode, goes the same way:
 When you first try the BROWSER mode, use a **demo or playtest app**, not your main game. The first write on every app
 has to be `restore_snapshot` of the snapshot just taken: it writes every row back unchanged and reads it again,
 proving the tool reads and writes that app correctly. Until that worked, `apply` refuses to write. Then go from the
-least visible area to the most visible one: Steam Cloud, a hidden test achievement, installation, store text last.
-`restore_snapshot` also undoes an apply.
+least visible area to the most visible one: Steam Cloud, a hidden test achievement, installation, depots, the store
+page, store text last. `restore_snapshot` also undoes an apply, except for images (the tool only fills empty image
+slots and cannot remove one) and store tags.
 
 `scripts/live/validate.py <appid>` runs exactly that on a test app of yours and restores everything afterwards: a
 quick way to check that Steamworks still behaves as this tool expects. Steamworks keeps an "uncommitted" revision
@@ -296,11 +299,14 @@ export packages and checklists.
 - **Publishing is blocked in code.** Every request the tool makes is checked before it is sent, and the browser
   window itself blocks the Publish page and every publish, prepare-for-publishing and revert request, even if someone
   clicks them there. The tool's writes go only to the handful of endpoints it uses. Your changes stay unpublished
-  drafts that you review in the Publish tab of your everyday browser (where "Revert Changes" undoes them).
+  drafts that you review in the Publish tab of your everyday browser (where "Revert Changes" undoes them). The one
+  exception is store tags, which Steam applies at once: they need a separate `goes_live_now=true` from you.
 
 ## What this tool never does
 
-- Publish, prepare to publish, revert, submit for review or release anything. You do that in Steamworks.
+- Publish, prepare to publish, revert, submit for review or release anything. You do that in Steamworks. (Store
+  tags are live as soon as they are saved; the tool saves them only with your separate `goes_live_now=true`.)
+- Edit packages: Steam applies package changes at once and they can grant or remove content from customers.
 - Set a build live on the default branch. That stays a manual step in App Admin; `set_build_live` only handles beta
   branches, after your OK.
 - Delete anything in Steam unless you explicitly ask for it (`remove_extra`).
