@@ -39,6 +39,10 @@ Resources: `steam://capabilities`, `steam://gates/{n}`, `steam://style-guide/{ge
 `steam://manifest/{project}` (and `get_spec_info` returns the same for clients that only use tools). Prompts:
 `release_assistant`, `write_store_page`, `localize_everything`, `design_achievements`, `review_gate`.
 
+Skill: [`skills/steam-store-page/SKILL.md`](skills/steam-store-page/SKILL.md) is the store-page workflow (interview,
+brief, draft, validate, save, translate) as a portable skill, for clients that don't show MCP prompts. Copy the
+folder to `~/.claude/skills/` for Claude Code, or add it as a skill in Claude's settings.
+
 ## How things get done in Steamworks
 
 Valve's partner Web API covers builds, branches, leaderboards and reading the achievement schema. It cannot edit
