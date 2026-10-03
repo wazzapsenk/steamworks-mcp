@@ -665,3 +665,80 @@ def server_info(data: dict[str, Any]) -> dict[str, Any]:
         f"steamworks-mcp {data.get('version')}, working in {data.get('workspace_root')}.",
         display=table(["Feature", "Ready", "Turned on by"], rows),
     )
+
+
+# ---------------------------------------------------------------------------------------------------- status
+
+
+def status_workspace(data: dict[str, Any]) -> dict[str, Any]:
+    games, untracked = data.get("games") or [], data.get("not_tracked_yet") or []
+    rows = [[g.get("name") or "—", g["path"], g.get("engine") or "—", "yes"] for g in games]
+    rows += [["—", u["path"], u["engine"], "not yet"] for u in untracked]
+    display = table(["Game", "Folder", "Engine", "Tracked"], rows)
+    if games:
+        summary = f"{plural(len(games), 'game')} tracked in this workspace"
+        if untracked:
+            summary += f", {plural(len(untracked), 'more game project')} not tracked yet"
+        return result(
+            data,
+            summary + ".",
+            next="Call status(path=<folder>) for the game the user means, or init_project for a new one.",
+            display=display,
+        )
+    if untracked:
+        return result(
+            data,
+            f"Found {plural(len(untracked), 'game project')}, none tracked yet.",
+            outcome="needs_input",
+            next="Ask the user which game to start with, then call init_project(path=<its folder>).",
+            display=display,
+        )
+    return result(
+        data,
+        f"No game found in {data.get('workspace_root')} yet.",
+        outcome="needs_input",
+        next=(
+            "Ask the user where the game's folder is. It has to be inside the workspace root above; if it is not, "
+            "they can change STEAMWORKS_MCP_ROOT (steamworks-mcp setup does it). Then call init_project(path=...)."
+        ),
+    )
+
+
+def status_project(data: dict[str, Any]) -> dict[str, Any]:
+    steps = data.get("steps") or []
+    name = data.get("game") or data.get("path")
+    first = next((s for s in steps if not s["ready"]), None)
+    if first is None:
+        summary = f"{name}: every release step is ready on this side; publishing stays yours in Steamworks."
+    else:
+        summary = f"{name}: next is {gate_label(first['gate'], first['title'])}, {plural(first['open'], 'open item')}."
+    rows = []
+    for s in steps:
+        share = f"{s['done']}/{s['total']} checks ({s['done'] / s['total']:.0%})" if s["total"] else "—"
+        rows.append([gate_label(s["gate"], s["title"]), "ready" if s["ready"] else "open", share, s["open"]])
+    v = data.get("values") or {}
+    facts = [
+        f"{v.get('approved', 0)} approved",
+        f"{v.get('drafts', 0)} drafts to review",
+        f"{v.get('to_fill', 0)} to fill",
+        f"{v.get('applied', 0)} done in Steamworks",
+    ]
+    if v.get("changed_after_approval"):
+        facts.append(f"{v['changed_after_approval']} changed after approval")
+    store = data.get("store_text") or {}
+    texts = ", ".join(
+        f"{label} {'written' if store.get(key) else 'not written yet'}"
+        for key, label in (("short_description", "short description"), ("about", "About This Game"))
+    )
+    tr = data.get("translations") or {}
+    languages = tr.get("languages") or []
+    translations = (
+        f"{', '.join(languages)}; {plural(tr.get('to_translate', 0), 'text')} to translate"
+        if languages
+        else "no target languages yet"
+    )
+    display = join(
+        table(["Release step", "State", "Progress", "Open items"], rows),
+        f"- Values: {', '.join(facts)}.\n- Store text: {texts}.\n- Translations: {translations}.",
+    )
+    return result(data, summary, display=display)

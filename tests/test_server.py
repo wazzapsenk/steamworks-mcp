@@ -143,6 +143,28 @@ async def test_gap_report_display_is_a_table_per_step(workspace: Path) -> None:
     assert report["next"] and all(isinstance(s, str) for s in report["next"])
 
 
+async def test_status_lists_games_then_shows_progress(workspace: Path) -> None:
+    config = Config(workspace_root=workspace)
+    (workspace / "other" / "Godot Game").mkdir(parents=True)
+    (workspace / "other" / "Godot Game" / "project.godot").write_text("config_version=5\n", "utf-8")
+    first = await call(config, "status")
+    assert first["outcome"] == "needs_input"
+    assert {(g["path"], g["engine"]) for g in first["not_tracked_yet"]} == {
+        ("game", "Unity"),
+        ("other/Godot Game", "Godot"),
+    }
+    untracked = await call(config, "status", path="game")
+    assert untracked["outcome"] == "needs_input" and "init_project" in untracked["next"][0]
+    await call(config, "init_project", path="game", appid=1000000)
+    listed = await call(config, "status")
+    assert listed["games"] == [{"path": "game", "name": "Pillow Fort Panic", "engine": "Unity"}]
+    progress = await call(config, "status", path="game")
+    assert progress["summary"].startswith("Pillow Fort Panic: next is Step 0 · Prerequisites")
+    assert [s["gate"] for s in progress["steps"]] == [0, 1, 2, 3]
+    assert progress["values"]["drafts"] > 0 and len(progress["next"]) == 1
+    assert "| Release step | State | Progress | Open items |" in progress["display"]
+
+
 async def test_server_info_has_no_secrets(tmp_path: Path) -> None:
     config = Config(workspace_root=tmp_path, publisher_key="SECRETKEY0123456789", http_token=TOKEN)
     info = await call(config, "server_info")

@@ -45,6 +45,8 @@ from steamworks_mcp.references.analyze import analyze
 from steamworks_mcp.references.fetch import FetchError, ReferenceFetcher
 from steamworks_mcp.scanners import run_scanners
 from steamworks_mcp.spec_info import spec_info
+from steamworks_mcp.status import project as project_status
+from steamworks_mcp.status import workspace as workspace_status
 from steamworks_mcp.validate.report import validate_project
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -114,9 +116,10 @@ def user_errors(fn: F) -> F:
 INSTRUCTIONS = """\
 steamworks-mcp takes a game from "nothing configured" to "released on Steam".
 
-Typical flow: init_project (creates steamworks.yaml and scans the game project) -> gap_report -> start_interview ->
-generate / set_field -> validate -> export_package -> apply. Values live in steamworks.yaml; per-field status
-(missing, draft, needs_review, approved, applied) lives in .steam-mcp/state.json.
+Start with status: without a path it lists the games in the workspace, with one it says how far the game is and what
+to do next. Typical flow: init_project (creates steamworks.yaml and scans the game project) -> gap_report ->
+start_interview -> generate / set_field -> validate -> export_package -> apply. Values live in steamworks.yaml;
+per-field status (missing, draft, needs_review, approved, applied) lives in .steam-mcp/state.json.
 
 Every result starts with the same four keys: outcome (ok, needs_input, needs_confirmation, partial, refused), summary
 (one sentence for the user), next (what to do next) and display (Markdown). Show `display` to the user as it is; if
@@ -217,6 +220,31 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
 
     def open_project(path: str) -> proj.Project:
         return proj.Project.open(project_dir(path))
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True))
+    @user_errors
+    def status(path: str | None = None) -> dict[str, Any]:
+        """Start here. Without `path`: the games in the workspace (tracked ones and engine projects not tracked
+        yet). With `path`: how far the game is on each release step, its values (approved, drafts, to fill, done in
+        Steamworks), store text and translations, and the one thing to do next.
+
+        Args:
+            path: The game's folder (the one with steamworks.yaml), relative to the workspace root.
+        """
+        if path is None:
+            return present.status_workspace(workspace_status(config.workspace_root))
+        root = project_dir(path)
+        if not (root / "steamworks.yaml").is_file():
+            out = workspace_status(root)
+            if not out["games"]:
+                return present.result(
+                    {"path": path, "engine": out["not_tracked_yet"][0]["engine"] if out["not_tracked_yet"] else None},
+                    f"{path} is not tracked yet.",
+                    outcome="needs_input",
+                    next=f"Ask the user whether to start tracking it, then call init_project(path='{path}').",
+                )
+            return present.status_workspace(out)
+        return present.status_project(project_status(open_project(path), browser=config.browser_enabled))
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=True))
     @user_errors
