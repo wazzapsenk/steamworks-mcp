@@ -22,6 +22,7 @@ from steamworks_mcp.execute.browser import partner as P
 from steamworks_mcp.execute.browser.transport import NotLoggedInError, Transport
 from steamworks_mcp.export import vdf
 from steamworks_mcp.gates.engine import gate_files
+from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.io import atomic_write
 from steamworks_mcp.project import Project
 
@@ -135,6 +136,11 @@ class Executor:
                 "snapshots": list_snapshots(project),
                 "next": "Pick one and call restore_snapshot(path, snapshot=<id>).",
             }
+        snap = A.load_snapshot(project.files, snapshot)
+        if fp.get(project.values(), f"apps.{snap.get('app')}.appid") != snap.get("appid"):
+            raise A.ApplyRefused(
+                f"Snapshot {snapshot} is not from this game's {snap.get('app')} app; nothing restored."
+            )
         t = await self.transport("restore_snapshot")
         return await A.restore_snapshot(
             t, project.files, self.consent, snapshot, dry_run=dry_run, user_confirmed=user_confirmed
@@ -222,7 +228,9 @@ class Executor:
             }
         plan = plan_leaderboards(desired, current, remove_extra)
         note = "Settings of existing leaderboards are not changed (only possible by deleting them with their scores)."
+        plan_key = f"apply:{app}:leaderboards:{remove_extra}"
         if dry_run:
+            A.remember_plan(project.files, plan_key, plan)
             changes = bool(plan["create"] or plan["delete"])
             return {
                 "snapshot": sid,
@@ -233,6 +241,7 @@ class Executor:
             }
         if not user_confirmed:
             raise A.ApplyRefused("Writing needs user_confirmed=true, after the user saw the dry-run changes.")
+        A.use_plan(project.files, plan_key, plan)
         done: list[dict[str, Any]] = []
         error = None
         try:
@@ -402,7 +411,7 @@ class Executor:
             result["next"] = (
                 "Ask the user to confirm the build change in the Steam Mobile app; it is not live until then."
             )
-        return {**result, "warning": warning}
+        return {**result, "action": "set_build_live", "build_id": build_id, "branch": branch, "warning": warning}
 
     # ------------------------------------------------------------------------------------------------ import
 

@@ -55,6 +55,17 @@ def test_source_language_not_in_targets() -> None:
         manifest(target_languages=["english"])
 
 
+@pytest.mark.parametrize(
+    "path", ["../secret.png", "art/../../x.png", "C:/Users/me/x.png", "/etc/x.png", r"\\srv\x.png"]
+)
+def test_paths_stay_inside_the_game_folder(path: str) -> None:
+    with pytest.raises(ValidationError, match="outside the game folder"):
+        manifest(assets={"key_art": path})
+    with pytest.raises(ValidationError, match="outside the game folder"):
+        manifest(assets={"overrides": {"header": path}})
+    assert manifest(assets={"key_art": "store/art/keyart.png"}).assets.key_art == "store/art/keyart.png"
+
+
 @pytest.mark.parametrize("name", ["ACH WIN", "ach-win", "ÄCH", ""])
 def test_api_names(name: str) -> None:
     with pytest.raises(ValidationError):

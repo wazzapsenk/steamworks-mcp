@@ -17,6 +17,7 @@ from __future__ import annotations
 import datetime as dt
 import re
 from decimal import Decimal
+from pathlib import PureWindowsPath
 from typing import Annotated, Any, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -49,7 +50,21 @@ def _api_name(name: str) -> str:
 ApiName = Annotated[str, Field(max_length=128), AfterValidator(_api_name)]
 """Name used in game code and in Steamworks (achievements, stats, leaderboards): letters, digits, underscores."""
 
-RelPath = Annotated[str, Field(description="Path relative to the folder that holds steamworks.yaml.")]
+
+def _inside(path: str) -> str:
+    """Files the tool uploads (depots, store images) must come from the game folder, never from elsewhere on disk."""
+    pure = PureWindowsPath(path)
+    if pure.is_absolute() or pure.drive or path.startswith(("/", "\\")) or ".." in pure.parts:
+        raise ValueError(
+            f'"{path}" points outside the game folder. Use a path inside the folder that holds steamworks.yaml, '
+            'like "Builds/Windows".'
+        )
+    return path
+
+
+RelPath = Annotated[
+    str, Field(description="Path relative to the folder that holds steamworks.yaml."), AfterValidator(_inside)
+]
 OsName = Literal["windows", "macos", "linux"]
 TriState = bool | None
 """``None`` means "not known yet" and shows up as missing in gap reports."""

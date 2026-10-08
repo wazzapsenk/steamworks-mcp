@@ -15,11 +15,19 @@ import httpx
 import pytest
 from mcp import Client
 
+from steamworks_mcp import present
 from steamworks_mcp import project as proj
 from steamworks_mcp.config import Config, load_config
 from steamworks_mcp.execute import depots, guard, importer, store_assets, store_page, sync
 from steamworks_mcp.execute.api import DISPLAY_TYPES, PartnerApi, SteamApiError, plan_leaderboards, run_steamcmd
-from steamworks_mcp.execute.apply import ApplyRefused, Consent, apply_section, restore_snapshot, save_snapshot
+from steamworks_mcp.execute.apply import (
+    ApplyRefused,
+    Consent,
+    apply_section,
+    load_snapshot,
+    restore_snapshot,
+    save_snapshot,
+)
 from steamworks_mcp.execute.browser import partner as P
 from steamworks_mcp.execute.browser.html import parse
 from steamworks_mcp.execute.browser.transport import NotLoggedInError, PlaywrightTransport, ReplayTransport, Response
@@ -92,6 +100,11 @@ async def run_apply(project: Project, consent: Consent, t: ReplayTransport, sect
     out = await apply_section(t, project.values(), project.state, project.files, consent, section, **kw)
     project.save()
     return out
+
+
+async def dry_run(project: Project, consent: Consent, step: str, section: str) -> None:
+    """The dry run a write needs first, read from its own recording of the same page."""
+    assert (await run_apply(project, consent, replay(step), section))["dry_run"]
 
 
 def audit_entries(project: Project) -> list[dict[str, Any]]:
@@ -705,6 +718,7 @@ async def test_only_approved_values_are_written(project: Project, consent: Conse
 async def test_apply_cloud_sends_what_the_page_sends(project: Project, consent: Consent) -> None:
     project = setv(project, CLOUD)
     consent.mark_restore_verified(APP)
+    await dry_run(project, consent, "cloud/read", "cloud")
     t = replay("cloud/read", "cloud/readback", "cloud/write")
     out = await run_apply(project, consent, t, "cloud", dry_run=False, user_confirmed=True)
     assert sorted(sent_posts(t)) == sorted(recorded_posts("cloud/write"))
@@ -736,6 +750,7 @@ async def test_apply_installation_keeps_other_languages(project: Project, consen
         project, "german", {"apps.main.installation.launch_options.1.description": "Aufnahme-Testoption"}
     )
     consent.mark_restore_verified(APP)
+    await dry_run(project, consent, "installation/read", "installation")
     t = replay("installation/read", "installation/readback", "installation/write")
     out = await run_apply(project, consent, t, "installation", dry_run=False, user_confirmed=True)
     launch = [p for p in recorded_posts("installation/write") if p[0].startswith("/apps/setlaunchoption")]
@@ -768,6 +783,7 @@ async def test_apply_achievements_with_translations(project: Project, consent: C
         },
     )
     consent.mark_restore_verified(APP)
+    await dry_run(project, consent, "achievements/write", "achievements")
     t = replay("achievements/write", "achievements/readback")
     # The write step re-read the list before creating; drop that second read so the readback gets the recorded one.
     t.queue = [e for e in t.queue if not e["request"]["url"].endswith("/fetchachievements/1000000")]
@@ -785,6 +801,7 @@ async def test_apply_store_text_uploads_only_what_changed(project: Project, cons
         project, {"store.short_description": short, "store.about": "steamworks-mcp test: About This Game placeholder."}
     )
     consent.mark_restore_verified(APP)
+    await dry_run(project, consent, "store/read", "store_text")
     t = replay("store/read", "store/readback", "store/write", "cleanup/store")
     out = await run_apply(project, consent, t, "store_text", dry_run=False, user_confirmed=True)
     uploads = [json.loads(s.form["json"]) for s in t.sent if s.method == "UPLOAD"]
@@ -792,9 +809,24 @@ async def test_apply_store_text_uploads_only_what_changed(project: Project, cons
     assert out["still_different"] == [] and set(out["applied_fields"]) == {"store.short_description", "store.about"}
 
 
+async def test_a_write_needs_the_dry_run_it_repeats(project: Project, consent: Consent) -> None:
+    project = setv(project, CLOUD)
+    consent.mark_restore_verified(APP)
+    t = replay("cloud/read")
+    with pytest.raises(ApplyRefused, match="dry run first"):
+        await run_apply(project, consent, t, "cloud", dry_run=False, user_confirmed=True)
+    await dry_run(project, consent, "cloud/read", "cloud")
+    project = setv(project, {"apps.main.cloud.file_quota": 202})  # changed after the user saw the dry run
+    t = replay("cloud/read")
+    with pytest.raises(ApplyRefused, match="changed since the dry run"):
+        await run_apply(project, consent, t, "cloud", dry_run=False, user_confirmed=True)
+    assert sent_posts(t) == []
+
+
 async def test_a_failed_write_is_reported_and_audited(project: Project, consent: Consent) -> None:
     project = setv(project, CLOUD)
     consent.mark_restore_verified(APP)
+    await dry_run(project, consent, "cloud/read", "cloud")
     t = replay("cloud/read", "cloud/readback")  # no recorded answers for the writes: the first one fails
     out = await run_apply(project, consent, t, "cloud", dry_run=False, user_confirmed=True)
     assert "Stopped after 0 of 3" in out["error"] and out["applied_fields"] == []
@@ -807,6 +839,19 @@ async def test_a_failed_write_is_reported_and_audited(project: Project, consent:
 async def snapshot_of(project: Project, step: str) -> str:
     data = await P.read_cloud(replay(step), APP)
     return save_snapshot(project.files, "main", APP, "cloud", data)
+
+
+@pytest.mark.parametrize("sid", ["../../state", "C:/x", "20260101T000000000000Z-main-cloud/../../x"])
+def test_snapshot_ids_are_never_paths(project: Project, sid: str) -> None:
+    with pytest.raises(ValueError, match="not a snapshot id"):
+        load_snapshot(project.files, sid)
+
+
+async def test_restoring_an_old_snapshot_warns(project: Project, consent: Consent) -> None:
+    old = await snapshot_of(project, "cloud/read")
+    await snapshot_of(project, "cloud/read")
+    dry = await restore_snapshot(replay("cloud/read"), project.files, consent, old)
+    assert "newer snapshot" in dry["warning"]
 
 
 async def test_first_restore_is_a_round_trip(project: Project, tmp_path: Path) -> None:
@@ -827,6 +872,7 @@ async def test_restore_undoes_an_apply(project: Project, consent: Consent) -> No
     t = replay("cleanup/cloud", "cloud/read")
     with pytest.raises(ApplyRefused, match="user_confirmed"):
         await restore_snapshot(replay("cleanup/cloud"), project.files, consent, sid, dry_run=False)
+    await restore_snapshot(replay("cleanup/cloud"), project.files, consent, sid)
     out = await restore_snapshot(t, project.files, consent, sid, dry_run=False, user_confirmed=True)
     assert out["restore_verified"] is True and out["still_different"] == []
     sent = sent_posts(t)
@@ -985,11 +1031,13 @@ def test_leaderboard_apply_reads_back_past_the_cached_list(tmp_path: Path) -> No
 
     config = Config(workspace_root=tmp_path, publisher_key=KEY, home_dir=tmp_path / "home")
     ex = Executor(config, api=mock_api(handler))
+    ex.apply_leaderboards(project, "main", dry_run=True, user_confirmed=False, remove_extra=True)
     out = ex.apply_leaderboards(project, "main", dry_run=False, user_confirmed=True, remove_extra=True)
     assert out["done"] == [{"action": "create", "name": "FAST"}, {"action": "delete", "name": "OLD"}]
     assert out["still_different"] == {"create": [], "delete": [], "settings_differ": []}
     assert out["applied_fields"] and "error" not in out
     # a minute later the cached list still shows OLD and not FAST: FAST is not created twice, OLD is already gone
+    ex.apply_leaderboards(project, "main", dry_run=True, user_confirmed=False, remove_extra=True)
     again = ex.apply_leaderboards(project, "main", dry_run=False, user_confirmed=True, remove_extra=True)
     assert again["done"] == [{"action": "delete", "name": "OLD", "already_gone": True}]
     assert again["still_different"] == {"create": [], "delete": [], "settings_differ": []}
@@ -1184,3 +1232,21 @@ def test_build_upload_dry_run_and_set_live(tmp_path: Path) -> None:
     assert "beta branch 'beta'" in live["warning"] and not any("SetAppBuildLive" in p for p in seen)
     with pytest.raises(ApplyRefused, match="user_confirmed"):
         ex.set_build_live(project, "main", 7, "beta", description="", dry_run=False, user_confirmed=False)
+
+
+@pytest.mark.parametrize(("status", "outcome"), [(200, "ok"), (201, "needs_confirmation")])
+def test_set_build_live_reports_the_write(tmp_path: Path, status: int, outcome: str) -> None:
+    root = tmp_path / "game"
+    proj.init_project(root, "ExampleGame", APP)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "SetAppBuildLive" in request.url.path:
+            return httpx.Response(status, json={"response": {"result": 1}})
+        return httpx.Response(200, json={"response": {"builds": {}, "betas": {}}})
+
+    config = Config(workspace_root=tmp_path, publisher_key=KEY, home_dir=tmp_path / "home")
+    ex = Executor(config, api=mock_api(handler))
+    data = ex.set_build_live(Project.open(root), "main", 7, "beta", description="", dry_run=False, user_confirmed=True)
+    shown = present.steam_write(data)
+    assert shown["outcome"] == outcome and "Wrote 0" not in shown["summary"]
+    assert ("Steam Mobile" in " ".join(shown["next"])) == (status == 201)

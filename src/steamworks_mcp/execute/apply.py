@@ -15,7 +15,9 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -118,12 +120,70 @@ def save_snapshot(files: ProjectFiles, app: str, appid: int, section: str, data:
     return sid
 
 
+SNAPSHOT_ID = re.compile(r"\d{8}T\d{12}Z-\w+-\w+")
+
+
 def load_snapshot(files: ProjectFiles, sid: str) -> dict[str, Any]:
+    if not SNAPSHOT_ID.fullmatch(sid):  # an id, never a path: nothing outside the snapshots folder is read
+        raise ValueError(f"{sid!r} is not a snapshot id. Call restore_snapshot without one to list them.")
     p = files.snapshots_dir / f"{sid}.json"
     if not p.exists():
         known = sorted(x.stem for x in files.snapshots_dir.glob("*.json")) if files.snapshots_dir.exists() else []
         raise ValueError(f"No snapshot {sid}. Snapshots: {', '.join(known[-10:]) or 'none'}.")
     return dict(json.loads(p.read_text(encoding="utf-8")))
+
+
+def newer_snapshots(files: ProjectFiles, sid: str) -> list[str]:
+    """Snapshots of the same app and section taken after ``sid``: restoring ``sid`` would undo those changes too."""
+    suffix = sid.split("Z-", 1)[1]
+    return sorted(p.stem for p in files.snapshots_dir.glob(f"*Z-{suffix}.json") if p.stem > sid)
+
+
+# ---------------------------------------------------------------------------------------------------- the plan
+
+# A write must do exactly what the user saw in the dry run. The dry run remembers a fingerprint of its changes; the
+# write plans again and refuses when the result differs (Steamworks or the approved values changed in between).
+
+PLAN_CHANGED = (
+    "Steamworks or the approved values changed since the dry run, so these are not the changes the user saw. "
+    "Run the dry run again and show the user the new changes."
+)
+NO_DRY_RUN = "Run the dry run first (dry_run=true) and show the user the changes; then write."
+
+
+def _fingerprint(changes: Any) -> str:
+    return hashlib.sha256(json.dumps(changes, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+
+
+def _plans_file(files: ProjectFiles) -> Path:
+    return files.state_dir / "dry_runs.json"
+
+
+def _plans(files: ProjectFiles) -> dict[str, str]:
+    path = _plans_file(files)
+    try:
+        return dict(json.loads(path.read_text(encoding="utf-8"))) if path.is_file() else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def remember_plan(files: ProjectFiles, key: str, changes: Any) -> None:
+    _save_plans(files, {**_plans(files), key: _fingerprint(changes)})
+
+
+def use_plan(files: ProjectFiles, key: str, changes: Any) -> None:
+    """Refuse a write whose changes are not the ones the last dry run showed; a dry run is good for one write."""
+    plans = _plans(files)
+    if key not in plans:
+        raise ApplyRefused(NO_DRY_RUN)
+    if plans[key] != _fingerprint(changes):
+        raise ApplyRefused(PLAN_CHANGED)
+    del plans[key]
+    _save_plans(files, plans)
+
+
+def _save_plans(files: ProjectFiles, plans: dict[str, str]) -> None:
+    atomic_write(_plans_file(files), json.dumps(plans, indent=2) + "\n")
 
 
 def audit(files: ProjectFiles, entry: dict[str, Any]) -> None:
@@ -231,7 +291,9 @@ async def apply_section(
     )
     ops = _plan(section, int(appid), desired, current, remove_extra, icons)
     changes = [op.describe() for op in ops]
+    plan_key = f"apply:{app}:{section}:{remove_extra}:{upload_icons}"
     if dry_run:
+        remember_plan(files, plan_key, changes)
         out: dict[str, Any] = {
             "snapshot": sid,
             "dry_run": True,
@@ -250,6 +312,7 @@ async def apply_section(
             f"Live-test protocol: the first write on app {appid} must be restore_snapshot('{sid}') (it writes "
             "back exactly what was just read). Once a restore worked, apply can write."
         )
+    use_plan(files, plan_key, changes)
     done, error = await _run(t, ops)
     after = await _read_back(
         t, files, section, int(appid), {"action": "apply", "app": app, "snapshot": sid, "done": done, "error": error}
@@ -419,16 +482,25 @@ async def restore_snapshot(
         if round_trip
         else "Only rows that differ from the snapshot are written."
     )
+    changes = [op.describe() for op in ops]
     if dry_run:
-        return {
+        remember_plan(files, f"restore:{sid}", changes)
+        out = {
             "snapshot": sid,
             "dry_run": True,
-            "changes": [op.describe() for op in ops],
+            "changes": changes,
             "note": note,
             "next": "Show these to the user; restore with dry_run=false, user_confirmed=true.",
         }
+        if newer := newer_snapshots(files, sid):
+            out["warning"] = (
+                f"{len(newer)} newer snapshot(s) of this section exist ({newer[-1]} is the latest): restoring this "
+                "older one also undoes what was written since then, deletions included."
+            )
+        return out
     if not user_confirmed:
         raise ApplyRefused("Restoring needs user_confirmed=true, after the user saw the changes.")
+    use_plan(files, f"restore:{sid}", changes)
     done, error = await _run(t, ops)
     after = await _read_back(
         t, files, section, appid, {"action": "restore", "snapshot": sid, "done": done, "error": error}

@@ -228,6 +228,8 @@ Every write, through the API or the BROWSER mode, goes the same way:
    page no longer looks like it did when this tool was verified, it stops before writing anything.
 2. **Dry run.** `dry_run=true` is the default and only shows the differences.
 3. **Your OK.** Writing needs `user_confirmed=true`, which the assistant may only send after you saw the changes.
+   The write must match the dry run you saw: if Steam or your approved values changed in between, it refuses and
+   asks for a new dry run. A restore of an older snapshot warns that it also undoes the writes made since.
 4. **Approved values only.** Drafts and values you haven't approved are refused. Rows that exist only in Steam are
    kept unless you explicitly ask for `remove_extra`.
 5. **Read back.** After writing, Steam is read again; only what Steam really has becomes `applied`.

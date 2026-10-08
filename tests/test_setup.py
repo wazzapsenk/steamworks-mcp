@@ -44,6 +44,8 @@ def test_settings_file_is_the_lowest_layer(tmp_path: Path) -> None:
     dotenv.write_text("STEAM_MCP_BROWSER=0\n", "utf-8")
     config = load_config({}, dotenv, settings)
     assert config.workspace_root == tmp_path.resolve() and not config.browser_enabled
+    for blank in ("", "${user_config.games_folder}"):  # a plugin setting the user left empty
+        assert load_config({"STEAMWORKS_MCP_ROOT": blank}, dotenv, settings).workspace_root == tmp_path.resolve()
 
 
 def test_json_config_is_merged_with_a_backup(tmp_path: Path) -> None:

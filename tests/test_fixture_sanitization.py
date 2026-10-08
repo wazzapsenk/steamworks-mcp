@@ -152,7 +152,12 @@ def test_repository_has_no_denylisted_terms() -> None:
             continue
         lower = text.lower()
         if owner:
-            for host in ("github.com/", "githubusercontent.com/", "io.github."):  # repo URLs, MCP registry name
+            for host in (
+                "github.com/",
+                "githubusercontent.com/",
+                "io.github.",
+                "mcpservers.org/servers/",
+            ):  # repo URLs, listings
                 lower = lower.replace(host + owner, host + "<owner>")
         hits += [
             f"{path.relative_to(ROOT).as_posix()}: term #{i + 1}" for i, t in enumerate(terms) if t.lower() in lower

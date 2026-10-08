@@ -581,6 +581,9 @@ def steam_write(data: dict[str, Any]) -> dict[str, Any]:
     done = data.get("done") or []
     remaining = data.get("still_different") or []
     if data.get("action") == "set_build_live":
+        if data.get("needs_mobile_confirmation"):
+            summary = f"Build {data.get('build_id')} waits for a Steam Mobile confirmation; it is not live yet."
+            return result(data, summary, outcome="needs_confirmation")
         return result(data, f"Build {data.get('build_id')} is live on the branch {data.get('branch')}.")
     summary = f"Wrote {plural(len(done), 'change')} to Steamworks"
     if data.get("publish"):

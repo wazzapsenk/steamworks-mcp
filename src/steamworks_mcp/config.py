@@ -105,7 +105,9 @@ def load_config(
     for path in (settings, dotenv if dotenv is not None else Path.cwd() / ".env"):
         if path is not None and path.is_file():
             values.update(parse_dotenv(path.read_text(encoding="utf-8")))
-    values.update(env if env is not None else os.environ)
+    # An empty value or an unfilled "${...}" (an optional plugin setting left blank) does not hide a saved setting.
+    given = env if env is not None else os.environ
+    values.update({k: v for k, v in given.items() if v.strip() and not v.startswith("${")})
 
     def get(name: str) -> str | None:
         v = values.get(name, "").strip()
