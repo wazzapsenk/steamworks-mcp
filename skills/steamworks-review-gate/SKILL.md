@@ -7,7 +7,7 @@ description: Everything still open before one Steam release gate, and the next t
 
 # Review a gate
 
-Arguments, from what the user wrote after the command (ask for any that are missing):
+Arguments, from the conversation (ask the user for any that are missing):
 
 - `<path>`: the game's folder, the one with steamworks.yaml (relative to the server's workspace root)
 - `<gate>`: the release gate: 0 prerequisites, 1 store page, 2 build review, 3 release

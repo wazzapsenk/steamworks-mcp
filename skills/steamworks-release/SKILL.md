@@ -7,15 +7,15 @@ description: Walk a game from nothing configured to released on Steam. Uses the 
 
 # Release assistant
 
-Arguments, from what the user wrote after the command (ask for any that are missing):
+Arguments, from the conversation (ask the user for any that are missing):
 
 - `<path>`: the game's folder, the one with steamworks.yaml (relative to the server's workspace root)
 
 Help me release the game in `<path>` on Steam. Work in this order and keep me in the loop:
 1. status: where the game stands. If it is not tracked yet, init_project (or scan_project if steamworks.yaml exists), then gap_report.
 2. start_interview: ask me the questions in small batches and save my answers with set_field.
-3. generate the drafts (store_short, store_long, achievements, cloud, builds, requirements, code); show me each one and approve_fields only what I agree with. Before the store text, offer a market study (the market_research prompt).
-4. validate, translate every text into every target language (the localize_everything prompt: localization_pending / localization_set), prepare_images.
+3. generate the drafts (store_short, store_long, achievements, cloud, builds, requirements, code); show me each one and approve_fields only what I agree with. Before the store text, offer a market study (the steamworks-market-research skill).
+4. validate, translate every text into every target language (the steamworks-localize skill: localization_pending / localization_set), prepare_images.
 5. In the game's code: integration_code for the Steam SDK code that matches steamworks.yaml, then check_code; explain what it finds and fix it only when I ask.
 6. Before release: price_brief for the price, and the event calendar (get_spec_info('events')) for the date.
 7. export_package for the next gate; with the publisher key or the BROWSER mode, apply section by section (always a dry run first, then only with my OK).

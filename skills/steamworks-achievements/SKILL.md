@@ -7,7 +7,7 @@ description: Steam achievement names, descriptions and icon briefs that fit the 
 
 # Design achievements
 
-Arguments, from what the user wrote after the command (ask for any that are missing):
+Arguments, from the conversation (ask the user for any that are missing):
 
 - `<path>`: the game's folder, the one with steamworks.yaml (relative to the server's workspace root)
 
