@@ -16,6 +16,7 @@ import queue
 import re
 import secrets
 import shutil
+import socket
 import subprocess
 import sys
 import threading
@@ -134,6 +135,15 @@ def instructions(url: str, token: str, temporary: bool) -> str:
     return "\n".join(lines)
 
 
+def port_free(port: int) -> bool:
+    with socket.socket() as s:
+        try:
+            s.bind(("127.0.0.1", port))
+        except OSError:
+            return False
+    return True
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
         prog="steamworks-mcp remote", description="Make steamworks-mcp reachable for ChatGPT and claude.ai."
@@ -146,6 +156,13 @@ def main(argv: list[str]) -> int:
 
     if not games_folder(settings_path()):
         print("Tell me where your games are first: steamworks-mcp setup --only-settings", flush=True)
+        return 2
+    if not port_free(args.port):  # checked before the address and code are shown, so the user never copies dead ones
+        print(
+            f"Port {args.port} is already in use; maybe `steamworks-mcp remote` already runs in another terminal. "
+            f"Close that one, or run: steamworks-mcp remote --port {args.port + 1}",
+            flush=True,
+        )
         return 2
     token = access_code(settings_path())
     tunnel: subprocess.Popen[str] | None = None

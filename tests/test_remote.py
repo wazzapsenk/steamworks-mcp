@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import socket
 import sys
 from pathlib import Path
 
@@ -78,6 +79,22 @@ def test_without_cloudflared_it_says_how_to_install(
     monkeypatch.setenv("STEAMWORKS_MCP_HOME", str(tmp_path))
     monkeypatch.setenv("STEAMWORKS_MCP_ROOT", str(tmp_path))
     monkeypatch.setattr(remote, "find_cloudflared", lambda: None)
+    monkeypatch.setattr(remote, "port_free", lambda _: True)
     assert remote.main([]) == 2
     out = capsys.readouterr().out
     assert "cloudflared" in out and "--url" in out and out.isascii()
+
+
+def test_a_busy_port_stops_before_any_address(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("STEAMWORKS_MCP_HOME", str(tmp_path))
+    monkeypatch.setenv("STEAMWORKS_MCP_ROOT", str(tmp_path))
+    with socket.socket() as busy:
+        busy.bind(("127.0.0.1", 0))
+        port = busy.getsockname()[1]
+        assert not remote.port_free(port)
+        assert remote.main(["--port", str(port)]) == 2
+    out = capsys.readouterr().out
+    assert f"--port {port + 1}" in out and "/mcp" not in out
+    assert not (tmp_path / "settings.env").exists() or "TOKEN" not in (tmp_path / "settings.env").read_text("utf-8")

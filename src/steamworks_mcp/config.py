@@ -48,6 +48,8 @@ def _flag(v: str | None) -> bool:
 class Config:
     workspace_root: Path
     """Every project path a tool receives must be inside this folder."""
+    root_given: bool = True
+    """False when no games folder was set and the folder the app started in is used instead."""
     browser_enabled: bool = False
     """STEAM_MCP_BROWSER=1: the opt-in BROWSER execution mode."""
     browser_remote: bool = False
@@ -116,6 +118,7 @@ def load_config(
     root = get("STEAMWORKS_MCP_ROOT")
     return Config(
         workspace_root=Path(root).expanduser().resolve() if root else Path.cwd().resolve(),
+        root_given=root is not None,
         browser_enabled=_flag(get("STEAM_MCP_BROWSER")),
         browser_remote=_flag(get("STEAM_MCP_BROWSER_REMOTE")),
         publisher_key=get("STEAMWORKS_PUBLISHER_KEY"),
@@ -139,6 +142,7 @@ def resolve_in_workspace(root: Path, user_path: str | None) -> Path:
     resolved = (p if p.is_absolute() else root / p).resolve()
     if resolved != root and root not in resolved.parents:
         raise WorkspaceError(
-            f"{user_path!r} is outside the workspace root ({root}). Set STEAMWORKS_MCP_ROOT to allow it."
+            f"{user_path!r} is outside the workspace root, your games folder ({root}). To use it, run "
+            "`uvx steamworks-mcp setup` in a terminal, pick a folder that holds it, and restart the app."
         )
     return resolved

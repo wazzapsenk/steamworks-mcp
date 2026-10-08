@@ -716,6 +716,18 @@ def status_workspace(data: dict[str, Any]) -> dict[str, Any]:
             next="Ask the user which game to start with, then call init_project(path=<its folder>).",
             display=display,
         )
+    if data.get("games_folder_set") is False:
+        return result(
+            data,
+            "The games folder is not set yet, so there is nothing to look at.",
+            outcome="needs_input",
+            next="Tell the user how to set it (display), then wait; nothing else works until it is set.",
+            display=(
+                "Your games folder is not set yet. In a terminal, run `uvx steamworks-mcp setup`, type the folder "
+                "that holds your game projects, then restart this app and ask again. (With the Claude Code plugin, "
+                "set Games folder in the plugin's settings instead.)"
+            ),
+        )
     return result(
         data,
         f"No game found in {data.get('workspace_root')} yet.",

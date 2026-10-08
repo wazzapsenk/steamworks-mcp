@@ -109,6 +109,7 @@ def main(argv: list[str] | None = None) -> int:
         return remote.main(argv[1:])
     parser = argparse.ArgumentParser(
         prog="steamworks-mcp",
+        usage="%(prog)s setup | doctor | remote  (see each one's --help)\n       %(prog)s [--http] [options]",
         description="Steamworks release assistant (MCP server). Also: `steamworks-mcp setup` connects it to your "
         "apps, `steamworks-mcp remote` makes it reachable for ChatGPT and claude.ai, `steamworks-mcp doctor` checks "
         "the installation.",

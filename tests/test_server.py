@@ -117,6 +117,12 @@ async def test_rescan_updates_drafts_but_not_approved(workspace: Path) -> None:
     assert report["counts"]["applied"] == 0 and report["counts"]["conflicts"] == 0
 
 
+async def test_status_says_when_the_games_folder_is_not_set(tmp_path: Path) -> None:
+    out = await call(Config(workspace_root=tmp_path, root_given=False), "status")
+    assert out["outcome"] == "needs_input" and "steamworks-mcp setup" in out["display"]
+    assert "not set" not in (await call(Config(workspace_root=tmp_path), "status"))["summary"]
+
+
 async def test_paths_outside_the_workspace_are_refused(workspace: Path) -> None:
     async with Client(create_server(Config(workspace_root=workspace / "game"))) as client:
         result = await client.call_tool("init_project", {"path": "../"})

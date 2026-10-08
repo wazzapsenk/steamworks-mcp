@@ -16,6 +16,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tomllib
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,7 +37,8 @@ def launch_command() -> list[str]:
     """How the apps start this server: this very installation, unless it runs from uvx's cache (then uvx again)."""
     exe = Path(sys.executable)
     if any(part.lower() in ("uv", "archive-v0") for part in exe.parts) and "cache" in str(exe).lower():
-        return ["uvx", "steamworks-mcp"]
+        # The full path: desktop apps started from the Dock or Start menu often do not have uv's folder on PATH.
+        return [shutil.which("uvx") or "uvx", "steamworks-mcp"]
     return [str(exe), "-m", "steamworks_mcp"]
 
 
@@ -206,6 +208,65 @@ def is_connected(client: Client) -> bool | None:
     except (json.JSONDecodeError, AttributeError):
         return None
     return SERVER_NAME in servers
+
+
+def configured_command(client: Client) -> str | None:
+    """The program the client starts for this server, as written in its config file; None when unknown."""
+    if client.config is None or not client.config.is_file():
+        return None
+    text = client.config.read_text(encoding="utf-8", errors="replace")
+    try:
+        if client.id == "codex":
+            entry = tomllib.loads(text).get("mcp_servers", {}).get(SERVER_NAME, {})
+        else:
+            entry = (json.loads(text).get("mcpServers") or {}).get(SERVER_NAME, {})
+    except (ValueError, AttributeError):
+        return None
+    command = entry.get("command") if isinstance(entry, dict) else None
+    return command if isinstance(command, str) and command else None
+
+
+def command_found(command: str) -> bool:
+    return Path(command).is_file() or shutil.which(command) is not None
+
+
+def plugin_installed(home: Path | None = None) -> bool:
+    """Whether the steamworks plugin is installed in Claude Code (it brings its own copy of the server)."""
+    path = (home or Path.home()) / ".claude" / "plugins" / "installed_plugins.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    plugins = data.get("plugins", data) if isinstance(data, dict) else {}
+    return isinstance(plugins, dict) and any(str(k).startswith(f"{SERVER_NAME}@") for k in plugins)
+
+
+def client_checks(client: Client, connected: bool | None, plugin: bool) -> list[Check]:
+    if client.id == "claude-code" and plugin:
+        if connected:
+            return [
+                Check(
+                    False,
+                    "Claude Code: set up twice (the plugin and setup), so every tool shows up twice",
+                    f"claude mcp remove --scope user {SERVER_NAME}",
+                )
+            ]
+        return [Check(True, "Claude Code: connected through the steamworks plugin")]
+    if not connected:
+        if client.installed():
+            fix = f"steamworks-mcp setup --client {client.id}"
+            return [Check(None, f"{client.name}: installed, not connected", fix)]
+        return []
+    command = configured_command(client)
+    if command is not None and not command_found(command):
+        return [
+            Check(
+                False,
+                f"{client.name}: set up, but it starts {command!r}, which is not on this computer",
+                f"steamworks-mcp setup --client {client.id}",
+            )
+        ]
+    return [Check(True, f"{client.name}: connected")]
 
 
 # ---------------------------------------------------------------------------------------------------- setup
@@ -402,12 +463,9 @@ def checks(online: bool = True) -> list[Check]:
             + " (for ChatGPT and claude.ai: steamworks-mcp remote)",
         )
     )
+    plugin = plugin_installed()
     for c in clients():
-        state = is_connected(c)
-        if state:
-            out.append(Check(True, f"{c.name}: connected"))
-        elif c.installed():
-            out.append(Check(None, f"{c.name}: installed, not connected", f"steamworks-mcp setup --client {c.id}"))
+        out += client_checks(c, is_connected(c), plugin)
     return out
 
 

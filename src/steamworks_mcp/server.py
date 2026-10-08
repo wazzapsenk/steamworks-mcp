@@ -73,7 +73,7 @@ USER_ERRORS = (
 
 
 HINTS: tuple[tuple[type[BaseException], str], ...] = (
-    (WorkspaceError, "Use a folder inside the workspace root (server_info shows it)."),
+    (WorkspaceError, "Tell the user in plain words what the message says; the games folder is only changed by them."),
     (
         ManifestError,
         "If there is no steamworks.yaml yet, call init_project; if the file is broken, show the user the line the "
@@ -264,7 +264,9 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             path: The game's folder (the one with steamworks.yaml), relative to the workspace root.
         """
         if path is None:
-            return present.status_workspace(workspace_status(config.workspace_root))
+            return present.status_workspace(
+                {**workspace_status(config.workspace_root), "games_folder_set": config.root_given}
+            )
         root = project_dir(path)
         if not (root / "steamworks.yaml").is_file():
             out = workspace_status(root)

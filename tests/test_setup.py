@@ -127,3 +127,28 @@ def test_doctor_offline(home: Path, tmp_path: Path, capsys: pytest.CaptureFixtur
     assert code == 0, out
     assert "[ok]  Games folder:" in out and "Publisher Web API key not set" in out
     assert "KEY" not in out and out.isascii()  # Windows consoles (cp1252) print ASCII only
+
+
+def test_doctor_finds_a_command_the_app_cannot_start(home: Path, tmp_path: Path) -> None:
+    config = tmp_path / "claude_desktop_config.json"
+    desktop = setup_cli.Client("claude-desktop", "Claude Desktop", config)
+    setup_cli.add_to_json(config, ["no-such-program-swmcp", "steamworks-mcp"])
+    [check] = setup_cli.client_checks(desktop, setup_cli.is_connected(desktop), plugin=False)
+    assert check.ok is False and "no-such-program-swmcp" in check.text
+    setup_cli.add_to_json(config, [str(config), "steamworks-mcp"])  # any existing file counts as found
+    assert setup_cli.client_checks(desktop, True, plugin=False)[0].ok is True
+    codex = setup_cli.Client("codex", "Codex", tmp_path / "config.toml")
+    setup_cli.add_to_codex(codex.config, ["no-such-program-swmcp"])  # type: ignore[arg-type]
+    assert setup_cli.configured_command(codex) == "no-such-program-swmcp"
+
+
+def test_doctor_knows_the_claude_code_plugin(home: Path) -> None:
+    assert not setup_cli.plugin_installed(home)
+    registry = home / ".claude" / "plugins" / "installed_plugins.json"
+    registry.parent.mkdir(parents=True)
+    registry.write_text(json.dumps({"version": 2, "plugins": {"steamworks@steamworks-mcp": []}}), "utf-8")
+    assert setup_cli.plugin_installed(home)
+    code = setup_cli.Client("claude-code", "Claude Code", None)
+    assert setup_cli.client_checks(code, False, plugin=True)[0].ok is True
+    twice = setup_cli.client_checks(code, True, plugin=True)[0]
+    assert twice.ok is False and "claude mcp remove" in twice.fix
