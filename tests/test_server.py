@@ -11,6 +11,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
+import anyio
 import httpx
 import pytest
 from mcp import Client
@@ -18,7 +19,7 @@ from mcp import Client
 from steamworks_mcp.__main__ import build_http_app, http_problems, main
 from steamworks_mcp.config import Config, WorkspaceError, load_config, parse_dotenv, resolve_in_workspace
 from steamworks_mcp.manifest.io import ManifestFile, ProjectFiles, load_state
-from steamworks_mcp.server import create_server
+from steamworks_mcp.server import create_server, user_errors
 
 FIXTURE = Path(__file__).parent / "fixtures" / "unity_min_project"
 TOKEN = "t" * 32
@@ -61,6 +62,36 @@ async def test_init_project_creates_files_and_scans(workspace: Path) -> None:
     assert state.get("achievements.ACH_FIRST_FORT.name").evidence[0].line == 5
     assert (game / ".steam-mcp" / "scan" / "unity.json").exists()
     assert "never_read_this_user" not in (game / ".steam-mcp" / "scan" / "steam_build_pipeline.json").read_text("utf-8")
+
+
+async def test_parallel_calls_on_one_game_keep_every_change(workspace: Path) -> None:
+    config = Config(workspace_root=workspace)
+    await call(config, "init_project", path="game", scan=False)
+    values = {"game.name": "Fort Night", "store.franchise": "Forts", "store.short_description": "Build forts."}
+    async with Client(create_server(config)) as client, anyio.create_task_group() as tg:
+        for field, value in values.items():
+            tg.start_soon(client.call_tool, "set_field", {"path": "game", "values": {field: value}})
+    m = ManifestFile.load(workspace / "game" / "steamworks.yaml").values()
+    assert (m["game"]["name"], m["store"]["franchise"], m["store"]["short_description"]) == tuple(values.values())
+
+
+def test_one_game_runs_one_call_at_a_time() -> None:
+    inside, most = 0, 0
+
+    @user_errors
+    def tool(path: str) -> None:
+        nonlocal inside, most
+        inside += 1
+        most = max(most, inside)
+        time.sleep(0.02)
+        inside -= 1
+
+    threads = [threading.Thread(target=tool, kwargs={"path": p}) for p in ("game", "./game/", "game")]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert most == 1
 
 
 async def test_second_init_keeps_files_and_scan_respects_approved_values(workspace: Path) -> None:

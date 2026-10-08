@@ -7,10 +7,13 @@ are evaluated when the tools are registered.
 import functools
 import inspect
 import json
+import os
+import threading
 from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, Any, Literal, TypeVar
 
+import anyio
 from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, RevocationOptions
 from mcp.server.mcpserver import Context, Elicit, MCPServer, Resolve
 from mcp.server.mcpserver.exceptions import ToolError
@@ -93,23 +96,49 @@ def hint_for(exc: BaseException) -> str | None:
     return next((hint for kind, hint in HINTS if isinstance(exc, kind)), None)
 
 
+_project_locks: dict[str, threading.Lock] = {}
+_project_locks_guard = threading.Lock()
+
+
+def project_lock(path: Any) -> threading.Lock | None:
+    """One lock per game folder. Every tool reads steamworks.yaml and state.json and writes them back whole, so two
+    calls on the same game at once would lose one call's changes; calls on different games still run side by side."""
+    if not isinstance(path, str) or not path.strip():
+        return None
+    # shortcut: keyed by the path as written, so "game" and "./game/" share a lock but a symlinked spelling does not
+    key = os.path.normcase(os.path.normpath(path.strip()))
+    with _project_locks_guard:
+        return _project_locks.setdefault(key, threading.Lock())
+
+
 def user_errors(fn: F) -> F:
-    """Show expected errors to the model in the result shape (the SDK hides unexpected exceptions' details)."""
+    """Show expected errors to the model in the result shape (the SDK hides unexpected exceptions' details), and run
+    the calls on one game one at a time (see project_lock)."""
     if inspect.iscoroutinefunction(fn):
 
         @functools.wraps(fn)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            lock = project_lock(kwargs.get("path"))
+            if lock is not None:
+                await anyio.to_thread.run_sync(lock.acquire)  # waits in a thread, so the server keeps answering
             try:
                 return await fn(*args, **kwargs)
             except USER_ERRORS as exc:
                 raise ToolError(present.error(str(exc), hint_for(exc))) from exc
+            finally:
+                if lock is not None:
+                    lock.release()
 
         return async_wrapper  # type: ignore[return-value]
 
     @functools.wraps(fn)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
+        lock = project_lock(kwargs.get("path"))
         try:
-            return fn(*args, **kwargs)
+            if lock is None:
+                return fn(*args, **kwargs)
+            with lock:
+                return fn(*args, **kwargs)
         except USER_ERRORS as exc:
             raise ToolError(present.error(str(exc), hint_for(exc))) from exc
 
