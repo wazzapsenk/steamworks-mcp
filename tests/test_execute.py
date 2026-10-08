@@ -18,6 +18,7 @@ from mcp import Client
 from steamworks_mcp import present
 from steamworks_mcp import project as proj
 from steamworks_mcp.config import Config, load_config
+from steamworks_mcp.execute import apply as apply_module
 from steamworks_mcp.execute import depots, guard, importer, store_assets, store_page, sync
 from steamworks_mcp.execute.api import DISPLAY_TYPES, PartnerApi, SteamApiError, plan_leaderboards, run_steamcmd
 from steamworks_mcp.execute.apply import (
@@ -807,6 +808,30 @@ async def test_apply_store_text_uploads_only_what_changed(project: Project, cons
     uploads = [json.loads(s.form["json"]) for s in t.sent if s.method == "UPLOAD"]
     assert uploads == [upload]
     assert out["still_different"] == [] and set(out["applied_fields"]) == {"store.short_description", "store.about"}
+
+
+async def test_a_failed_read_back_still_reports_the_writes(
+    project: Project, consent: Consent, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = setv(project, CLOUD)
+    consent.mark_restore_verified(APP)
+    await dry_run(project, consent, "cloud/read", "cloud")
+    reads = 0
+    real = apply_module.read_section
+
+    async def read_once(*args: Any) -> dict[str, Any]:  # the read after the writes fails
+        nonlocal reads
+        reads += 1
+        if reads > 1:
+            raise RuntimeError("page did not load")
+        return await real(*args)
+
+    monkeypatch.setattr(apply_module, "read_section", read_once)
+    t = replay("cloud/read", "cloud/readback", "cloud/write")
+    out = await run_apply(project, consent, t, "cloud", dry_run=False, user_confirmed=True)
+    assert len(out["done"]) == 3 and out["applied_fields"] == []
+    assert "could not read Steamworks back" in out["error"] and out["snapshot"] in out["error"]
+    assert audit_entries(project)[-1]["readback_error"]
 
 
 async def test_a_write_needs_the_dry_run_it_repeats(project: Project, consent: Consent) -> None:

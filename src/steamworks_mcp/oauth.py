@@ -10,7 +10,7 @@ Hardening:
 * Clients may only register redirect URIs of known MCP hosts (ChatGPT, Claude) or loopback addresses, plus the
   prefixes in ``STEAMWORKS_MCP_OAUTH_REDIRECTS``, so an approval can never send a code to some other site.
 * The approval page shows which client and which host the code goes to; it cannot be framed.
-* Wrong tokens are counted per request and globally; after too many the page locks for a while.
+* Each wrong token waits a second, and a sign-in request ends after a few wrong tokens. Nothing locks the owner out.
 * Refresh tokens are stored as SHA-256 hashes (``~/.steamworks-mcp/oauth.json``); access tokens live in memory.
 """
 
@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+import anyio
 from mcp.server.auth.provider import (
     AccessToken,
     AuthorizationCode,
@@ -50,8 +51,9 @@ REFRESH_TTL = 30 * 24 * 3600
 CODE_TTL = 300
 REQUEST_TTL = 600
 MAX_TRIES_PER_REQUEST = 5
-MAX_FAILURES = 20
-LOCK_SECONDS = 600
+WRONG_TOKEN_DELAY = 1.0
+"""Seconds a wrong token waits before the answer: slows guessing without ever locking the owner out (a global
+lockout would let anyone who knows the address keep the owner from signing in)."""
 STATIC_CLIENT = "static-bearer-token"
 MAX_CLIENTS = 100
 
@@ -72,7 +74,13 @@ def redirect_allowed(uri: str, extra: tuple[str, ...] = ()) -> bool:
     parts = urlsplit(uri)
     if parts.scheme == "http" and parts.hostname in ("127.0.0.1", "localhost", "::1"):
         return True
-    return parts.scheme == "https" and any(uri.startswith(p) for p in (*KNOWN_REDIRECTS, *extra))
+    if parts.scheme != "https":
+        return False
+    for prefix in (*KNOWN_REDIRECTS, *extra):  # the same host exactly, then the path: no look-alike hosts
+        allowed = urlsplit(prefix)
+        if parts.netloc.lower() == allowed.netloc.lower() and parts.path.startswith(allowed.path):
+            return True
+    return False
 
 
 @dataclass
@@ -95,7 +103,6 @@ class LocalOAuth:
     _pending: dict[str, Pending] = field(default_factory=dict, repr=False)
     _codes: dict[str, AuthorizationCode] = field(default_factory=dict, repr=False)
     _access: dict[str, AccessToken] = field(default_factory=dict, repr=False)
-    _failures: list[float] = field(default_factory=list, repr=False)
 
     # ------------------------------------------------------------------------------------------------ storage
 
@@ -152,7 +159,6 @@ class LocalOAuth:
         now = time.time()
         self._pending = {k: v for k, v in self._pending.items() if v.expires >= now}
         self._codes = {k: v for k, v in self._codes.items() if v.expires_at >= now}
-        self._failures = [t for t in self._failures if t > now - LOCK_SECONDS]
 
     async def approval_page(self, request: Request) -> Response:
         self._expire()
@@ -173,11 +179,9 @@ class LocalOAuth:
         if form.get("decision") != "allow":
             del self._pending[request_id]
             return _redirect(str(pending.params.redirect_uri), error="access_denied", state=pending.params.state)
-        if len(self._failures) >= MAX_FAILURES:
-            return _page("Too many wrong tokens. Try again in a few minutes.", status=429)
         if not hmac.compare_digest(str(form.get("token", "")).strip().encode(), self.server_token.encode()):
             pending.tries += 1
-            self._failures.append(time.time())
+            await anyio.sleep(WRONG_TOKEN_DELAY)
             if pending.tries >= MAX_TRIES_PER_REQUEST:
                 del self._pending[request_id]
                 return _page("Too many wrong tokens for this request. Start again from your MCP client.", status=403)

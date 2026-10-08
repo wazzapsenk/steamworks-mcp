@@ -314,9 +314,16 @@ async def apply_section(
         )
     use_plan(files, plan_key, changes)
     done, error = await _run(t, ops)
-    after = await _read_back(
-        t, files, section, int(appid), {"action": "apply", "app": app, "snapshot": sid, "done": done, "error": error}
-    )
+    try:
+        after = await _read_back(
+            t,
+            files,
+            section,
+            int(appid),
+            {"action": "apply", "app": app, "snapshot": sid, "done": done, "error": error},
+        )
+    except ReadBackError as exc:
+        return _unread(sid, done, ops, exc, undo=True)
     if section == "store_assets":  # an image cannot be compared: a slot uploaded now and filled after counts
         uploaded = {op["target"] for op in done if op["action"] == "upload"}
         remaining = [op for op in ops if op.action == "upload" and not after["slots"].get(op.target)]
@@ -371,14 +378,31 @@ async def apply_section(
     return out
 
 
+class ReadBackError(Exception):
+    """Steamworks could not be read after writing; what was written is known and reported."""
+
+
 async def _read_back(
     t: Transport, files: ProjectFiles, section: str, appid: int, entry: dict[str, Any]
 ) -> dict[str, Any]:
     try:
         return await read_section(t, section, appid)
-    except Exception as exc:  # what was written still goes to the audit log
+    except Exception as exc:  # what was written still goes to the audit log and back to the user
         audit(files, {**entry, "appid": appid, "section": section, "readback_error": str(exc)})
-        raise
+        raise ReadBackError(str(exc) or type(exc).__name__) from exc
+
+
+def _unread(sid: str, done: list[dict[str, Any]], ops: list[sync.Op], exc: ReadBackError, undo: bool) -> dict[str, Any]:
+    """The answer when the writes ran but Steamworks could not be read again: no field is marked done."""
+    error = f"Wrote {len(done)} of {len(ops)} change(s), then could not read Steamworks back ({exc}). Check them there"
+    return {
+        "snapshot": sid,
+        "done": done,
+        "still_different": [],
+        "applied_fields": [],
+        "error": error + (f"; restore_snapshot('{sid}') undoes them." if undo else "."),
+        "publish": "Nothing was published.",
+    }
 
 
 async def _run(t: Transport, ops: list[sync.Op]) -> tuple[list[dict[str, Any]], str | None]:
@@ -502,9 +526,12 @@ async def restore_snapshot(
         raise ApplyRefused("Restoring needs user_confirmed=true, after the user saw the changes.")
     use_plan(files, f"restore:{sid}", changes)
     done, error = await _run(t, ops)
-    after = await _read_back(
-        t, files, section, appid, {"action": "restore", "snapshot": sid, "done": done, "error": error}
-    )
+    try:
+        after = await _read_back(
+            t, files, section, appid, {"action": "restore", "snapshot": sid, "done": done, "error": error}
+        )
+    except ReadBackError as exc:
+        return {**_unread(sid, done, ops, exc, undo=False), "restore_verified": False}
     remaining = _plan(section, appid, desired, after, True)
     verified = not remaining and error is None
     if verified:

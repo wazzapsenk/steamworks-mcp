@@ -16,6 +16,7 @@ from urllib.parse import parse_qs, urlsplit
 import httpx
 import pytest
 
+from steamworks_mcp import oauth
 from steamworks_mcp.__main__ import build_http_app, http_problems
 from steamworks_mcp.config import Config
 from steamworks_mcp.oauth import redirect_allowed
@@ -35,6 +36,11 @@ MCP_HEADERS = {"accept": "application/json, text/event-stream", "content-type": 
 class Server:
     base: str
     home: Path
+
+
+@pytest.fixture(autouse=True)
+def no_wait(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(oauth, "WRONG_TOKEN_DELAY", 0)
 
 
 @pytest.fixture
@@ -184,9 +190,11 @@ def test_codes_only_go_to_known_clients(server: Server) -> None:
     assert redirect_allowed("https://claude.ai/api/mcp/auth_callback")
     assert not redirect_allowed("https://chatgpt.com.evil.example/connector_platform_oauth_redirect")
     assert redirect_allowed("https://my.example/cb", extra=("https://my.example/",))
+    for look_alike in ("https://my.example.evil.net/cb", "https://my.example@evil.net/cb", "http://my.example/cb"):
+        assert not redirect_allowed(look_alike, extra=("https://my.example",))
 
 
-def test_deny_and_lockout(server: Server) -> None:
+def test_deny_and_too_many_wrong_tokens(server: Server) -> None:
     client_id = register(server.base).json()["client_id"]
     _, challenge = pkce()
     denied = approve(server.base, start(server.base, client_id, challenge, resource=server.base), decision="deny")

@@ -23,6 +23,7 @@ from pathlib import Path
 
 from steamworks_mcp import __version__
 from steamworks_mcp.config import SETTINGS_FILE, home_dir, load_config, parse_dotenv
+from steamworks_mcp.manifest.io import atomic_write
 
 SERVER_NAME = "steamworks"
 CODEX_TIMEOUT = 900  # build uploads and Steamworks writes can take minutes
@@ -61,10 +62,7 @@ def write_settings(path: Path, updates: dict[str, str]) -> None:
         else:
             out.append(line)
     out += [f"{k}={_quote(v)}" for k, v in remaining.items()]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(out) + "\n", encoding="utf-8")
-    if os.name != "nt":
-        path.chmod(0o600)  # keys live here
+    atomic_write(path, "\n".join(out) + "\n")  # keys live here: the new file is private (600) from the start
 
 
 def _quote(value: str) -> str:
