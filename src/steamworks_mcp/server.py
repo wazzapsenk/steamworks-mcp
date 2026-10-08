@@ -290,7 +290,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
 
         Args:
             path: Folder that holds steamworks.yaml.
-            gate: Only this gate (0-3); default all.
+            gate: Only this gate (0-3), in full. Default: every gate, with only the next open one in full.
             include_info: Also list the background notes (permissions, timings) that never block.
         """
         project = open_project(path)

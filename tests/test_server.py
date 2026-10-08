@@ -176,6 +176,17 @@ async def test_gap_report_display_is_a_table_per_step(workspace: Path) -> None:
     assert report["next"] and all(isinstance(s, str) for s in report["next"])
 
 
+async def test_gap_report_details_only_the_next_step(workspace: Path) -> None:
+    config = Config(workspace_root=workspace)
+    await call(config, "init_project", path="game", appid=1000000)
+    report = await call(config, "gap_report", path="game")
+    first, *later = [g for g in report["gates"] if not g["ready"]]
+    assert "where" in first["blocking"][0] and later and "gate=N" in report["details"]
+    assert all(set(i) == {"id", "title", "status"} for g in later for i in g["blocking"])
+    full = await call(config, "gap_report", path="game", gate=later[0]["gate"])
+    assert "where" in full["gates"][0]["blocking"][0]
+
+
 async def test_status_lists_games_then_shows_progress(workspace: Path) -> None:
     config = Config(workspace_root=workspace)
     (workspace / "other" / "Godot Game").mkdir(parents=True)

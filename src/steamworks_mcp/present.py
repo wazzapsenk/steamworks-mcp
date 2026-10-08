@@ -207,12 +207,20 @@ def gap_report(data: dict[str, Any]) -> dict[str, Any]:
             extra.append(plural(len(to_approve), "value") + " to approve")
         if extra:
             summary += " (" + ", ".join(extra) + ")"
+    if len(gates) > 1 and open_gates:  # the next step in full; later ones in short (one gate asks for its details)
+        data = {**data, "gates": [g if g is open_gates[0] else _gate_in_short(g) for g in gates]}
+        later = [g["gate"] for g in open_gates[1:]]
+        if later:
+            data["details"] = f"Later steps are in short; gap_report(path, gate=N) gives one in full (N in {later})."
     parts = []
     for g in gates:
         blocking = g.get("blocking") or []
         head = f"{gate_label(g['gate'], g['title'])}: " + (
             "ready" if not blocking else plural(len(blocking), "item") + " open"
         )
+        if blocking and g is not open_gates[0]:
+            parts.append(f"**{head}**: " + ", ".join(str(i.get("title")) for i in blocking) + ".")
+            continue
         rows = [
             [
                 ITEM_STATUS.get(i.get("status", ""), i.get("status")),
@@ -226,6 +234,12 @@ def gap_report(data: dict[str, Any]) -> dict[str, Any]:
         tail = f"\n\nAlso {plural(recommended, 'recommended item')} (not blocking)." if recommended else ""
         parts.append(f"**{head}**" + ("\n\n" + table(["Status", "What", "How", "Where"], rows) if rows else "") + tail)
     return result(data, summary + ".", display=join(*parts))
+
+
+def _gate_in_short(g: dict[str, Any]) -> dict[str, Any]:
+    short: dict[str, Any] = {k: g[k] for k in ("gate", "title", "ready", "counts") if k in g}
+    short["blocking"] = [{k: i.get(k) for k in ("id", "title", "status")} for i in g.get("blocking") or []]
+    return short
 
 
 def start_interview(data: dict[str, Any]) -> dict[str, Any]:
@@ -402,7 +416,13 @@ def validate(data: dict[str, Any]) -> dict[str, Any]:
         table(["Severity", "Area", "Item", "Message"], rows, limit=40),
         section("Translations", localization_table(localization)) if isinstance(localization, list) else "",
     )
+    if isinstance(localization, list):  # counts only: localization_pending lists the texts to translate
+        data = {**data, "localization": [_counted(s) for s in localization]}
     return result(data, summary, next=steps, display=display)
+
+
+def _counted(language: dict[str, Any]) -> dict[str, Any]:
+    return {k: len(v) if k in ("missing", "stale") and isinstance(v, list) else v for k, v in language.items()}
 
 
 def preview_store(data: dict[str, Any]) -> dict[str, Any]:
