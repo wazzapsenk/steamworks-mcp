@@ -73,7 +73,7 @@ include = [
   "LICENSE",
   "pyproject.toml",
 ]
-exclude = ["tests/fixtures", ".steam-mcp"]
+exclude = ["tests/fixtures", ".steam-mcp", "docs/RUBRIC_PROPOSALS.md", "docs/SPIKE_RESOLVE.md"]  # local notes
 
 # PyPI shows the README as the package page: relative links become links into the repository.
 [tool.hatch.metadata.hooks.fancy-pypi-readme]
@@ -103,7 +103,6 @@ python_version = "3.11"
 strict = true
 files = ["src", "tests", "scripts"]
 plugins = ["pydantic.mypy"]
-exclude = ["^spikes/"]
 
 [[tool.mypy.overrides]]
 module = ["playwright.*"]  # the optional [browser] extra

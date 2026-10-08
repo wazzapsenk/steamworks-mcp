@@ -302,7 +302,7 @@ def test_genre_guide_overrides_thresholds() -> None:
     assert genre["long_media_count"].params == {"min": 3, "max": 10}
 
 
-# Rules accepted from docs/RUBRIC_PROPOSALS.md
+# Rules added 2026-10-03
 
 
 @pytest.mark.parametrize(

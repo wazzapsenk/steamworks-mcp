@@ -17,8 +17,8 @@ IDE extension). Free and open source ([MIT](LICENSE)).
 
 **Contents:** [How it works](#how-it-works) · [Install](#install) · [Your first conversation](#your-first-conversation) ·
 [Words you will see](#words-you-will-see) · [What it can do](#what-it-can-do) · [Skills](#skills) ·
-[Code rules](#code-rules) · [Safety](#safety-what-it-never-does) · [Known limits](#known-limits) ·
-[Advanced setup](docs/ADVANCED.md)
+[Code rules](#code-rules) · [Safety](#safety-what-it-never-does) · [Troubleshooting](#troubleshooting) ·
+[Known limits](#known-limits) · [Advanced setup](docs/ADVANCED.md)
 
 ## How it works
 
@@ -47,7 +47,7 @@ flowchart LR
 
 Everything about your game's Steam release lives in one readable file in your game folder, `steamworks.yaml`. Every
 value in it has a status: **missing**, **draft** (found or written, not yet checked by you), **approved** (you said
-it is right), or **done in Steamworks**.
+it is right), **done in Steamworks**, or **needs review** (it changed after you approved it, so you look at it again).
 
 ## Install
 
@@ -58,7 +58,7 @@ The server speaks both MCP transports:
 
 | Transport | For | Started by |
 |---|---|---|
-| **stdio** (the default) | Apps that start the server on your computer: Claude Desktop, Claude Code, Codex (app, CLI, IDE extension), Cursor | the app itself (`steamworks-mcp`); `setup` and the plugin configure it |
+| **stdio** (the default) | Apps that start the server on your computer: Claude Desktop, Claude Code, Codex (app, CLI, IDE extension) | the app itself (`steamworks-mcp`); `setup` and the plugin configure it |
 | **Streamable HTTP** | Apps that connect over the internet: ChatGPT (web and desktop app), claude.ai | `steamworks-mcp remote` (with a secure address), or `steamworks-mcp --http` (local only, [details](docs/ADVANCED.md#remote-clients-chatgpt-claudeai)) |
 
 Over HTTP every request needs sign-in (OAuth, or a bearer token); over stdio only the app that started the server
@@ -135,7 +135,8 @@ without asking; Codex asks before every tool that changes something.
 uvx steamworks-mcp doctor
 ```
 
-Other apps (Cursor and anything else that supports MCP) and connecting by hand: [docs/ADVANCED.md](docs/ADVANCED.md).
+It lists what is set up and what to fix; [Troubleshooting](#troubleshooting) covers the common problems. Other apps that
+support MCP, and connecting by hand: [docs/ADVANCED.md](docs/ADVANCED.md).
 
 ## Your first conversation
 
@@ -169,6 +170,7 @@ you approve.
 | **Code rule** | A check of your game's code against Steamworks requirements, with the fix. |
 | **steamworks.yaml** | The file in your game folder with every Steam setting of your game. Readable and editable. |
 | **Draft / approved / done** | A value found or written for you / a value you confirmed / a value Steamworks has. |
+| **Needs review** | A value that changed after you approved it (or whose source text changed); approve it again. |
 | **Release step** | Step 0-3 above (in the code: "gate"). |
 | **Dry run** | Showing what would change in Steamworks without changing anything. Every write starts with one. |
 | **BROWSER mode** | Optional: the tool fills Steamworks pages in a browser window you signed in to yourself. |
@@ -277,6 +279,21 @@ The full list with Valve's sources: [`src/steamworks_mcp/data/code_rules.yaml`](
 Every write saves a snapshot of what Steam had, reads Steam again afterwards and is logged. Details:
 [Writing to Steam](docs/ADVANCED.md#writing-to-steam-the-protocol) and
 [BROWSER mode](docs/ADVANCED.md#browser-mode-read-this-first).
+
+## Troubleshooting
+
+Start with `uvx steamworks-mcp doctor`: it shows what is set up and the command that fixes each problem.
+
+| What you see | What to do |
+|---|---|
+| The app says the server failed to start, or "spawn uvx ENOENT" | The app cannot find `uvx`. Run `uvx steamworks-mcp setup` again (it writes uvx's full path), then restart the app. |
+| "The games folder is not set yet" | Run `uvx steamworks-mcp setup` and type the folder that holds your game projects. With the Claude Code plugin, set **Games folder** in the plugin's settings. |
+| "... is outside the workspace root" | Your game is not inside the games folder. Run setup again and pick a folder that contains it. |
+| Every tool shows up twice in Claude Code | It is set up twice (the plugin and setup). `doctor` prints the command that removes the extra one. |
+| The first start of the Claude Code plugin is slow or times out | The first start installs what the server needs. Wait a minute and restart Claude Code. |
+| `remote` says the port is in use | It already runs in another terminal. Close that one, or use the port it suggests. |
+| ChatGPT or claude.ai cannot reach the server | Keep the `remote` terminal open. Its address changes each time it starts: update the connector's URL. |
+| "Run the dry run first" or "changed since the dry run" | Steam or your values changed after you saw the changes. Ask for the dry run again and check the new changes. |
 
 ## Known limits
 

@@ -120,7 +120,7 @@ rules:
     severity: warning
     rationale: '[GIF: …] placeholders must be replaced by the real clips before the page goes to review.'
     fix: Upload the GIFs in the store editor and replace each placeholder with its [img] tag.
-  # ---- accepted from docs/RUBRIC_PROPOSALS.md (maintainer's decisions of 2026-10-03; #12 was not taken)
+  # ---- added 2026-10-03
   - id: short_states_hook
     applies_to: short
     check: llm_judged
