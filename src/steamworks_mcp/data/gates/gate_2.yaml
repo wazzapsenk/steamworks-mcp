@@ -44,6 +44,22 @@ rules:
     source_doc: https://partner.steamgames.com/doc/sdk/uploading
     quote: New apps should have a Steam Pipe install directory as well as a depot
     steamworks_checklist: Your Game Build / Install Directory Set
+  - id: common_redistributables_set
+    title: Common redistributables chosen
+    description: Tick the runtimes Steam must install before the game starts (Visual C++, DirectX, …), or confirm none
+      are needed. scan_project drafts the choice from the engine and the game's binaries.
+    severity: required
+    check:
+      kind: present
+      fields:
+        - apps.main.installation.redistributables
+    execution_mode: BROWSER
+    fallback_mode: MANUAL
+    where: Edit Steamworks Settings > Installation > Redistributables
+    rule: '[none], or the needed ones (e.g. [vc2022]).'
+    source_doc: https://partner.steamgames.com/doc/features/common_redist
+    quote: check the checkboxes for the redistributables which your game or application requires.
+    steamworks_checklist: Your Game Build / Common Redistributables
   - id: depots_configured
     title: Depots configured
     description: Configure depots (rename default depot; language "All languages" and OS "All OSes" unless specific).

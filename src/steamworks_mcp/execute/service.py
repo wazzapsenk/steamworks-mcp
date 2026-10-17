@@ -427,7 +427,7 @@ class Executor:
         if unknown:
             raise ValueError(f"sections: {', '.join(importer.SECTIONS)}")
         if app != "main":  # steamworks.yaml keeps store text, achievements and leaderboards for the main game only
-            wanted = [s for s in wanted if s in ("cloud", "installation")]
+            wanted = [s for s in wanted if s in ("cloud", "installation", "redistributables")]
         found: dict[str, Any] = {}
         translations: dict[str, dict[str, str]] = {}
         done: list[str] = []
@@ -462,6 +462,8 @@ class Executor:
                         f = importer.cloud(await P.read_cloud(t, appid), app)
                     elif section == "installation":
                         f, tr, n = importer.installation(await P.read_installation(t, appid), app, source)
+                    elif section == "redistributables":
+                        f = importer.redistributables(await A.read_section(t, section, appid), app)
                     elif section == "checklist":
                         manual = {
                             r.steamworks_checklist: r.id

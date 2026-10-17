@@ -1205,6 +1205,43 @@
           },
           "title": "Launch Options",
           "type": "array"
+        },
+        "redistributables": {
+          "description": "Steam's common redistributables (Installation > Redistributables), e.g. ``[vc2022]``; ``[none]`` confirms the\ngame needs none. Drafted from the engine and the game's binaries by scan_project.",
+          "items": {
+            "enum": [
+              "none",
+              "directx",
+              "vc2022",
+              "vc2019",
+              "vc2017",
+              "vc2015",
+              "vc2013",
+              "vc2012",
+              "vc2010",
+              "vc2008",
+              "vc2005",
+              "openal",
+              "dotnet48",
+              "dotnet472",
+              "dotnet462",
+              "dotnet452",
+              "dotnet40_client",
+              "dotnet40",
+              "dotnet35_client",
+              "dotnet35",
+              "xna40",
+              "xna31",
+              "xna30",
+              "physx_8_09_04",
+              "physx_9_12_1031",
+              "physx_9_13_1220",
+              "physx_9_14_0702"
+            ],
+            "type": "string"
+          },
+          "title": "Redistributables",
+          "type": "array"
         }
       },
       "title": "Installation",

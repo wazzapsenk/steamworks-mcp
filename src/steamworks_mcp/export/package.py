@@ -171,6 +171,11 @@ def _details(rule_id: str, values: dict[str, Any], files: dict[str, str]) -> lis
         return _table(["#", "Executable", "Arguments", "OS", "Arch", "Type", "Description"], options)
     if rule_id == "install_folder_set":
         return [f"Install folder: `{g('apps.main.installation.install_folder') or '—'}`"]
+    if rule_id == "common_redistributables_set":
+        chosen = g("apps.main.installation.redistributables") or []
+        if chosen == ["none"]:
+            return ['Tick "Check this box if no redistributables are needed".']
+        return [f"Tick: {', '.join(chosen)}" if chosen else "Not decided yet: scan_project drafts it."]
     if rule_id == "depots_configured":
         rows = [
             [d.get("name"), d.get("depot_id"), d.get("os"), d.get("arch"), d.get("content_root")]

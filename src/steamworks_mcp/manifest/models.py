@@ -557,9 +557,49 @@ class LaunchOption(Model):
     owns_dlc: str = ""
 
 
+Redistributable = Literal[
+    "none",
+    "directx",
+    "vc2022",
+    "vc2019",
+    "vc2017",
+    "vc2015",
+    "vc2013",
+    "vc2012",
+    "vc2010",
+    "vc2008",
+    "vc2005",
+    "openal",
+    "dotnet48",
+    "dotnet472",
+    "dotnet462",
+    "dotnet452",
+    "dotnet40_client",
+    "dotnet40",
+    "dotnet35_client",
+    "dotnet35",
+    "xna40",
+    "xna31",
+    "xna30",
+    "physx_8_09_04",
+    "physx_9_12_1031",
+    "physx_9_13_1220",
+    "physx_9_14_0702",
+]
+
+
 class Installation(Model):
     install_folder: str | None = None
     launch_options: list[LaunchOption] = Field(default_factory=list)
+    redistributables: list[Redistributable] = Field(default_factory=list)
+    """Steam's common redistributables (Installation > Redistributables), e.g. ``[vc2022]``; ``[none]`` confirms the
+    game needs none. Drafted from the engine and the game's binaries by scan_project."""
+
+    @model_validator(mode="after")
+    def _none_alone(self) -> Installation:
+        if "none" in self.redistributables and len(self.redistributables) > 1:
+            raise ValueError("redistributables: 'none' cannot be listed together with others")
+        return self
 
 
 class Depot(Model):

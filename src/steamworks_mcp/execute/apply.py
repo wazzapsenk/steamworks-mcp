@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from steamworks_mcp.execute import depots, store_assets, store_page, store_tags, sync
+from steamworks_mcp.execute import depots, redistributables, store_assets, store_page, store_tags, sync
 from steamworks_mcp.execute.browser import partner as P
 from steamworks_mcp.execute.browser.transport import Transport
 from steamworks_mcp.manifest import paths as fp
@@ -100,6 +100,8 @@ async def read_section(t: Transport, section: str, appid: int) -> dict[str, Any]
         return await store_assets.read_section(t, appid)
     if section == "depots":
         return await depots.read_section(t, appid)
+    if section == "redistributables":
+        return await redistributables.read_section(t, appid)
     if section == "store_tags":
         return await store_tags.read_section(t, appid)
     raise ValueError(f"section must be one of {', '.join(sync.SECTIONS)}")
@@ -213,6 +215,8 @@ def _plan(
         return store_assets.plan(current["item_id"], desired, current)
     if section == "depots":
         return depots.plan(appid, desired, current, force)
+    if section == "redistributables":
+        return redistributables.plan(appid, desired, current, force)
     if section == "store_tags":
         return store_tags.plan(appid, desired, current, force)
     return sync.plan_store(appid, current["item_id"], desired, current, force)
@@ -233,6 +237,8 @@ def desired_from_values(
         return store_assets.desired(ProjectFiles(root).state_dir / "exports" / "images", values)
     if section == "depots":
         return depots.desired(values, app)
+    if section == "redistributables":
+        return redistributables.desired(values, app, current)
     if section == "store_tags":
         return store_tags.desired(values, current)
     if section == "cloud":

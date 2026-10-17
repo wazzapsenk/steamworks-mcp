@@ -11,6 +11,7 @@ from typing import Any
 
 from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.state import Evidence, is_empty
+from steamworks_mcp.scanners import redist
 from steamworks_mcp.scanners.base import Finding
 from steamworks_mcp.validate.crosschecks import scan_facts
 
@@ -65,6 +66,20 @@ def builds(values: dict[str, Any], root: Path) -> list[Finding]:
             "apps.main.builds.depots", depots, 0.5, note="Fill in each depot_id from Steamworks > SteamPipe > Depots."
         )
     ]
+
+
+def redistributables(
+    values: dict[str, Any], root: Path, source: Path | None = None, engine: str | None = None
+) -> list[Finding]:
+    """Steam's common redistributables from the engine, the native plugins in ``source`` and the Windows build
+    (each Windows depot's content_root, else Builds/Windows). Only Windows games install any."""
+    platforms = _get(values, "store.platforms") or []
+    if platforms and "windows" not in platforms:
+        return [Finding(redist.FIELD, ["none"], 0.9, note="Steam installs common redistributables on Windows only.")]
+    depots = _get(values, "apps.main.builds.depots") or []
+    windows = [d for d in depots if d.get("content_root") and d.get("os", "windows") in ("windows", "all")]
+    builds = [root / d["content_root"] for d in windows] or [root / "Builds" / OS_FOLDER["windows"]]
+    return [redist.detect(source or root, engine or _get(values, "game.engine.name"), builds)]
 
 
 def _folder_size_gb(folder: Path) -> float | None:

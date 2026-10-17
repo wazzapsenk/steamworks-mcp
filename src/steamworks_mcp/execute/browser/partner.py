@@ -490,6 +490,33 @@ async def delete_launch_option(t: Transport, appid: int, index: int) -> None:
     _checked(res, f"delete launch option {index}")
 
 
+async def read_common_redists(t: Transport, appid: int) -> dict[str, Any]:
+    """The Redistributables page (a React widget; its data sits in ``data-props``): ``{"offered": {depot id: name},
+    "checked": [depot ids], "none_needed": bool}``."""
+    res = _checked(await t.get(f"/apps/installer/{appid}"), "Redistributables page")
+    m = re.search(r'data-featuretarget="storeadmin-steamworksredist-edit"[^>]*data-props="([^"]*)"', res.text)
+    if not m:
+        raise FormatError("The Redistributables page changed (its data was not found).")
+    props = json.loads(html.unescape(m.group(1)))
+    offered = {
+        int(depot): f"{group} {version.strip()}"
+        for group, info in [*props.get("rgCommonRedistAllPlatforms", []), *props.get("rgCommonRedistWindows", [])]
+        for version, depot in (info.get("components") or {}).items()
+    }
+    checked = sorted(int(d) for d, on in props.get("rgCheckedDepots", []) if on and str(d).isdigit())
+    return {
+        "offered": offered,
+        "checked": [d for d in checked if d in offered],
+        "none_needed": bool(props.get("bNoCommonRedistsNeeded")),
+    }
+
+
+async def set_common_redists(t: Transport, appid: int, depots: dict[int, bool], none_needed: bool) -> None:
+    """What the page sends on every click: "none needed" plus every offered redistributable on or off."""
+    form = {"noneneeded": "1" if none_needed else "0", **{str(d): "1" if on else "0" for d, on in depots.items()}}
+    _ok(await t.post(f"/apps/setcommonredists/{appid}", form), "common redistributables")
+
+
 # ---------------------------------------------------------------------------------------------------- pending changes
 
 

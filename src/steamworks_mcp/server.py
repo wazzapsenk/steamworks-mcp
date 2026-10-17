@@ -49,6 +49,7 @@ from steamworks_mcp.references import reviews as review_study
 from steamworks_mcp.references.analyze import analyze
 from steamworks_mcp.references.fetch import FetchError, ReferenceFetcher
 from steamworks_mcp.scanners import run_scanners
+from steamworks_mcp.scanners.base import ScanResult
 from steamworks_mcp.spec_info import spec_info
 from steamworks_mcp.status import project as project_status
 from steamworks_mcp.status import workspace as workspace_status
@@ -235,6 +236,10 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         results = run_scanners(source)
         if not results:
             return {"scanners": [], "message": f"No Unity, Godot or Unreal project found in {source}."}
+        engine = next((f.value for r in results for f in r.findings if f.field == "game.engine.name"), None)
+        results.append(
+            ScanResult("redistributables", findings=gen_det.redistributables(project.values(), root, source, engine))
+        )
         report = proj.merge_scan(project, results)
         project.save()
         out = report.as_dict()
@@ -454,8 +459,9 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
           - "achievements": names, descriptions and icon briefs for achievements that lack them.
         Deterministic sections write drafts into steamworks.yaml directly (never over approved values):
           - "cloud" (quotas, enable), "builds" (a depot per OS; returns the SteamPipe scripts when depot ids exist),
-            "requirements" (minimum system requirements from the engine, always to review), "code" (stats,
-            leaderboards and achievements used in code).
+            "requirements" (minimum system requirements from the engine, always to review), "redistributables"
+            (Steam's common redistributables from the engine and the game's binaries; scan_project drafts them too,
+            run it again after a build), "code" (stats, leaderboards and achievements used in code).
         """
         project = open_project(path)
         values, root = project.values(), project.files.root
@@ -466,9 +472,16 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             report = proj.propose(project, findings)
             project.save()
             return present.generate({**report.as_dict(), "code_vs_manifest": code_report}, section, stage)
-        makers = {"cloud": gen_det.cloud, "builds": gen_det.builds, "requirements": gen_det.requirements}
+        makers = {
+            "cloud": gen_det.cloud,
+            "builds": gen_det.builds,
+            "requirements": gen_det.requirements,
+            "redistributables": gen_det.redistributables,
+        }
         if section not in makers:
-            raise ValueError("section: store_short, store_long, achievements, cloud, builds, requirements or code.")
+            raise ValueError(
+                "section: store_short, store_long, achievements, cloud, builds, requirements, redistributables or code."
+            )
         report = proj.propose(project, makers[section](values, root))
         project.save()
         out = report.as_dict()
@@ -823,6 +836,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         section: Literal[
             "cloud",
             "installation",
+            "redistributables",
             "achievements",
             "store_text",
             "store_page",
@@ -846,7 +860,8 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         that.
 
         Sections: "leaderboards" (Web API, publisher key), "build" (uploads the SteamPipe scripts with steamcmd),
-        and with the BROWSER mode: "cloud", "installation", "achievements" (main game), "store_text" (short and long
+        and with the BROWSER mode: "cloud", "installation", "redistributables" (Steam's common redistributables, or
+        "none needed"), "achievements" (main game), "store_text" (short and long
         description in every approved language), "store_page" (the store page form: links, support info, legal
         line, system requirements, platforms, language table, genres, categories, third-party DRM/accounts; empty
         fields never clear Steam's), "store_assets" (uploads prepare_images' capsules and library images into the
@@ -891,6 +906,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "checklist",
             "cloud",
             "installation",
+            "redistributables",
             "achievements",
             "store_text",
             "store_page",
@@ -901,7 +917,8 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         app: Literal["main", "demo", "playtest"] = "main",
     ) -> dict[str, Any]:
         """Read-only look at what Steam has now. With the publisher key: "builds" (recent builds and branches),
-        "leaderboards", "achievement_schema". With the BROWSER mode: "cloud", "installation", "achievements",
+        "leaderboards", "achievement_schema". With the BROWSER mode: "cloud", "installation", "redistributables",
+        "achievements",
         "store_text", "store_page", "store_assets" (which image slots are filled), "pending" (the unpublished changes
         the Publish tab would show), and "checklist" (the
         release checklists of the app's Steamworks landing page, each item linked to its gap_report rule).

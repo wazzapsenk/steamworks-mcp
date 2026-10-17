@@ -19,7 +19,17 @@ from steamworks_mcp.localization.store import Localization
 from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.state import State, is_empty
 
-SECTIONS = ("cloud", "installation", "achievements", "store_text", "store_page", "store_assets", "depots", "store_tags")
+SECTIONS = (
+    "cloud",
+    "installation",
+    "redistributables",
+    "achievements",
+    "store_text",
+    "store_page",
+    "store_assets",
+    "depots",
+    "store_tags",
+)
 STORE_PAGE_FIELDS = (
     "store.developers",
     "store.publishers",
@@ -69,7 +79,9 @@ def written(section: str, app: str, path: str, icons: bool = False) -> bool:
     if section == "cloud":
         return path.startswith(f"apps.{app}.cloud.")
     if section == "installation":
-        return path.startswith(f"apps.{app}.installation.")
+        return path.startswith(f"apps.{app}.installation.") and not written("redistributables", app, path)
+    if section == "redistributables":
+        return path.startswith(f"apps.{app}.installation.redistributables")
     if section == "achievements":
         m = re.match(r"achievements\.[^.]+\.([a-z_]+)$", path)
         return m is not None and m.group(1) in (

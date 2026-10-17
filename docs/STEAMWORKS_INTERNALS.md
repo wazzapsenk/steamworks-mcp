@@ -28,6 +28,7 @@ The recordings behind every statement are in [`tests/fixtures/steamworks/`](../t
 | Achievement localization | `/apps/loc/{appid}` |
 | Steam Cloud | `/apps/cloud/{appid}` |
 | Installation → General | `/apps/config/{appid}` |
+| Installation → Redistributables | `/apps/installer/{appid}` |
 | Publish | `/apps/publishing/{appid}` |
 | Pending changes & history | `/apps/history/{appid}` |
 
@@ -266,6 +267,22 @@ What it showed beyond the recordings:
     `""`, `32`, `64`.
   - Existing rows are forms `LaunchForm{i}`. Localized descriptions are hidden inputs
     `Launch_{i}_description_loc[{lang}]`. The arguments input is named `argumentsx`.
+
+## Installation → Redistributables
+
+- The page is a React widget (`data-featuretarget="storeadmin-steamworksredist-edit"`). Its `data-props` hold:
+  - `rgCommonRedistWindows` (and `rgCommonRedistAllPlatforms`, empty so far): `[name, {category, components:
+    {version: depotId}}]`. The depot ids are Valve's and the same for every app, e.g. Visual C++ 2022 `228989`,
+    DirectX June 2010 `228990`, OpenAL `229020`.
+  - `rgCheckedDepots`: `[[depotId, true], …]`, the app's own depots included; the ticked redistributables are the
+    offered ids found here.
+  - `bNoCommonRedistsNeeded`, and `nDetectedGameEngine` (`1` makes the page say the Unreal engine needs DirectX and
+    Visual C++).
+- Every click posts `POST /apps/setcommonredists/{appid}` `{noneneeded: 0|1, <depotId>: 0|1 for every offered
+  redistributable}` through `AppsAjaxRequest` (`{success, message}`), into the unpublished app data. Visual C++
+  2015 and 2017 are deprecated: the page only lets them be unticked.
+- The "Your Game Build" checklist item "Common Redistributables" wants some ticked or "none needed" confirmed
+  (seen 2026-10-17).
 
 ## What the server does *not* validate
 

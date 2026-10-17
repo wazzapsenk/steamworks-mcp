@@ -38,7 +38,7 @@ from steamworks_mcp.project import init_project
 from steamworks_mcp.server import create_server
 
 ROOT = Path(__file__).resolve().parents[2]
-SECTIONS = ("cloud", "achievements", "installation", "store_text")  # least visible first
+SECTIONS = ("cloud", "redistributables", "achievements", "installation", "store_text")  # least visible first
 MARK = "steamworks-mcp-live-test"
 ACH = "SWMCP_LIVE_TEST"
 
@@ -138,6 +138,8 @@ def summary(section: str, data: dict[str, Any]) -> dict[str, Any]:
         }
     if section == "installation":
         return {"launch_options": len(data["launch_options"])}
+    if section == "redistributables":
+        return {"selected": data["selected"], "none_needed": data["none_needed"]}
     return {
         "languages_with_text": sorted(
             k for k, v in data["languages"].items() if isinstance(v, dict) and any(v.values())
@@ -175,6 +177,13 @@ async def section_test(run: Run, section: str, current: dict[str, Any]) -> None:
             },
         ]
         await run.set({"apps.main.installation.launch_options": options})
+    elif section == "redistributables":
+        base = ["none"] if current["none_needed"] else current["selected"]
+        if base:
+            await run.set({"apps.main.installation.redistributables": base})
+            await mapping_check(run, section)
+        test = [n for n in base if n != "none" and n != "openal"]
+        await run.set({"apps.main.installation.redistributables": test if "openal" in base else [*test, "openal"]})
     elif section == "achievements":
         icon = run.out / "project" / "icons" / "live_test.png"
         icon.parent.mkdir(parents=True, exist_ok=True)
@@ -219,7 +228,7 @@ async def section_test(run: Run, section: str, current: dict[str, Any]) -> None:
     if section == "store_text":
         await public_check(run)
     if section != "store_text":  # the store page is not part of the Publish page's technical diff
-        needle = ACH if section == "achievements" else MARK
+        needle = {"achievements": ACH, "redistributables": "229020"}.get(section, MARK)  # 229020: OpenAL
         pending = await run.call("steamworks_inspect", path="project", what="pending")
         added = "".join(a for v in pending["sections"].values() for a in v["added"])
         hidden = [k for k, v in pending["sections"].items() if v["new"]]

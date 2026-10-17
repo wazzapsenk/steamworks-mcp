@@ -18,7 +18,7 @@ from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.state import is_empty, value_hash
 from steamworks_mcp.project import Project
 
-SECTIONS = ("store_text", "achievements", "cloud", "installation", "leaderboards", "checklist")
+SECTIONS = ("store_text", "achievements", "cloud", "installation", "redistributables", "leaderboards", "checklist")
 BACK_CLOUD_OS = {v: k for k, v in sync.CLOUD_OS.items()}
 BACK_LAUNCH_OS = {v: k for k, v in sync.LAUNCH_OS.items()}
 BACK_ARCH = {v: k for k, v in sync.ARCH.items()}
@@ -154,6 +154,13 @@ def installation(current: dict[str, Any], app: str, source: str) -> tuple[Found,
     if rows:
         found[f"{base}.launch_options"] = rows
     return found, translations, notes
+
+
+def redistributables(current: dict[str, Any], app: str) -> Found:
+    """``current`` as :func:`steamworks_mcp.execute.redistributables.read_section` reads it."""
+    value = ["none"] if current["none_needed"] else current["selected"]
+    known = [n for n in value if not n.startswith("depot_")]
+    return {f"apps.{app}.installation.redistributables": known} if known else {}
 
 
 def leaderboards(boards: list[dict[str, Any]]) -> tuple[Found, list[str]]:

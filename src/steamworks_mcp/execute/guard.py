@@ -29,7 +29,7 @@ FORBIDDEN = re.compile(
 )
 ALLOWED_WRITES = [
     re.compile(
-        r"^/apps/(newachievement|saveachievement|setufsparameters|setautocloudpath|setautocloudoverride|setappinstallfolder|setlaunchoption)/\d+$"
+        r"^/apps/(newachievement|saveachievement|setufsparameters|setautocloudpath|setautocloudoverride|setappinstallfolder|setlaunchoption|setcommonredists)/\d+$"
     ),
     re.compile(r"^/apps/deleteachievement/\d+/\d+/\d+$"),
     re.compile(r"^/images/uploadachievement$"),

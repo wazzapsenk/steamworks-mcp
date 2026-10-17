@@ -9,7 +9,7 @@ It never publishes anything: you press Publish.
 Works with **Claude** (Desktop, Code and claude.ai), **ChatGPT** (web and desktop app) and **Codex** (app, CLI and
 IDE extension). Free and open source ([MIT](LICENSE)).
 
-**37 tools · 36 skills · 24 code rules · 124 release checks · 114 store-text rules · Unity, Godot and Unreal**
+**37 tools · 36 skills · 24 code rules · 125 release checks · 114 store-text rules · Unity, Godot and Unreal**
 
 <!-- mcp-name: io.github.wazzapsenk/steamworks-mcp -->
 
