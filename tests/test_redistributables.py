@@ -81,7 +81,7 @@ def test_model_keeps_none_alone() -> None:
     with pytest.raises(ValidationError):
         Installation(redistributables=["none", "vc2022"])
     with pytest.raises(ValidationError):
-        Installation(redistributables=["vc2099"])  # type: ignore[list-item]
+        Installation(redistributables=["vc2099"])
 
 
 def page(checked: list[Any], none_needed: bool = False) -> str:

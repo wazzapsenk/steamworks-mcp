@@ -178,12 +178,12 @@ async def section_test(run: Run, section: str, current: dict[str, Any]) -> None:
         ]
         await run.set({"apps.main.installation.launch_options": options})
     elif section == "redistributables":
-        base = ["none"] if current["none_needed"] else current["selected"]
-        if base:
-            await run.set({"apps.main.installation.redistributables": base})
+        chosen: list[str] = ["none"] if current["none_needed"] else current["selected"]
+        if chosen:
+            await run.set({"apps.main.installation.redistributables": chosen})
             await mapping_check(run, section)
-        test = [n for n in base if n != "none" and n != "openal"]
-        await run.set({"apps.main.installation.redistributables": test if "openal" in base else [*test, "openal"]})
+        rest = [n for n in chosen if n not in ("none", "openal")]
+        await run.set({"apps.main.installation.redistributables": rest if "openal" in chosen else [*rest, "openal"]})
     elif section == "achievements":
         icon = run.out / "project" / "icons" / "live_test.png"
         icon.parent.mkdir(parents=True, exist_ok=True)
