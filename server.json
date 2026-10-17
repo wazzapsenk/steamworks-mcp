@@ -8,12 +8,12 @@
     "source": "github"
   },
   "websiteUrl": "https://burakkaan.dev/steamworks-mcp",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "steamworks-mcp",
-      "version": "0.3.2",
+      "version": "0.4.0",
       "transport": {
         "type": "stdio"
       },
