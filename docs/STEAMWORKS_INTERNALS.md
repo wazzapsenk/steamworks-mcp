@@ -142,7 +142,11 @@ What it showed beyond the recordings:
   - The Controller and Accessibility wizards set categories and also record that the wizard was finished.
   - The release date has its own endpoint (`/apprelease/ajaxupdatereleaserequest/{appid}`).
 - **Graphical assets.** The Graphical Assets tab uploads each image as one multipart part to
-  `POST /admin/game/save/{storeItemId}?activetab=tab_graphicalassets&json=1`, together with `sessionid`.
+  `POST /admin/game/save/{storeItemId}?activetab=tab_graphicalassets&json=1&base_assets=1`, together with `sessionid`.
+  - Since October 2026 the tab first asks which asset set to edit: the long-term base set (`&base_assets=1`) or a
+    temporary override for an event (`&alt_asset_index=<n>`, up to 20, with start and end times). Only the header,
+    small, main and vertical capsules can be overridden; an override's parts read `…_alt_assets_<postfix>|alt_assets|<n>|…`
+    instead of `…|assets|…`. The tool writes the base set only and leaves overrides to the user.
   - The part's name says the slot. For localized slots the language follows:
     - `header_image|header|assets|header_image|image|english`
     - `small_capsule|capsule|…`, `main_capsule|capsule_616x353|…`, `hero_capsule|hero_capsule|…` (the vertical

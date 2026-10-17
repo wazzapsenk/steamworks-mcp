@@ -1,9 +1,10 @@
 """Store and library images (Edit Store Page > Graphical Assets), uploaded from prepare_images' output.
 
 The page posts each image as one multipart part to ``/admin/game/save/<storeItemId>?activetab=tab_graphicalassets
-&json=1``; the part's name says the slot (and, for localized slots, the language), e.g.
+&json=1&base_assets=1``; the part's name says the slot (and, for localized slots, the language), e.g.
 ``header_image|header|assets|header_image|image|english``. What Steam has is in the store item's
-``serialized_app_data.assets``. Uploads land in the unpublished draft.
+``serialized_app_data.assets``. Uploads land in the unpublished draft, in the base asset set (``&base_assets=1``),
+never in a temporary event override.
 
 Only empty slots are filled: an image Steam already has is never replaced by this tool, and the tool has no way to
 remove an uploaded image, so there is nothing to restore (the user deletes images on the Graphical Assets tab).

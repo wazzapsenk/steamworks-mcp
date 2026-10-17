@@ -545,7 +545,7 @@ async def test_store_assets_fill_only_empty_slots(tmp_path: Path) -> None:
 
     for op in ops:
         await op.run(Recorder())  # type: ignore[arg-type]
-    assert [p for p, _ in sent] == ["/admin/game/save/2000000?activetab=tab_graphicalassets&json=1"] * 2
+    assert [p for p, _ in sent] == ["/admin/game/save/2000000?activetab=tab_graphicalassets&json=1&base_assets=1"] * 2
     assert list(sent[0][1]) == ["page_background|page_bg_raw|assets|page_background_raw"]  # not localized
     assert sent[0][1]["page_background|page_bg_raw|assets|page_background_raw"][2] == "image/png"
     assert list(sent[1][1]) == ["library_hero|library_hero|assets|library_hero|image|english"]

@@ -109,10 +109,13 @@ async def save_store_page(t: Transport, item_id: str, changes: dict[str, str]) -
 
 
 async def upload_store_image(t: Transport, item_id: str, part: str, file_name: str, data: bytes, mime: str) -> None:
-    """One image for one Graphical Assets slot, as the page's own upload posts it (into the unpublished draft)."""
+    """One image for one Graphical Assets slot, as the page's own upload posts it (into the unpublished draft).
+    ``base_assets=1``: into the long-term base set, never into a temporary event override."""
     res = _checked(
         await t.post_multipart(
-            f"/admin/game/save/{item_id}?activetab=tab_graphicalassets&json=1", {}, {part: (file_name, data, mime)}
+            f"/admin/game/save/{item_id}?activetab=tab_graphicalassets&json=1&base_assets=1",
+            {},
+            {part: (file_name, data, mime)},
         ),
         "image upload",
     )
