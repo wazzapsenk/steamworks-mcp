@@ -9,7 +9,7 @@ It never publishes anything: you press Publish.
 Works with **Claude** (Desktop, Code and claude.ai), **ChatGPT** (web and desktop app) and **Codex** (app, CLI and
 IDE extension). Free and open source ([MIT](LICENSE)).
 
-**37 tools · 36 skills · 24 code rules · 125 release checks · 114 store-text rules · Unity, Godot and Unreal**
+**38 tools · 38 skills · 24 code rules · 125 release checks · 114 store-text rules · Unity, Godot and Unreal**
 
 <!-- mcp-name: io.github.wazzapsenk/steamworks-mcp -->
 
@@ -223,8 +223,9 @@ you approve.
 | What | Tools |
 |---|---|
 | Every file plus a checklist that says which Steamworks page and field it goes to | `export_package` |
-| Apply approved values (dry run first): Steam Cloud, installation, achievements, store text and page, images, depots, tags, leaderboards, builds | `apply` |
+| Apply approved values (dry run first): Steam Cloud, installation, redistributables, achievements, store text and page, images, depots, tags, leaderboards, builds | `apply` |
 | See what Steamworks has now; set a build live on a beta branch | `steamworks_inspect`, `set_build_live` |
+| Check the store page or the build setup in Steamworks field by field: what is missing, what does not add up | `steamworks_check` |
 | BROWSER mode: open Steamworks, undo a write | `steamworks_open`, `restore_snapshot` |
 
 How each area gets done in Steamworks (Web API, BROWSER mode, a file to upload, or a manual step) and how well it is
@@ -232,11 +233,11 @@ verified: [docs/CAPABILITIES.md](docs/CAPABILITIES.md).
 
 ## Skills
 
-36 recipes for your assistant. In Claude Code with the plugin they show as `/steamworks:<name>`.
+38 recipes for your assistant. In Claude Code with the plugin they show as `/steamworks:<name>`.
 
 | Area | Skills |
 |---|---|
-| Start | `steamworks-getting-started` (first steps, in plain words) · `steamworks-release` (the whole road) · `steamworks-review-gate` (everything open before one release step) |
+| Start | `steamworks-getting-started` (first steps, in plain words) · `steamworks-release` (the whole road) · `steamworks-review-gate` (everything open before one release step) · `steamworks-check-store` · `steamworks-check-build` (what Steamworks really has, field by field) |
 | Store page | `steamworks-store-page` · `steamworks-store-assets` (images, screenshots, trailers) · `steamworks-content-survey` (mature content, AI disclosure) · `steamworks-localize` |
 | Market | `steamworks-market-research` · `steamworks-store-lookup` · `steamworks-compare-games` · `steamworks-pricing` · `steamworks-sales-estimate` · `steamworks-review-analysis` · `steamworks-sales-calendar` (release date, Next Fest, sales) |
 | Game code | `steamworks-sdk-integration` · `steamworks-code-check` · `steamworks-achievements` · `steamworks-cloud-saves` · `steamworks-leaderboards` · `steamworks-input` (controllers, Steam Input) · `steamworks-multiplayer` · `steamworks-social` (Rich Presence, overlay) · `steamworks-inventory` (items, in-game purchases) · `steamworks-workshop` · `steamworks-anticheat` · `steamworks-api-reference` |

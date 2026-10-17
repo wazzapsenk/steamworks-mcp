@@ -925,6 +925,25 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         "snapshots" lists the snapshots saved before writes (local)."""
         return present.steam_read(await execu.inspect(open_project(path), what, app), what)
 
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True))
+    @user_errors
+    async def steamworks_check(
+        path: str, area: Literal["store", "build"], app: Literal["main", "demo", "playtest"] = "main"
+    ) -> dict[str, Any]:
+        """Check what Steamworks really has, field by field (BROWSER mode, read-only), not its checklist table:
+        whether each value is filled the way Steam's review needs, and whether the values agree with each other,
+        with steamworks.yaml and with the game's build folder.
+
+        area "store": texts and their length, languages vs translations, platforms vs system requirements and
+        depots, genre, categories vs achievements and Steam Cloud, developer, publisher, support, release date,
+        image slots, screenshots and their all-ages marks, tags. Returns `for_you_to_judge` (the texts) for you to
+        assess too. area "build": depots vs platforms, uploaded builds (publisher key), launch options vs the build
+        folder (path, OS, 32/64-bit), install folder, redistributables vs the build's DLLs, steam_api in the build,
+        Steam Cloud, achievement icons and texts, unpublished changes.
+
+        Each issue: severity (missing, inconsistent, check), area, what, fix and where in Steamworks."""
+        return present.steamworks_check(await execu.check(open_project(path), area, app))
+
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True))
     @user_errors
     async def import_from_steamworks(
@@ -1133,6 +1152,37 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             f"Review release gate {gate} for the game in `{path}`: call gap_report(gate={gate}) and validate, then "
             "explain what blocks the gate, what I have to approve, which steps are manual (with the Steamworks page "
             "for each) and what can be applied. Suggest the next three actions."
+        )
+
+    @server.prompt(title="Check the store page")
+    def check_store(path: str) -> str:
+        """Go through the Steamworks store page field by field and report what is missing or does not add up."""
+        return (
+            f"Check the Steam store page of the game in `{path}` as it is in Steamworks now, not by its checklist.\n"
+            "1. Call steamworks_check(area='store'). If Steamworks is not open or signed in, call steamworks_open "
+            "and let me sign in, then call it again.\n"
+            "2. Judge `for_you_to_judge` yourself: does the short description say what the player does and why it "
+            "is fun, in plain words? Does About match it, the tags and the genre? Is anything promised that the "
+            "game (steamworks.yaml) does not have? Run validate(section='store') for Valve's text rules.\n"
+            "3. Give me one list, most serious first: missing, then inconsistent, then worth checking, then your own "
+            "findings on the texts. For each: what, why it matters, and where to fix it (the tool's `where`, or the "
+            "tool call that fixes it). Skip what is fine.\n"
+            "Change nothing: offer the fixes and wait for my OK (apply always starts with a dry run)."
+        )
+
+    @server.prompt(title="Check the build")
+    def check_build(path: str) -> str:
+        """Check the build setup in Steamworks and the build folder and report what is missing or does not add up."""
+        return (
+            f"Check the Steam build setup of the game in `{path}` as it is in Steamworks now, not by its checklist.\n"
+            "1. Call steamworks_check(area='build'). If Steamworks is not open or signed in, call steamworks_open "
+            "and let me sign in, then call it again.\n"
+            "2. Call check_code for the game's code (Steam init, app id, achievement and stat names, steam_appid.txt) "
+            "and gap_report(gate=2) for what steamworks.yaml still lacks.\n"
+            "3. Give me one list, most serious first: missing, then inconsistent, then worth checking. For each: "
+            "what, why it matters for the build review, and where to fix it. Say what could not be checked "
+            "(`not_checked`) and how to make it checkable.\n"
+            "Change nothing: offer the fixes and wait for my OK (apply always starts with a dry run)."
         )
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=True))

@@ -646,6 +646,20 @@ def steam_read(data: dict[str, Any], what: str) -> dict[str, Any]:
     return result(data, f"Read {what.replace('_', ' ')} from Steamworks; nothing was changed.")
 
 
+def steamworks_check(data: dict[str, Any]) -> dict[str, Any]:
+    issues, counts = data.get("issues") or [], data.get("counts") or {}
+    label = {"missing": "Missing", "inconsistent": "Inconsistent", "check": "To check"}
+    rows = [[label[i["severity"]], i["area"], i["what"], i["fix"], i["where"]] for i in issues]
+    shown = ", ".join(f"{n} {label[s].lower()}" for s, n in counts.items() if n)
+    summary = (
+        f"The {data['area']} in Steamworks: {shown}." if issues else f"The {data['area']} in Steamworks looks complete."
+    )
+    body = table(["", "Area", "What", "Fix", "Where"], rows, width=120)
+    if data.get("not_checked"):
+        body += "\n\nNot checked: " + "; ".join(data["not_checked"])
+    return result(data, summary, outcome="ok", display=body)
+
+
 def steamworks_open(data: dict[str, Any]) -> dict[str, Any]:
     if data.get("consent_required"):
         return result(

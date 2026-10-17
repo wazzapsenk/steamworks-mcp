@@ -30,6 +30,8 @@ NAMES = {
     "localize_everything": "steamworks-localize",
     "design_achievements": "steamworks-achievements",
     "review_gate": "steamworks-review-gate",
+    "check_store": "steamworks-check-store",
+    "check_build": "steamworks-check-build",
 }
 """Prompt name -> skill name. Every prompt needs one (the tests check it)."""
 HANDWRITTEN = {"write_store_page"}

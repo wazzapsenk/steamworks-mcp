@@ -16,7 +16,7 @@ import anyio
 
 from steamworks_mcp.config import Config
 from steamworks_mcp.execute import apply as A
-from steamworks_mcp.execute import importer, sync
+from steamworks_mcp.execute import checks, importer, redistributables, store_tags, sync
 from steamworks_mcp.execute.api import PartnerApi, SteamApiError, plan_leaderboards, run_steamcmd
 from steamworks_mcp.execute.browser import partner as P
 from steamworks_mcp.execute.browser.transport import NotLoggedInError, Transport
@@ -557,6 +557,76 @@ class Executor:
             names = data["names"]
             data = {k: [names.get(i, i) for i in data[k]] for k in ("applied", "community")}
         return {"appid": appid, "steamworks": data}
+
+    async def check(self, project: Project, area: str, app: str) -> dict[str, Any]:
+        """check_store / check_build: every field Steamworks has for the area, checked for sense (read-only)."""
+        if area not in ("store", "build"):
+            raise ValueError("area must be store or build")
+        values = project.values()
+        appid = appid_of(values, app)
+        t = await self.transport(f"steamworks_check({area})")
+        not_checked: list[str] = []
+        try:
+            item_id = await P.store_item_id(t, appid)
+            item = P.serialized_app_data((await P.read_store_form(t, item_id))[1])
+        except P.FormatError as exc:
+            if area == "store":
+                raise
+            item_id, item = None, {}
+            not_checked.append(f"platforms on the store page: {exc}")
+        platforms = [
+            checks.PLATFORMS[k]
+            for k, v in (item.get("platforms") or {}).items()
+            if k in checks.PLATFORMS and checks._on(v)
+        ]
+        depots_now = await P.read_depots(t, appid)
+        cloud = await P.read_cloud(t, appid)
+        achievements = (await P.read_achievements(t, appid))["achievements"]
+        judge: dict[str, Any] = {}
+        if area == "store":
+            assert item_id is not None
+            loc = await P.read_store_localization(t, item_id)
+            tags = await store_tags.read_section(t, appid)
+            issues = checks.store_issues(item, loc, tags["applied"], len(achievements), cloud, depots_now, values)
+            source = str(values.get("source_language") or "english")
+            own = (loc.get("languages") or {}).get(source) or {}
+            judge = {
+                "short_description": own.get(checks.SHORT, ""),
+                "about": str(own.get(checks.ABOUT, ""))[:4000],
+                "tags": [tags["names"].get(i, i) for i in tags["applied"]],
+                "genre_ids": (item.get("classification") or {}).get("genres") or [],
+                "game": {k: fp.get(values, f"game.{k}") for k in ("name", "pitch", "genres")},
+            }
+        else:
+            builds = None
+            if self.config.publisher_key:
+                builds = await anyio.to_thread.run_sync(lambda: or_error(lambda: self.api().builds(appid)))
+            else:
+                not_checked.append("uploaded builds (needs STEAMWORKS_PUBLISHER_KEY)")
+            issues = checks.build_issues(
+                platforms,
+                depots_now,
+                await P.read_installation(t, appid),
+                await redistributables.read_section(t, appid),
+                cloud,
+                achievements,
+                builds,
+                (await P.pending_changes(t, appid))["changed_sections"],
+                values,
+                project.files.root,
+            )
+            if not any(f.is_dir() for f in checks.build_folders(values, project.files.root).values()):
+                not_checked.append("the build folder (none found; set apps.main.builds.depots.*.content_root)")
+        order = {"missing": 0, "inconsistent": 1, "check": 2}
+        issues.sort(key=lambda i: order[i["severity"]])
+        return {
+            "appid": appid,
+            "area": area,
+            "issues": issues,
+            "counts": {s: sum(i["severity"] == s for i in issues) for s in order},
+            "not_checked": not_checked,
+            **({"for_you_to_judge": judge} if judge else {}),
+        }
 
 
 def list_snapshots(project: Project) -> list[str]:
