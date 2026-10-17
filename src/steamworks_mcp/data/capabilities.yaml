@@ -134,12 +134,12 @@ areas:
   - id: redistributables
     name: Common redistributables (Visual C++, DirectX, …)
     api: {status: never}
-    browser: {status: unverified, how: "apps/setcommonredists, apply(section='redistributables')"}
-    default_mode: MANUAL
+    browser: {status: verified, how: "apps/setcommonredists, apply(section='redistributables')"}
+    default_mode: BROWSER
+    fallback_mode: MANUAL
     notes: >-
       scan_project drafts the choice from the engine and the import tables of the game's native plugins and Windows
-      build. The page and its save request were read from Steamworks; until the write is recorded live, the default
-      is to tick the boxes by hand (export_package lists them).
+      build. A redistributable was ticked, read back, listed as an unpublished change and restored live.
   - id: depots
     name: Depots, OS support, packages
     api: {status: never}

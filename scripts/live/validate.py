@@ -238,6 +238,7 @@ async def section_test(run: Run, section: str, current: dict[str, Any]) -> None:
             changed_sections=pending["changed_sections"],
             note=None if needle in added else f"new section(s) {hidden}: Steamworks does not show their content",
         )
+    await run.call("restore_snapshot", path="project", snapshot=sid)  # writes must match a dry run
     restored = await run.call("restore_snapshot", path="project", snapshot=sid, dry_run=False, user_confirmed=True)
     run.log(
         f"{section}: restore",

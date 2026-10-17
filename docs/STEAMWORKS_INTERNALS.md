@@ -280,7 +280,8 @@ What it showed beyond the recordings:
     Visual C++).
 - Every click posts `POST /apps/setcommonredists/{appid}` `{noneneeded: 0|1, <depotId>: 0|1 for every offered
   redistributable}` through `AppsAjaxRequest` (`{success, message}`), into the unpublished app data. Visual C++
-  2015 and 2017 are deprecated: the page only lets them be unticked.
+  2015 and 2017 are deprecated: the page only lets them be unticked. Recorded live (2026-10-17): ticking OpenAL
+  showed up in the Publish diff under the "depots" section, and writing the old values back left no change.
 - The "Your Game Build" checklist item "Common Redistributables" wants some ticked or "none needed" confirmed
   (seen 2026-10-17).
 
