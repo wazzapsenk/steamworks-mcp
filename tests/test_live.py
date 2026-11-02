@@ -84,11 +84,11 @@ def fetcher(tmp_path: Path, requests: list[httpx.Request]) -> ReferenceFetcher:
             return httpx.Response(200, json=out)
         if "appdetails" in url:
             return httpx.Response(200, json={q["appids"]: {"success": True, "data": DETAILS[int(q["appids"])]}})
-        if "appreviews" in url:
-            appid = int(urlparse(url).path.rsplit("/", 1)[1])
+        if "IUserReviewsService/GetAppReviews" in url:
+            q = json.loads(q["input_json"])
+            appid = q["appid"]
             pos, neg = REVIEWS[appid]
             body: dict[str, Any] = {
-                "success": 1,
                 "query_summary": {
                     "review_score_desc": "Very Positive",
                     "total_positive": pos,
@@ -96,21 +96,21 @@ def fetcher(tmp_path: Path, requests: list[httpx.Request]) -> ReferenceFetcher:
                     "total_reviews": pos + neg,
                 },
             }
-            if q.get("num_per_page") != "0":
-                kind = q["review_type"]
+            if "review_type" in q:
+                kind = {1: "positive", 2: "negative"}[q["review_type"]]
                 body["reviews"] = [
                     {
                         "recommendationid": str(i),
-                        "author": {"steamid": "76561190000000001", "personaname": "someone", "playtime_at_review": 600},
+                        "author": {"steamid": "76561190000000001", "playtime_at_review": 600},
                         "voted_up": kind == "positive",
                         "votes_up": 3,
                         "timestamp_created": 1700000000,
                         "language": "english",
                         "review": f"{TEXTS[kind]} ({i})",
                     }
-                    for i in range(int(q["num_per_page"]))
+                    for i in range(q["num_per_page"])
                 ]
-            return httpx.Response(200, json=body)
+            return httpx.Response(200, json={"response": body})
         if "GetNumberOfCurrentPlayers" in url:
             return httpx.Response(200, json={"response": {"player_count": PLAYERS[int(q["appid"])], "result": 1}})
         return httpx.Response(404)

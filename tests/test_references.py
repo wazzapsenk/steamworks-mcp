@@ -134,6 +134,13 @@ def test_unavailable_app_is_an_error(tmp_path: Path) -> None:
         f.appdetails(1000000)
 
 
+def test_a_web_page_instead_of_data_is_a_fetch_error(tmp_path: Path) -> None:
+    page = httpx.Response(200, html="<!DOCTYPE html><html></html>")  # what a retired endpoint answers
+    f = fetcher(tmp_path, [], {"GetAppReviews": [page]})
+    with pytest.raises(FetchError, match="web page instead of data"):
+        f.review_summary(1000000)
+
+
 def test_rate_limit_retries_with_retry_after(tmp_path: Path) -> None:
     calls: list[httpx.Request] = []
     responses = {

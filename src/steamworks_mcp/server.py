@@ -82,7 +82,11 @@ HINTS: tuple[tuple[type[BaseException], str], ...] = (
     ),
     (FieldPathError, 'Field paths look like store.short_description; get_spec_info("schema") lists them all.'),
     (TransitionError, "Show the value to the user and approve it first; only approved values can be marked done."),
-    (FetchError, "Steam's public store did not answer; try again in a minute. Everything offline still works."),
+    (
+        FetchError,
+        "Steam's public store did not answer as expected. If the message says Steam may have changed something, tell "
+        "the user; otherwise try again in a minute. Everything offline still works.",
+    ),
     (NotLoggedInError, "Call steamworks_open and let the user sign in to Steamworks, then call again."),
     (FormatError, "Steamworks changed one of its pages, so nothing was written. Tell the user; do it by hand for now."),
     (GuardError, "This request is outside what the tool may do in Steamworks; do it by hand."),

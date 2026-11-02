@@ -11,8 +11,8 @@ Sources (no key needed unless noted):
 * ``store.steampowered.com/tagdata/populartags`` - the store tags with their ids.
 * ``store.steampowered.com/api/storesearch`` - games by name.
 * ``ISteamUserStats/GetNumberOfCurrentPlayers`` - how many people play a game right now.
-* ``store.steampowered.com/appreviews/<appid>`` - the review score and totals, and review texts. Only the text, the
-  vote, the playtime at review and the date are kept; nothing about the reviewer.
+* ``IUserReviewsService/GetAppReviews`` - the review score and totals, and review texts. Only the text, the vote, the
+  playtime at review and the date are kept; nothing about the reviewer.
 * ``appdetails?filters=price_overview&cc=<country>`` - prices in a country's store, for many games at once.
 
 Live numbers (players, reviews, prices) are cached for hours, not days: see :data:`FRESH`.
@@ -44,7 +44,11 @@ WEB_API = "https://api.steampowered.com"
 COMMUNITY = "https://steamcommunity.com/stats/{appid}/achievements/"
 USER_AGENT = "steamworks-mcp (reference research; https://github.com/wazzapsenk/steamworks-mcp)"
 STORE_FIND = "https://store.steampowered.com/api/storesearch/"
-REVIEWS = "https://store.steampowered.com/appreviews/{appid}"
+REVIEWS = f"{WEB_API}/IUserReviewsService/GetAppReviews/v1/"
+"""Replaced ``store.steampowered.com/appreviews/<appid>`` on 2026-10-22; works without a key. Its filters are enums."""
+FILTER_HELPFUL = 0
+PURCHASE_ALL = 1
+REVIEW_TYPES = {"positive": 1, "negative": 2}
 FRESH = {
     "players": dt.timedelta(hours=1),
     "review_summary": dt.timedelta(hours=12),
@@ -151,7 +155,7 @@ class ReferenceFetcher:
         res = self._get(STORE_API, params)
         if res.status_code != 200:
             raise FetchError(f"appdetails {appid}: HTTP {res.status_code}")
-        entry = res.json().get(str(appid)) or {}
+        entry = _json(res).get(str(appid)) or {}
         if not entry.get("success"):
             raise FetchError(f"appdetails {appid}: not available (unreleased, region-locked or wrong app id)")
         return self._store(appid, "appdetails", entry["data"], str(res.url))
@@ -165,7 +169,7 @@ class ReferenceFetcher:
             return self._store(appid, "achievement_percentages", [], url)  # no public achievements
         if res.status_code != 200:
             raise FetchError(f"achievement percentages {appid}: HTTP {res.status_code}")
-        rows = res.json().get("achievementpercentages", {}).get("achievements", [])
+        rows = _json(res).get("achievementpercentages", {}).get("achievements", [])
         data = [{"name": r["name"], "percent": float(r["percent"])} for r in rows]
         return self._store(appid, "achievement_percentages", data, url)
 
@@ -189,7 +193,7 @@ class ReferenceFetcher:
         res = self._get(url, {"appid": appid, "key": self.web_api_key, "l": "english"})
         if res.status_code != 200:
             raise FetchError(f"schema {appid}: HTTP {res.status_code}")
-        return self._store(appid, "schema", res.json().get("game", {}), self._redact(str(res.url)))
+        return self._store(appid, "schema", _json(res).get("game", {}), self._redact(str(res.url)))
 
     def popular_new_releases(self, count: int = 100) -> list[int]:
         """App ids on the store's "Popular New Releases" list, newest first (not cached: it changes every day)."""
@@ -210,7 +214,7 @@ class ReferenceFetcher:
         res = self._get(STORE_SEARCH, params)
         if res.status_code != 200:
             raise FetchError(f"store search ({list_filter}): HTTP {res.status_code}")
-        ids = [_APP_IN_URL.search(str(item.get("logo", ""))) for item in res.json().get("items", [])]
+        ids = [_APP_IN_URL.search(str(item.get("logo", ""))) for item in _json(res).get("items", [])]
         return list(dict.fromkeys(int(m.group(1)) for m in ids if m))  # bundles and packages have no /apps/ url
 
     def store_tags(self, *, refresh: bool = False) -> dict[str, int]:
@@ -223,7 +227,7 @@ class ReferenceFetcher:
         res = self._get(STORE_TAGS, {})
         if res.status_code != 200:
             raise FetchError(f"store tags: HTTP {res.status_code}")
-        data = {str(t["name"]).lower(): int(t["tagid"]) for t in res.json() if t.get("name") and t.get("tagid")}
+        data = {str(t["name"]).lower(): int(t["tagid"]) for t in _json(res) if t.get("name") and t.get("tagid")}
         now = dt.datetime.now(dt.UTC).replace(microsecond=0)
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(json.dumps({"fetched_at": now.isoformat(), "source": STORE_TAGS, "data": data}), "utf-8")
@@ -238,7 +242,7 @@ class ReferenceFetcher:
             raise FetchError(f"store search {term!r}: HTTP {res.status_code}")
         return [
             {"appid": int(i["id"]), "name": str(i.get("name") or ""), "price": i.get("price")}
-            for i in res.json().get("items") or []
+            for i in _json(res).get("items") or []
             if i.get("type") == "app" and i.get("id")
         ]
 
@@ -251,7 +255,7 @@ class ReferenceFetcher:
             return self._store(appid, "players", None, url)  # unreleased, or no player data
         if res.status_code != 200:
             raise FetchError(f"current players {appid}: HTTP {res.status_code}")
-        response = res.json().get("response") or {}
+        response = _json(res).get("response") or {}
         count = response.get("player_count") if response.get("result") == 1 else None
         return self._store(appid, "players", count, url)
 
@@ -260,12 +264,12 @@ class ReferenceFetcher:
         total_reviews."""
         if hit := self._cached(appid, "review_summary", refresh, FRESH["review_summary"]):
             return hit
-        url = REVIEWS.format(appid=appid)
-        params = {"json": 1, "language": "all", "purchase_type": "all", "num_per_page": 0, "filter": "all"}
-        res = self._get(url, params)
+        url = f"{REVIEWS}?appid={appid}"
+        query = {"appid": appid, "languages": ["all"], "purchase_type": PURCHASE_ALL, "num_per_page": 1}
+        res = self._get(REVIEWS, {"input_json": json.dumps(query)})
         if res.status_code != 200:
             raise FetchError(f"review summary {appid}: HTTP {res.status_code}")
-        summary = res.json().get("query_summary") or {}
+        summary = (_json(res).get("response") or {}).get("query_summary") or {}
         keep = ("review_score", "review_score_desc", "total_positive", "total_negative", "total_reviews")
         return self._store(appid, "review_summary", {k: summary.get(k) for k in keep}, url)
 
@@ -280,21 +284,21 @@ class ReferenceFetcher:
         if hit and (count is None or len(hit.data) >= count):
             return Cached(hit.data[:count], hit.fetched_at, hit.source)
         count = count or 20
-        url = REVIEWS.format(appid=appid)
-        params = {
-            "json": 1,
-            "language": "english",
-            "purchase_type": "all",
-            "filter": "all",
-            "review_type": kind,
+        url = f"{REVIEWS}?appid={appid}"
+        query = {
+            "appid": appid,
+            "languages": ["english"],
+            "purchase_type": PURCHASE_ALL,
+            "filter": FILTER_HELPFUL,
+            "review_type": REVIEW_TYPES[kind],
             "num_per_page": min(100, max(1, count)),
             "cursor": "*",
         }
-        res = self._get(url, params)
+        res = self._get(REVIEWS, {"input_json": json.dumps(query)})
         if res.status_code != 200:
             raise FetchError(f"reviews {appid}: HTTP {res.status_code}")
         rows = []
-        for r in res.json().get("reviews") or []:
+        for r in (_json(res).get("response") or {}).get("reviews") or []:
             row = {k: r.get(k) for k in REVIEW_KEYS}
             row["review"] = " ".join(str(row["review"] or "").split())[:1500]
             row["hours_at_review"] = round(((r.get("author") or {}).get("playtime_at_review") or 0) / 60, 1)
@@ -318,7 +322,7 @@ class ReferenceFetcher:
             res = self._get(STORE_API, params)
             if res.status_code != 200:
                 raise FetchError(f"prices ({cc}): HTTP {res.status_code}")
-            body = res.json() or {}
+            body = _json(res) or {}
             for appid in batch:
                 entry = body.get(str(appid)) or {}
                 overview = (entry.get("data") or {}).get("price_overview") if entry.get("success") else None
@@ -334,6 +338,15 @@ class ReferenceFetcher:
                 )
                 out[appid] = self._store(appid, f"price_{cc}", price, str(res.url)).data
         return {a: out[a] for a in appids}
+
+
+def _json(res: httpx.Response) -> Any:
+    try:
+        return res.json()
+    except ValueError as exc:  # a web page where data was expected: Steam moved or retired the endpoint
+        raise FetchError(
+            f"{res.url.host}{res.url.path} answered with a web page instead of data; Steam may have changed it."
+        ) from exc
 
 
 _APP_IN_URL = re.compile(r"/apps/(\d+)/")
