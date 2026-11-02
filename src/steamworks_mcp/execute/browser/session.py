@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from steamworks_mcp.execute import guard
 from steamworks_mcp.execute.browser.transport import BASE, PlaywrightTransport
@@ -28,6 +29,9 @@ class BrowserSession:
         self._pw: Any = None
         self._context: Any = None
         self.page: Any = None
+        self.blocked: list[str] = []
+        """The latest requests the window's filter refused (method and path only), so a sign-in Steam broke by
+        moving its endpoints is reported instead of failing silently."""
 
     async def open(self) -> Any:
         if self.page is not None and not self.page.is_closed():
@@ -56,6 +60,7 @@ class BrowserSession:
             if guard.browser_allows(req.method, req.url, req.resource_type):
                 await route.continue_()
             else:
+                self.blocked = [*self.blocked[-19:], f"{req.method} {urlsplit(req.url).path}"]
                 await route.abort("blockedbyclient")
 
         await self._context.route("**/*", filter_route)

@@ -169,6 +169,14 @@ def test_guard_allows_only_known_writes_on_steam() -> None:
             guard.check("GET", url)
 
 
+def test_refused_sign_in_requests_are_reported() -> None:
+    blocked = {"logged_in": False, "blocked": ["POST /um/Authentication/BeginAuthSessionViaQR/"]}
+    shown = present.steamworks_open(blocked)
+    assert shown["outcome"] == "needs_input" and "sign-in" in shown["summary"]
+    assert "BeginAuthSessionViaQR" in shown["display"]
+    assert "Sign in to Steamworks" in present.steamworks_open({"logged_in": False, "blocked": []})["summary"]
+
+
 def test_browser_window_filter() -> None:
     allows = guard.browser_allows
     assert allows("GET", "https://partner.steamgames.com/apps/cloud/1000000", "document")
@@ -177,6 +185,8 @@ def test_browser_window_filter() -> None:
     assert not allows("POST", "https://partner.steamgames.com/apps/prepare/1000000", "fetch")
     assert not allows("POST", "https://partner.steamgames.com/apps/savesomething/1000000", "xhr")
     assert allows("POST", "https://partner.steamgames.com/login/settoken", "fetch")  # the user signing in
+    assert allows("POST", "https://partner.steamgames.com/um/Authentication/BeginAuthSessionViaQR/", "fetch")
+    assert allows("POST", "https://partner.steamgames.com/um/Authentication/BeginAuthSessionViaCredentials/", "fetch")
     assert allows("POST", "https://login.steampowered.com/jwt/finalizelogin", "fetch")
     assert allows("GET", "data:image/png;base64,AAAA", "image")
 

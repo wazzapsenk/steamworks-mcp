@@ -104,6 +104,7 @@ class Executor:
         logged_in = await session.logged_in()
         return {
             "logged_in": logged_in,
+            "blocked": [] if logged_in else session.blocked[-5:],
             "next": "Steamworks is ready. Look first: steamworks_inspect, then apply(..., dry_run=true)."
             if logged_in
             else "Ask the user to sign in to Steamworks in the browser window that opened (they type the password and "

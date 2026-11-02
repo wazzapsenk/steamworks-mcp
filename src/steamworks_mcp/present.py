@@ -668,6 +668,14 @@ def steamworks_open(data: dict[str, Any]) -> dict[str, Any]:
             outcome="needs_input",
             display=str(data.get("text") or ""),
         )
+    if not data.get("logged_in") and data.get("blocked"):
+        return result(
+            data,
+            "The browser window refused requests the Steamworks page made, so signing in may not work: Steam has "
+            "probably changed its sign-in. Tell the user; this needs a tool update.",
+            outcome="needs_input",
+            display="Refused in the window:\n" + "\n".join(f"- `{b}`" for b in data["blocked"]),
+        )
     if not data.get("logged_in"):
         return result(data, "Sign in to Steamworks in the browser window that opened.", outcome="needs_input")
     return result(data, "Steamworks is open and signed in.")
