@@ -9,7 +9,7 @@ It never publishes anything: you press Publish.
 Works with **Claude** (Desktop, Code and claude.ai), **ChatGPT** (web and desktop app) and **Codex** (app, CLI and
 IDE extension). Free and open source ([MIT](LICENSE)).
 
-**38 tools · 38 skills · 24 code rules · 125 release checks · 114 store-text rules · Unity, Godot and Unreal**
+**38 tools · 38 skills · 24 code rules · 128 release checks · 114 store-text rules · Unity, Godot and Unreal**
 
 <!-- mcp-name: io.github.wazzapsenk/steamworks-mcp -->
 
@@ -306,7 +306,7 @@ Start with `uvx steamworks-mcp doctor`: it shows what is set up and the command 
 - **Not verified live:** writing store tags, setting a beta branch live, the app and shortcut icons, and the
   Auto-Cloud overrides suggested for macOS and Linux saves.
 - **Images:** the tool fills empty image slots only; it never replaces or removes an image in Steamworks.
-- **The BROWSER mode follows the Steamworks site as it was on 2026-10-03.** When a page changes, the tool stops
+- **The BROWSER mode follows the Steamworks site as it was on 2026-11-02** (every read checked live that day). When a page changes, the tool stops
   before writing.
 - **Market numbers** come from Steam's public store; Steam publishes no sales, so sales estimates are rules of thumb.
 

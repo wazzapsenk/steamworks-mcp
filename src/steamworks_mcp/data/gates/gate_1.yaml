@@ -53,6 +53,22 @@ rules:
     source_doc: https://partner.steamgames.com/apps/landing
     quote: You must specify the developer and publisher of your game
     steamworks_checklist: Your Store Presence / Developer and Publisher Names
+  - id: supported_players_configured
+    title: Supported players configured
+    description: Tick at least one Players option (Single-player, Multi-player, ...); a multiplayer game also needs PvP
+      or Co-op, and each of those Online, LAN or Local.
+    severity: required
+    check:
+      kind: present
+      fields:
+        - store.categories
+    execution_mode: BROWSER
+    fallback_mode: MANUAL
+    where: Edit Store Page > Basic Info > Players
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: On the Basic Info tab, select at least one option under Players, such as Single-player or Multi-player.
+    steamworks_checklist: Your Store Presence / Supported Players Configured
+    notes: Added to the Steamworks checklist in late October 2026.
   - id: support_info
     title: Support info
     description: 'Give players at least one way to reach support: a website, an e-mail address or a phone number.'

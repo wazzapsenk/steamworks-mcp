@@ -152,6 +152,37 @@ rules:
     source_doc: https://partner.steamgames.com/apps/landing
     quote: Store and Steamworks types for this app match. This should always be complete.
     steamworks_checklist: Your Game Build / App Configuration
+  - id: played_through_steam
+    title: Played through Steam for 5 minutes
+    description: Launch the game from the Steam library with an account that owns it and play at least 5 minutes,
+      within 7 days before the build review or after the default branch's current build was uploaded.
+    severity: required
+    check:
+      kind: checklist
+    execution_mode: MANUAL
+    where: Steam client > Library
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: Your game needs to have been launched through Steam and played for at least 5 minutes by an account that
+      owns it
+    steamworks_checklist: Your Game Build / Played Through Steam for 5 Minutes
+    notes: Added to the Steamworks checklist in late October 2026. It can take a few minutes to update after playing.
+  - id: steam_cloud_files_saved
+    title: Steam Cloud files saved and open to customers
+    description: Save once in a Steam-launched game from a partner-group account and exit so the files upload, then
+      untick "Enable cloud support for developers only".
+    severity: required
+    check:
+      kind: checklist
+    when:
+      - field: apps.main.cloud.enabled
+        op: is_true
+    execution_mode: MANUAL
+    where: Steam client; Steamworks Settings > Steam Cloud
+    source_doc: https://partner.steamgames.com/apps/landing
+    quote: Launch your game through Steam from an account in your Steamworks partner group and save at least once
+    steamworks_checklist: Your Game Build / Steam Cloud Enabled and Files Saved
+    notes: Added to the Steamworks checklist in late October 2026. Saving an Auto-Cloud path turns "developers only"
+      back on.
   - id: publish_steamworks_settings
     title: Publish Steamworks settings
     description: Publish Steamworks settings changes (depots, installation, launch options) - unpublished config breaks builds.
