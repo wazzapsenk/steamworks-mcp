@@ -42,8 +42,9 @@ ALLOWED_WRITES = [
 ]
 
 
-LOGIN_PATHS = ("/login/", "/logout")
-"""Partner-site writes the sign-in flow makes (setting the session after logging in)."""
+LOGIN_PATHS = ("/login/", "/logout", "/um/Authentication/")
+"""Partner-site writes the sign-in flow makes: the QR and password sign-in calls (moved onto the partner site in
+late 2026) and setting the session after logging in."""
 
 
 class GuardError(PermissionError):
