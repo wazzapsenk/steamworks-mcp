@@ -206,6 +206,13 @@ What it showed beyond the recordings:
   import/export, generated locked icons). The classic page `/apps/achievements/{appid}` still works and still calls
   the endpoints below (seen 2026-11-02); it links the new one, `/apps/achievementsbeta/{appid}`, as "Try Achievement
   Sets". The tool only uses the classic endpoints. **Unverified:** whether achievements in sets stay editable there.
+  - Recorded live on 2026-11-02: a test achievement was created, saved, read back and deleted through the classic
+    endpoints on a test app.
+  - The new editor is a React widget (`data-featuretarget="achievements-editor"`). Opening it only reads:
+    `GET /achievements/ajaxgetstatsschema/{appid}` (`{"schema": {"stats": {...}}, "limits": {"max_achievements": 100,
+    "max_groups": 40, "vetted": false}}`), `ajaxgetappinfo`, `ajaxgetdlc`, `ajaxgetlanguagelist`,
+    `ajaxgetlanguageoptionslist`, and `/um/Player/GetGameAchievements/` with `GetGlobalAchievementPercentages`.
+    Its write calls are not recorded.
 - `GET /apps/fetchachievements/{appid}` → `{"achievements":[…],"languages":{"english":true,…}}`. `languages` lists the
   languages enabled for achievement text on `/apps/loc/{appid}`.
 - `POST /apps/newachievement/{appid}` `{maxstatid, maxbitid}` (from `#max_statid_used` / `#max_bitid_used`, `0`/`-1`
