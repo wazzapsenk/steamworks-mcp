@@ -18,6 +18,9 @@ The recordings behind every statement are in [`tests/fixtures/steamworks/`](../t
 - Every state-changing call is a `POST` with the page's CSRF token `sessionid` (the page global `g_sessionID`),
   sent from inside the logged-in page with `credentials: same-origin`.
 - The pages never reach `networkidle`; use `domcontentloaded` plus a short wait.
+- **Signing in (since late October 2026)** posts to the partner site itself: `POST /um/Authentication/...`
+  (`BeginAuthSessionViaQR`, `BeginAuthSessionViaCredentials`, ...). The window's filter lets these through; before
+  that change they went to `api.steampowered.com`, and blocking them hid the QR code and failed password sign-ins.
 - App list: `/apps/` (links `/apps/landing/{appid}`, rendered after load).
 
 | Page | URL |
@@ -199,6 +202,10 @@ What it showed beyond the recordings:
 
 ## Achievements
 
+- **Two editors since 2026-10-15.** Valve rebuilt the achievement editor (achievement sets, archiving, bulk CSV
+  import/export, generated locked icons). The classic page `/apps/achievements/{appid}` still works and still calls
+  the endpoints below (seen 2026-11-02); it links the new one, `/apps/achievementsbeta/{appid}`, as "Try Achievement
+  Sets". The tool only uses the classic endpoints. **Unverified:** whether achievements in sets stay editable there.
 - `GET /apps/fetchachievements/{appid}` → `{"achievements":[…],"languages":{"english":true,…}}`. `languages` lists the
   languages enabled for achievement text on `/apps/loc/{appid}`.
 - `POST /apps/newachievement/{appid}` `{maxstatid, maxbitid}` (from `#max_statid_used` / `#max_bitid_used`, `0`/`-1`
