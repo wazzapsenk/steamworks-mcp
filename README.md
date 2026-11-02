@@ -175,6 +175,15 @@ you approve.
 | **Dry run** | Showing what would change in Steamworks without changing anything. Every write starts with one. |
 | **BROWSER mode** | Optional: the tool fills Steamworks pages in a browser window you signed in to yourself. |
 | **Publisher key** | Optional: a Steamworks key for builds, branches and leaderboards. Never share it. |
+| **App id** | Your game's number on Steam (Steamworks > App Admin), e.g. 480. |
+| **Capsule** | One of the store images: the boxes your game appears in on Steam's pages and lists. |
+| **Library assets** | The images in the player's Steam library: hero (wide background), logo, header, capsule. |
+| **Tags / genres / categories** | Tags are the words players search by; genres are Steam's broad types (Action, Indie); categories are features (Single-player, Online Co-op, Steam Cloud). |
+| **Depot** | The container your game files are uploaded into; a build is one upload of your depots. |
+| **Launch option** | The file Steam starts when a player presses Play. |
+| **Redistributables** | Runtimes Steam installs with your game, like Visual C++ or DirectX. Unity and Godot games usually need none. |
+| **Content Survey** | Valve's questionnaire about mature content and AI use, in Steamworks; required before review. |
+| **Steam Direct** | Valve's per-game fee you pay before releasing; release comes at least 21 days later. |
 
 ## What it can do
 

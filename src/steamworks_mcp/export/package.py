@@ -24,6 +24,7 @@ from steamworks_mcp.manifest.io import ProjectFiles, atomic_write, load_drafts
 from steamworks_mcp.manifest.models import EarlyAccessAnswers
 from steamworks_mcp.manifest.state import State
 from steamworks_mcp.media.images import prepare_achievement_icons, prepare_store_images
+from steamworks_mcp.present import MODES
 
 STORE_FIELDS = {"store.short_description": "app[content][short_description]", "store.about": "app[content][about]"}
 PARTNER = "https://partner.steamgames.com"
@@ -215,7 +216,7 @@ def render_checklist(
     appid = fp.get(values, "apps.main.appid")
     name = fp.get(values, "game.name") or "Your game"
     L = [
-        f"# Gate {gate}: {g.title} — {name}{f' (app {appid})' if appid else ''}",
+        f"# Step {gate}: {g.title} — {name}{f' (app {appid})' if appid else ''}",
         "",
         f"{g.summary}",
         "",
@@ -233,7 +234,7 @@ def render_checklist(
         for r in sorted(rs, key=lambda r: (r.status in DONE, order[r.rule.severity])):
             tick = "x" if r.status in DONE else " "
             where = f" — *{r.rule.where}*" if r.rule.where else ""
-            L.append(f"- [{tick}] **{r.rule.title}**{where} `({r.mode})`")
+            L.append(f"- [{tick}] **{r.rule.title}**{where} ({MODES.get(r.mode, r.mode)})")
             if r.status not in DONE:
                 L.append(f"  {r.rule.description}")
                 if r.rule.steamworks_checklist:
@@ -246,7 +247,7 @@ def render_checklist(
                     L.append(f"  Waiting for your approval: {', '.join(f'`{m}`' for m in r.needs_approval)}")
                 L += [f"  {line}" for line in _details(r.rule.id, values, files) + _asset_file(r, files)]
                 if r.rule.check.kind == "checklist":
-                    L.append(f"  Confirm when done: `mark_applied(['checklist.{r.rule.id}'])`")
+                    L.append(f"  When done, tell your assistant so it ticks it off (`checklist.{r.rule.id}`).")
             if r.rule.source_doc:
                 L.append(f"  Source: <{r.rule.source_doc}>{' (unverified)' if r.rule.unverified else ''}")
         L.append("")

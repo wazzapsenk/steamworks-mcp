@@ -53,7 +53,7 @@ def test_gate_1_package(project: Project) -> None:
     checklist = (folder / "CHECKLIST.md").read_text("utf-8")
     assert "- [x] **Steam tags**" in checklist and "usable screenshot" in checklist
     assert "Upload `images/header_capsule.png`" in checklist
-    assert "mark_applied(['checklist.store_presence_checklist_complete'])" in checklist
+    assert "`checklist.store_presence_checklist_complete`" in checklist
 
 
 def test_early_access_answers_in_every_language(project: Project) -> None:
