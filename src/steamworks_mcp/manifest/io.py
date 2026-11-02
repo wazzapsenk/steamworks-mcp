@@ -142,8 +142,21 @@ def format_errors(err: ValidationError, raw: Any) -> list[str]:
             segs.append(seg)
             node, cur = _descend(node, cur, loc)
         where = ".".join(segs) or "(root)"
-        out.append(f"{where}: {e['msg']}")
+        out.append(f"{where}: {PLAIN_ERRORS.get(e['type'], e['msg'])}")
     return out
+
+
+PLAIN_ERRORS = {
+    "bool_parsing": "answer yes or no ('not yet' counts as no)",
+    "bool_type": "answer yes or no ('not yet' counts as no)",
+    "int_parsing": "give a whole number",
+    "int_from_float": "give a whole number",
+    "float_parsing": "give a number",
+    "decimal_parsing": "give a number",
+    "date_parsing": "give a date as YYYY-MM-DD",
+    "date_from_datetime_parsing": "give a date as YYYY-MM-DD",
+}
+"""Pydantic's wording for the errors chat answers cause, in plain words."""
 
 
 def _descend(node: fp.Node | None, cur: Any, loc: Any) -> tuple[fp.Node | None, Any]:

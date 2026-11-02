@@ -148,7 +148,8 @@ CATALOG: dict[str, dict[str, Any]] = {
     },
     "target_languages": {
         "q": "Which languages should the store page, achievements and other player-facing texts be translated "
-        "into? Your assistant translates them from the source language. Suggested: the languages the game supports.",
+        "into? Your assistant translates them from the source language. Suggested: English (Steam needs it) and the "
+        "languages the game supports.",
         "help": "Answer 'none' to keep every text in the source language only.",
     },
     "store.genres": {"q": "Which Steam genres fit (e.g. Action, Casual, Indie, Strategy)?", "kind": "list"},
@@ -177,6 +178,32 @@ CATALOG: dict[str, dict[str, Any]] = {
         "kind": "path",
     },
     "assets.logo": {"q": "Path to the logo (transparent PNG), relative to steamworks.yaml?", "kind": "path"},
+    "assets.trailers": {
+        "q": "Path(s) to your trailer video file(s), relative to steamworks.yaml? Steam needs at least one trailer "
+        "before release; say 'not yet' if you have none.",
+        "kind": "list",
+    },
+    "achievements": {
+        "q": "Which achievements should the game have? Describe each in plain words (e.g. 'finish the tutorial', "
+        "'win 10 matches'); your assistant turns them into Steam achievements.",
+        "kind": "list",
+    },
+    "store.categories": {
+        "q": "Which Steam features does the game have (e.g. Single-player, Online Co-op, Steam Achievements, Steam "
+        "Cloud, Full controller support)?",
+        "kind": "list",
+    },
+    "apps.main.cloud.enabled": {"q": "Should players' save files sync through Steam Cloud?"},
+    "apps.main.installation.install_folder": {
+        "q": "Folder name the game installs into under steamapps/common (usually the game's name)?"
+    },
+    "apps.main.installation.redistributables": {
+        "q": "Which runtimes must Steam install with the game (e.g. Visual C++ 2022, DirectX)? Say 'none' if it "
+        "needs none; Unity and Godot games usually need none.",
+        "kind": "list",
+    },
+    "release.store_review_passed": {"q": "Has Valve approved the store page review?"},
+    "release.build_review_passed": {"q": "Has Valve approved the build review?"},
 }
 
 
@@ -317,9 +344,8 @@ def build_question(
     kind, options = kind_of(annotation)
     spec = CATALOG.get(path, {})
     kind = spec.get("kind", kind)
-    text = spec.get("q") or (
-        description.split(". ")[0].rstrip(".") + "?" if description else f"What is the {_humanize(path)}?"
-    )
+    first = re.split(r"(?<!e\.g)(?<!i\.e)\.\s", description)[0].rstrip(".?")
+    text = spec.get("q") or (first + "?" if description else f"What is the {_humanize(path)}?")
     current = fp.get(values, path)
     if isinstance(current, dict) and kind == "multi":
         current = list(current)  # a dict keyed by language: the chosen languages are the answer
@@ -333,6 +359,8 @@ def build_question(
         source = values.get("source_language")
         q.options = [o for o in q.options if o != source]
         supported = [lang for lang in fp.get(values, "store.supported_languages") or {} if lang != source]
+        if source and source != "english" and "english" not in supported:
+            supported.insert(0, "english")  # Steam falls back to English, so the store needs English text
         if is_empty(current) and supported:
             q.suggestion, q.suggestion_source = supported, "store.supported_languages"
     if kind == "path" and not is_empty(current) and root is not None and not (root / str(current)).is_file():
@@ -440,7 +468,12 @@ def next_questions(
 
 
 TRUE = {"yes", "y", "true", "1", "evet", "ja", "oui"}
-FALSE = {"no", "n", "false", "0", "hayir", "hayır", "nein", "non"}
+FALSE = {"no", "n", "false", "0", "hayir", "hayır", "nein", "non", "not yet", "henüz değil", "noch nicht", "pas encore"}
+""""Not yet" is a no: for the yes/no confirmations it means a step still to do in Steamworks."""
+
+
+def _option_key(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", text.lower()).replace("visualc", "vc")
 
 
 def _language_codes(value: Any) -> Any:
@@ -463,7 +496,7 @@ def coerce(path: str, value: Any, current: Any = None) -> Any:
     """Turn a chat answer into the field's type (lists from comma-separated text, yes/no into booleans, language
     names into Steam codes). ``current`` is the field's value now: a language table keeps its rows' details."""
     annotation, _ = field_info(path)
-    kind, _ = kind_of(annotation)
+    kind, options = kind_of(annotation)
     lang = language_field(annotation)
     if lang == "one" and isinstance(value, str):
         found = find_language(value)
@@ -477,7 +510,16 @@ def coerce(path: str, value: Any, current: Any = None) -> Any:
     if isinstance(value, str):
         v = value.strip()
         if kind in ("list", "multi"):
-            return [x.strip() for x in re.split(r"[,\n]", v) if x.strip()]
+            if v.lower() in NONE_ANSWERS | FALSE:
+                return ["none"] if "none" in options else []
+            items = [x.strip() for x in re.split(r"[,\n]", v) if x.strip()]
+            if options:  # "Resizable UI" or "Visual C++ 2022" for the codes resizable_ui and vc2022
+                by_key = {_option_key(o): o for o in options}
+                return [by_key.get(_option_key(x), x) for x in items]
+            item = _strip(get_args(_strip(annotation))[0]) if get_origin(_strip(annotation)) is list else None
+            if isinstance(item, type) and issubclass(item, BaseModel) and "path" in item.model_fields:
+                return [{"path": x} for x in items]  # e.g. trailers given as file paths
+            return items
         if kind == "bool":
             if v.lower() in TRUE:
                 return True

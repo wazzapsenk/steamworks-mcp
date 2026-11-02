@@ -284,6 +284,27 @@ def test_coerce() -> None:
     assert coerce("game.players.max", "4") == "4"  # pydantic converts on write
 
 
+def test_plain_answers_become_the_codes_steamworks_yaml_uses() -> None:
+    assert coerce("prerequisites.bank_info_done", "Not yet") is False  # a step still to do
+    assert coerce("store.accessibility", "Resizable UI, subtitles") == ["resizable_ui", "subtitles"]
+    assert coerce("store.accessibility", "none") == ["none"]
+    assert coerce("apps.main.installation.redistributables", "Visual C++ 2022, DirectX") == ["vc2022", "directx"]
+    assert coerce("assets.trailers", "media/trailer.mp4") == [{"path": "media/trailer.mp4"}]
+    assert coerce("assets.trailers", "not yet") == []
+    assert coerce("source_language", "Türkçe") == "turkish"
+    assert coerce("target_languages", "Deutsch, Español") == ["german", "spanish"]
+
+
+def test_questions_read_as_questions() -> None:
+    values = Manifest.model_validate({"source_language": "turkish"}).model_dump(mode="json")
+    s = State()
+    for path in ("store.categories", "assets.trailers", "apps.main.cloud.enabled", "release.store_review_passed"):
+        q = build_question(path, 1, values, s, "x").question
+        assert "e.g?" not in q and not q.startswith("What is the ") and "??" not in q, q
+    target = build_question("target_languages", 1, values, s, "languages")
+    assert target.suggestion == ["english"]  # Steam falls back to English
+
+
 def test_language_answers_become_steam_codes() -> None:
     assert coerce("source_language", "German") == "german"
     assert coerce("target_languages", "de, Simplified Chinese, Brazilian Portuguese") == [
