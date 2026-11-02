@@ -46,6 +46,23 @@ async def call(config: Config, tool: str, **args: Any) -> dict[str, Any]:
     return dict(result.structured_content)
 
 
+async def test_novice_mistakes_get_plain_answers(workspace: Path) -> None:
+    config = Config(workspace_root=workspace)
+    async with Client(create_server(config)) as client:
+        wrong = await client.call_tool("apply", {"path": "game", "section": "store text"})
+        assert wrong.is_error
+        body = json.loads(getattr(wrong.content[0], "text", "").split(": ", 1)[1])
+        assert "store_text" in body["summary"] and "pydantic" not in body["summary"] and body["display"]
+        assert (await client.call_tool("gap_report", {"path": "game", "gate": 5})).is_error
+    out = await call(config, "init_project", path="My First Game", scan=False)  # no folder yet
+    assert (workspace / "My First Game" / "steamworks.yaml").exists() and out["display"]
+    async with Client(create_server(config)) as client:
+        answer = {"path": "My First Game", "field": "pricing.free_to_play", "value": "?"}
+        bad = await client.call_tool("set_field", answer)
+    body = json.loads(getattr(bad.content[0], "text", "").split(": ", 1)[1])
+    assert "yes or no" in body["summary"] and "init_project" not in " ".join(body["next"])
+
+
 async def test_init_project_creates_files_and_scans(workspace: Path) -> None:
     config = Config(workspace_root=workspace)
     out = await call(config, "init_project", path="game", appid=1000000)

@@ -169,6 +169,13 @@ def test_guard_allows_only_known_writes_on_steam() -> None:
             guard.check("GET", url)
 
 
+def test_reasons_are_not_cut_and_display_is_never_empty() -> None:
+    reason = "Short description (plain text, no time-based text such as 'new' or 'out now') " * 2
+    assert reason.strip() in present.table(["Field", "Why"], [["store.short_description", reason]])
+    assert present.result({}, "Saved.")["display"] == "Saved."
+    assert json.loads(present.error("No such game.", None))["display"] == "No such game."
+
+
 def test_refused_sign_in_requests_are_reported() -> None:
     blocked = {"logged_in": False, "blocked": ["POST /um/Authentication/BeginAuthSessionViaQR/"]}
     shown = present.steamworks_open(blocked)

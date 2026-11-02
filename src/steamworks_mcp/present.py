@@ -51,12 +51,13 @@ def result(
     """``data`` with the envelope in front. ``next`` defaults to the data's own ``next``."""
     steps = steps_of(data.get("next") if next is None else next)
     rest = {k: v for k, v in data.items() if k not in ENVELOPE}
-    return {"outcome": outcome, "summary": summary, "next": steps, "display": display.strip(), **rest}
+    # an assistant told to show `display` as it is shows nothing when it is empty: the summary at least
+    return {"outcome": outcome, "summary": summary, "next": steps, "display": display.strip() or summary, **rest}
 
 
 def error(message: str, hint: str | None) -> str:
     """The text of a tool error, in the same shape as a result."""
-    body = {"outcome": "error", "summary": message, "next": steps_of(hint), "display": ""}
+    body = {"outcome": "error", "summary": message, "next": steps_of(hint), "display": message}
     return json.dumps(body, ensure_ascii=False)
 
 
@@ -94,12 +95,17 @@ def cell(value: Any, limit: int = 60) -> str:
     return fmt(value, limit).replace("|", "\\|")
 
 
+REASONS = {"Why", "Message", "Fix", "Found"}
+"""Columns that explain something: cut, they lose the part the user needs."""
+
+
 def table(headers: Sequence[str], rows: Iterable[Sequence[Any]], limit: int = MAX_ROWS, width: int = 60) -> str:
     rows = list(rows)
     if not rows:
         return ""
+    widths = [400 if h in REASONS else width for h in headers]
     lines = ["| " + " | ".join(headers) + " |", "|" + "|".join("---" for _ in headers) + "|"]
-    lines += ["| " + " | ".join(cell(c, width) for c in row) + " |" for row in rows[:limit]]
+    lines += ["| " + " | ".join(cell(c, w) for c, w in zip(row, widths, strict=False)) + " |" for row in rows[:limit]]
     if len(rows) > limit:
         lines.append(f"\n…and {len(rows) - limit} more.")
     return "\n".join(lines)
@@ -702,7 +708,7 @@ def server_info(data: dict[str, Any]) -> dict[str, Any]:
             "STEAMWORKS_PUBLISHER_KEY",
         ],
         ["Build uploads (steamcmd)", fmt(data.get("steamcmd_configured")), "STEAMCMD_PATH, STEAMCMD_USERNAME"],
-        ["Writing to the Steamworks site (BROWSER mode)", fmt(data.get("browser_mode")), "STEAM_MCP_BROWSER=1"],
+        ["Writing to the Steamworks site (BROWSER mode)", fmt(data.get("browser_mode")), "uvx steamworks-mcp setup"],
         ["Hidden-achievement data of reference games", fmt(data.get("web_api_key_configured")), "STEAM_WEB_API_KEY"],
     ]
     return result(

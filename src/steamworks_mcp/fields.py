@@ -15,6 +15,10 @@ from steamworks_mcp.validate.store_text import TARGET_FIELDS, check_store_text
 STORE_TEXT_FIELDS = set(TARGET_FIELDS.values())
 
 
+class AnswerError(ValueError):
+    """A value steamworks.yaml does not accept (the file itself is fine)."""
+
+
 def _store_findings(project: Project, changes: dict[str, Any]) -> list[dict[str, Any]]:
     texts = {k: v for k, v in changes.items() if k in STORE_TEXT_FIELDS and isinstance(v, str)}
     if not texts:
@@ -56,18 +60,18 @@ def set_fields(
     errors_by_field: dict[str, str] = {}
     try:
         project.manifest.set_many(list(coerced.items()))
-    except ManifestError:
+    except ManifestError as exc:
         if len(coerced) == 1:
-            raise
+            raise AnswerError(f"Not saved: {exc}") from exc
         # Answers are independent: keep the valid ones, report the rest.
         for path, value in list(coerced.items()):
             try:
                 project.manifest.set(path, value)
-            except ManifestError as exc:
-                errors_by_field[path] = str(exc)
+            except ManifestError as one:
+                errors_by_field[path] = str(one)
                 del coerced[path]
         if not coerced:
-            raise ManifestError("; ".join(errors_by_field.values())) from None
+            raise AnswerError("Not saved: " + "; ".join(errors_by_field.values())) from None
     values = project.values()
     recorded: dict[str, str] = {}
     for path in coerced:

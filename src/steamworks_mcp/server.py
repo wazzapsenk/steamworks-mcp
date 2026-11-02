@@ -18,7 +18,7 @@ from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, Re
 from mcp.server.mcpserver import Context, Elicit, MCPServer, Resolve
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from steamworks_mcp import __version__, present
 from steamworks_mcp import fields as fields_ops
@@ -57,6 +57,8 @@ from steamworks_mcp.validate.code import check_code as check_code_fn
 from steamworks_mcp.validate.report import validate_project
 
 F = TypeVar("F", bound=Callable[..., Any])
+Gate = Literal[0, 1, 2, 3]
+"""Release gates: 0 prerequisites, 1 store page review, 2 build review, 3 release."""
 USER_ERRORS = (
     WorkspaceError,
     ManifestError,
@@ -92,6 +94,7 @@ HINTS: tuple[tuple[type[BaseException], str], ...] = (
     (GuardError, "This request is outside what the tool may do in Steamworks; do it by hand."),
     (SteamApiError, "Check the publisher key and the app id (server_info shows which keys are set)."),
     (ApplyRefused, "Do what the message asks, then call again."),
+    (fields_ops.AnswerError, "Tell the user in plain words why the answer was not saved, then ask again."),
     (FileNotFoundError, "Check the path; paths are relative to the game folder or the workspace root."),
     (ValueError, "Fix the arguments as the message says and call again."),
 )
@@ -214,8 +217,9 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         project's own .gitignore), and the scan report when scanning.
         """
         root = project_dir(path)
-        if not root.is_dir():
-            raise ValueError(f"{root} is not a folder")
+        if root.exists() and not root.is_dir():
+            raise ValueError(f"{root} is a file, not a folder")
+        root.mkdir(parents=True, exist_ok=True)  # a game with no folder yet: status tells the user to start here
         result: dict[str, Any] = {"project": str(root), **proj.init_project(root, name, appid)}
         if scan:
             result["scan"] = _scan(root, project_dir(source_dir) if source_dir else root)
@@ -291,7 +295,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=True))
     @user_errors
-    def gap_report(path: str, gate: int | None = None, include_info: bool = False) -> dict[str, Any]:
+    def gap_report(path: str, gate: Gate | None = None, include_info: bool = False) -> dict[str, Any]:
         """What is still missing before each release gate, and how each item gets done.
 
         Gates: 0 prerequisites, 1 store page review / Coming Soon, 2 build review, 3 release. For every blocking item
@@ -329,7 +333,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         )
 
     def interview_form(
-        ctx: Context, path: str, gate: int | None = None, max_questions: int = 3, use_form: bool = True
+        ctx: Context, path: str, gate: Gate | None = None, max_questions: int = 3, use_form: bool = True
     ) -> Any:
         caps = ctx.client_capabilities
         if not use_form or caps is None or caps.elicitation is None:
@@ -343,7 +347,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
     @user_errors
     def start_interview(
         path: str,
-        gate: int | None = None,
+        gate: Gate | None = None,
         max_questions: int = 3,
         use_form: bool = True,
         form: Annotated[BaseModel | None, Resolve(interview_form)] = None,
@@ -378,7 +382,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         if answered:
             out["saved_from_form"] = sorted(answered)
         if not questions:
-            out["message"] = "Nothing left to ask for this gate. Call gap_report for the remaining steps."
+            out["message"] = "Nothing left to ask for this step. Call gap_report for the remaining steps."
         else:
             out["how_to_answer"] = "set_field(path, values={<question id>: <answer>, ...})"
         return present.start_interview(out)
@@ -821,7 +825,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
-    def export_package(path: str, gate: int) -> dict[str, Any]:
+    def export_package(path: str, gate: Gate) -> dict[str, Any]:
         """Write everything needed to finish a gate by hand to .steam-mcp/exports/gate_<gate>/: correctly named
         files (store localization JSON and per-language texts, store/library images and icons, SteamPipe scripts,
         achievement icons and CSV) and a CHECKLIST.md that says, for every open item, which Steamworks page and
@@ -1207,4 +1211,38 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             }
         )
 
+    plain_argument_errors(server)
     return server
+
+
+def argument_problems(err: ValidationError) -> str:
+    """A tool's wrong arguments in plain words, e.g. 'section: one of 'cloud', 'store_text' (got 'store text')'."""
+    out = []
+    for e in err.errors():
+        name = ".".join(str(x) for x in e["loc"]) or "arguments"
+        if e["type"] == "missing":
+            out.append(f"{name} is missing")
+        elif e["type"] == "literal_error":
+            out.append(f"{name}: one of {e.get('ctx', {}).get('expected')} (got {e.get('input')!r})")
+        else:
+            out.append(f"{name}: {e['msg']} (got {e.get('input')!r})")
+    return "Wrong arguments: " + "; ".join(out) + "."
+
+
+def plain_argument_errors(server: MCPServer) -> None:
+    """The SDK reports wrong tool arguments as pydantic's raw text (with a link to pydantic's docs); say it plainly,
+    in the result shape the other errors use."""
+    manager = server._tool_manager  # shortcut: private SDK attribute; move to a public hook when the SDK has one
+    call = manager.call_tool
+
+    async def call_tool(name: str, arguments: dict[str, Any], *args: Any, **kwargs: Any) -> Any:
+        try:
+            return await call(name, arguments, *args, **kwargs)
+        except ToolError as exc:
+            cause = exc.__cause__
+            if isinstance(cause, ValidationError) and cause.title.endswith("Arguments"):
+                body = present.error(argument_problems(cause), "Call the tool again with the arguments fixed.")
+                raise ToolError(f"Error executing tool {name}: {body}") from cause
+            raise
+
+    manager.call_tool = call_tool  # type: ignore[method-assign]

@@ -35,7 +35,8 @@ INSPECT = ("builds", "leaderboards", "achievement_schema", "snapshots", "pending
 TransportFactory = Callable[[], Awaitable[Transport]]
 
 NO_BROWSER = (
-    "{what} needs the BROWSER mode, which is off (STEAM_MCP_BROWSER=1 turns it on; read the README first). "
+    "{what} needs the BROWSER mode, which is off. To turn it on, run `uvx steamworks-mcp setup` in a terminal, "
+    "answer yes to the browser mode, then restart the app (or set STEAM_MCP_BROWSER=1 yourself). "
     "Without it, export_package(gate) writes these values as files with a checklist for entering them by hand."
 )
 
