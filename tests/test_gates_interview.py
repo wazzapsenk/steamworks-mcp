@@ -499,7 +499,10 @@ async def test_generated_store_text_breaking_valve_rules_is_rejected(game: Path)
     )
     assert ok["status"]["store.short_description"] == "draft"
     user = await tool(config, "set_field", path="game", field="store.short_description", value="See www.example.com")
-    assert user["status"]["store.short_description"] == "approved" and user["store_rule_findings"]
+    assert user["status"]["store.short_description"] == "needs_review" and user["store_rule_findings"]
+    assert "Valve rule" in user["summary"]  # kept, but the user decides after seeing why
+    fine = await tool(config, "set_field", path="game", field="store.short_description", value="Build forts.")
+    assert fine["status"]["store.short_description"] == "approved"
 
 
 @pytest.mark.anyio
@@ -678,3 +681,46 @@ async def test_a_new_game_reaches_the_store_page_step_in_few_rounds(tmp_path: Pa
             saved = await client.call_tool("set_field", {"path": "game", "values": values, "source": source})
             assert not saved.is_error, getattr(saved.content[0], "text", "")
     assert rounds >= 5  # description, confirmation, languages, optional inputs, account steps at least
+
+
+@pytest.mark.anyio
+async def test_answers_steam_would_not_take_are_refused_or_flagged(game: Path) -> None:
+    config = Config(workspace_root=game)
+    await tool(config, "init_project", path="game", scan=False)
+    (game / "game" / "notes.png").write_text("not an image", "utf-8")
+    Image.new("RGB", (8, 8)).save(game / "game" / "key.png")
+    out = await tool(
+        config,
+        "set_field",
+        path="game",
+        values={
+            "store.support.email": "My answer",
+            "store.support.url": "www.example.com",
+            "store.links.website": "my site",
+            "assets.logo": "notes.png",
+            "assets.key_art": "key.png",
+            "store.tags": "Casual, Pilow Fort",
+        },
+    )
+    assert set(out["not_saved"]) == {"store.support.email", "store.links.website", "assets.logo"}
+    assert "not an e-mail address" in out["not_saved"]["store.support.email"]
+    assert "not an image" in out["not_saved"]["assets.logo"]
+    values = ManifestFile.load(game / "game" / "steamworks.yaml").manifest
+    assert values.store.support.url == "https://www.example.com" and values.assets.key_art == "key.png"
+    assert any("at least 5 tags" in w for w in out["warnings"]) and "Saved, but check" in out["display"]
+    missing = await tool(config, "set_field", path="game", field="assets.logo", value="art/logo.png")
+    assert "not in the game folder yet" in missing["warnings"][0]  # saved: the file may come later
+
+
+def test_unknown_tags_get_the_closest_steam_tag(tmp_path: Path) -> None:
+    from steamworks_mcp.fields import check_answers
+    from steamworks_mcp.project import Project
+
+    _, warnings = check_answers(
+        Project.__new__(Project),
+        {"store.tags": ["Casual", "Co-op", "Phisics", "Indie", "Building"]},
+        {"casual", "co-op", "physics", "indie", "building"},
+    )
+    assert warnings == ["store.tags: 'Phisics' is not one of Steam's tags (did you mean 'physics'?)."]
+    refused, _ = check_answers(Project.__new__(Project), {"store.tags": [f"t{i}" for i in range(21)]})
+    assert "20 tags at most" in refused["store.tags"]

@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import difflib
+import re
 from typing import Any
+
+from PIL import Image
 
 from steamworks_mcp.interview.questions import (
     CORE_INPUTS,
@@ -20,10 +24,57 @@ from steamworks_mcp.project import Project, tracked_under
 from steamworks_mcp.validate.store_text import TARGET_FIELDS, check_store_text
 
 STORE_TEXT_FIELDS = set(TARGET_FIELDS.values())
+EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+WEB_ADDRESS = re.compile(r"^https?://[^\s/]+\.[^\s]+$")
+URL_FIELDS = re.compile(r"^store\.(support\.url|links\.(website|privacy_policy|online_manual|forums|social\.\w+))$")
+IMAGE_FIELDS = re.compile(r"^assets\.(key_art|logo|overrides\.\w+)$")
+TAGS_MIN, TAGS_MAX = 5, 20
+"""Steam's user tags: at least 5 for the store page, 20 at most."""
 
 
 class AnswerError(ValueError):
     """A value steamworks.yaml does not accept (the file itself is fine)."""
+
+
+def check_answers(
+    project: Project, values: dict[str, Any], known_tags: set[str] | None = None
+) -> tuple[dict[str, str], list[str]]:
+    """Answers the schema accepts but Steam would not: ``(refused, warnings)``. Refused values are clearly wrong (not
+    an e-mail address, not an image); warnings are saved and say what is still missing. A web address without
+    ``https://`` gets it added in ``values``. ``known_tags``: Steam's tag names in lower case, when cached."""
+    refused: dict[str, str] = {}
+    warnings: list[str] = []
+    for path, value in list(values.items()):
+        if is_empty(value):
+            continue
+        if path == "store.support.email" and not EMAIL.match(str(value)):
+            refused[path] = f"'{value}' is not an e-mail address."
+        elif URL_FIELDS.match(path) and isinstance(value, str):
+            if "://" not in value and " " not in value.strip() and "." in value:
+                values[path] = value = "https://" + value.strip()
+            if not WEB_ADDRESS.match(value):
+                refused[path] = f"'{value}' is not a web address (like https://example.com)."
+        elif IMAGE_FIELDS.match(path):
+            file = project.files.root / str(value)
+            if not file.is_file():
+                warnings.append(f"{path}: {value} is not in the game folder yet; put it there before making images.")
+            else:
+                try:
+                    with Image.open(file) as image:
+                        image.verify()
+                except (OSError, ValueError):
+                    refused[path] = f"{value} is not an image file (PNG or JPG)."
+        elif path == "store.tags" and isinstance(value, list):
+            if len(value) > TAGS_MAX:
+                refused[path] = f"Steam allows {TAGS_MAX} tags at most; {len(value)} given."
+                continue
+            if len(value) < TAGS_MIN:
+                warnings.append(f"store.tags: Steam needs at least {TAGS_MIN} tags; {len(value)} given, add more.")
+            for tag in [t for t in value if known_tags and str(t).lower() not in known_tags]:
+                close = difflib.get_close_matches(str(tag).lower(), sorted(known_tags or ()), n=1)
+                hint = f" (did you mean '{close[0]}'?)" if close else ""
+                warnings.append(f"store.tags: '{tag}' is not one of Steam's tags{hint}.")
+    return refused, warnings
 
 
 def _store_findings(project: Project, changes: dict[str, Any]) -> list[dict[str, Any]]:
@@ -41,11 +92,14 @@ def set_fields(
     *,
     confidence: float | None = None,
     notes: str | None = None,
+    known_tags: set[str] | None = None,
 ) -> dict[str, Any]:
     """Write values and record their state: the user's answers are approved, other sources are drafts.
 
     The values are applied together when they validate together; otherwise each one is tried on its own, and the
-    ones that still fail are reported under ``not_saved`` while the others are kept.
+    ones that still fail are reported under ``not_saved`` while the others are kept. Answers Steam would not take
+    (see :func:`check_answers`) are refused or saved with ``warnings``; the user's own store text that breaks a Valve
+    rule is saved as needs_review.
     """
     if not changes:
         raise ValueError("Nothing to set: pass `field` + `value` or `values`.")
@@ -79,10 +133,17 @@ def set_fields(
             + "; ".join(f"[{e['rule_id']}] {e['field']}: {e['message']}" for e in errors)
         )
     errors_by_field: dict[str, str] = {}
+    warnings: list[str] = []
+    if source in ("user", "generated"):  # what Steam or the scan found is kept as it is
+        errors_by_field, warnings = check_answers(project, coerced, known_tags)
+        for path in errors_by_field:
+            del coerced[path]
+        if not coerced:
+            raise AnswerError("Not saved: " + " ".join(errors_by_field.values()))
     try:
         project.manifest.set_many(list(coerced.items()))
     except ManifestError as exc:
-        if len(coerced) == 1:
+        if len(coerced) == 1 and not errors_by_field:
             raise AnswerError(f"Not saved: {exc}") from exc
         # Answers are independent: keep the valid ones, report the rest.
         for path, value in list(coerced.items()):
@@ -100,9 +161,14 @@ def set_fields(
         for p, v in tracked_under(project, tracked, fp.get(values, tracked)):
             fs = project.state.record_value(p, v, source, confidence=confidence, notes=notes)
             recorded[p] = fs.status
+    for path in {e["field"] for e in errors if source == "user"} & set(recorded):
+        # the user's own text that breaks a Valve rule is kept, but not as approved: they decide after seeing why
+        project.state.fields[path].status = recorded[path] = "needs_review"
     out: dict[str, Any] = {"set": sorted(coerced), "status": recorded}
     if errors_by_field:
         out["not_saved"] = errors_by_field
+    if warnings:
+        out["warnings"] = warnings
     if findings:
         out["store_rule_findings"] = findings
     return out

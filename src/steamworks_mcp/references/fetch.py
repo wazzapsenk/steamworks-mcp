@@ -217,6 +217,13 @@ class ReferenceFetcher:
         ids = [_APP_IN_URL.search(str(item.get("logo", ""))) for item in _json(res).get("items", [])]
         return list(dict.fromkeys(int(m.group(1)) for m in ids if m))  # bundles and packages have no /apps/ url
 
+    def cached_store_tags(self) -> set[str] | None:
+        """Steam's tag names (lower case) from the cache, however old; ``None`` when never fetched. No network."""
+        try:
+            return set(json.loads((self.cache_dir / "_store" / "tags.json").read_text(encoding="utf-8"))["data"])
+        except (OSError, ValueError, KeyError):
+            return None
+
     def store_tags(self, *, refresh: bool = False) -> dict[str, int]:
         """Store tag names (lowercase) to their ids, e.g. {"co-op": 1685}. Cached like the store data."""
         p = self.cache_dir / "_store" / "tags.json"

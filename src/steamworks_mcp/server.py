@@ -419,7 +419,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             changes = dict(values or {})
             if field is not None:
                 changes[field] = value
-            out = fields_ops.set_fields(project, changes, source, notes=notes)
+            out = fields_ops.set_fields(project, changes, source, notes=notes, known_tags=fetcher().cached_store_tags())
         project.save()
         return present.set_field(out)
 

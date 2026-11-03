@@ -317,10 +317,12 @@ def set_field(data: dict[str, Any]) -> dict[str, Any]:
     summary = f"Saved {plural(len(data.get('set') or []), 'value')}" + (" (" + ", ".join(parts) + ")" if parts else "")
     not_saved = data.get("not_saved") or {}
     findings = data.get("store_rule_findings") or []
+    warnings = data.get("warnings") or []
     display = join(
         section("Not saved", table(["Field", "Why"], [[k, v] for k, v in not_saved.items()])),
+        section("Saved, but check", "\n".join(f"- {w}" for w in warnings)),
         section(
-            "Store rule warnings",
+            "Valve's store rules",
             table(
                 ["Field", "Rule", "Message"], [[f.get("field"), f.get("rule_id"), f.get("message")] for f in findings]
             ),
@@ -328,6 +330,8 @@ def set_field(data: dict[str, Any]) -> dict[str, Any]:
     )
     if not_saved:
         summary += f"; {plural(len(not_saved), 'value')} not saved"
+    if any(f.get("severity") == "error" for f in findings):
+        summary += "; your text breaks a Valve rule, so it waits for your OK after you read why"
     return result(data, summary + ".", outcome="partial" if not_saved else "ok", display=display)
 
 

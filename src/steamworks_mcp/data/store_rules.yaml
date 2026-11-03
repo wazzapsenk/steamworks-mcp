@@ -45,6 +45,25 @@ rules:
     rule: Avoid time-based text such as "Now Available", "Available on March 4th" or "Prepurchase now".
     source_doc: https://partner.steamgames.com/doc/store/page/description
     quote: Don't add "time-related" text to the short description as these will soon become old and out of date.
+  - id: short_description_no_price_or_sale_text
+    area: text
+    applies_to:
+      - short_description
+    check: deterministic
+    kind: regex_forbidden
+    params:
+      patterns:
+        - \bbuy (?:it )?now\b
+        - \bon sale\b
+        - \b\d{1,3}\s?% off\b
+        - \bdiscount(?:ed)?\b
+        - \blimited[- ]time\b
+        - (?:[$€£]\s?\d|\d\s?(?:usd|eur|tl)\b)
+    severity: warning
+    rule: Leave prices, sales and "Buy now" out of the short description; Steam shows the price and any discount itself, and they go out of date like time-based text.
+    source_doc: https://partner.steamgames.com/doc/store/page/description
+    quote: Don't add "time-related" text to the short description as these will soon become old and out of date.
+    notes: Valve's page names time-based text only; prices and sales are flagged for the same reason. A warning, not a ban.
   - id: about_game_media_allowed
     area: text
     applies_to:
