@@ -33,13 +33,40 @@ MAX_DEPTH = 3
 COUNTED = ("pass", "done", "fail", "warn", "review", "todo", "unknown")
 
 
+ENGINES = (
+    ("Unity", ("ProjectSettings/ProjectVersion.txt",)),
+    ("Godot", ("project.godot",)),
+    ("Unreal", ("*.uproject",)),
+    ("GameMaker", ("*.yyp",)),
+    ("Construct", ("*.c3proj", "*.c3p")),
+    ("RPG Maker", ("*.rmmzproject", "*.rpgproject")),
+    ("Defold", ("game.project",)),
+    ("LÖVE", ("*.love",)),
+)
+"""Engine name and the files (glob patterns) that mark a project of it. Only Unity, Godot and Unreal are scanned;
+the others are listed so the user can start them, and answer the interview instead."""
+
+
+def _mentions(file: Path, word: str) -> bool:
+    try:
+        return word in file.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return False
+
+
 def engine_of(folder: Path) -> str | None:
-    if (folder / "ProjectSettings" / "ProjectVersion.txt").is_file():
-        return "Unity"
-    if (folder / "project.godot").is_file():
-        return "Godot"
-    if any(folder.glob("*.uproject")):
-        return "Unreal"
+    for name, patterns in ENGINES:
+        if any(next(folder.glob(p), None) for p in patterns):
+            return name
+    if (folder / "main.lua").is_file() and (folder / "conf.lua").is_file():
+        return "LÖVE"
+    if _mentions(folder / "Cargo.toml", "bevy"):
+        return "Bevy"
+    if any(_mentions(p, "MonoGame") for p in folder.glob("*.csproj")):
+        return "MonoGame"
+    built = any((folder / f"{exe.stem}_Data").is_dir() for exe in folder.glob("*.exe"))
+    if built or (folder / "steam_appid.txt").is_file():
+        return "game build"  # a built game: its project may be elsewhere or in an engine not listed here
     return None
 
 

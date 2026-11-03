@@ -232,6 +232,39 @@ async def test_status_lists_games_then_shows_progress(workspace: Path) -> None:
     assert "| Release step | State | Progress | Open items |" in progress["display"]
 
 
+def test_more_engines_and_built_games_are_found(tmp_path: Path) -> None:
+    from steamworks_mcp.status import engine_of
+
+    def folder(name: str, files: dict[str, str]) -> Path:
+        for rel, text in files.items():
+            (tmp_path / name / rel).parent.mkdir(parents=True, exist_ok=True)
+            (tmp_path / name / rel).write_text(text, "utf-8")
+        return tmp_path / name
+
+    assert engine_of(folder("gm", {"Fort.yyp": "{}"})) == "GameMaker"
+    assert engine_of(folder("rpg", {"game.rmmzproject": ""})) == "RPG Maker"
+    assert engine_of(folder("love", {"main.lua": "", "conf.lua": ""})) == "LÖVE"
+    assert engine_of(folder("bevy", {"Cargo.toml": '[dependencies]\nbevy = "0.14"\n'})) == "Bevy"
+    assert engine_of(folder("mg", {"Fort.csproj": '<PackageReference Include="MonoGame.Framework.DesktopGL" />'})) == (
+        "MonoGame"
+    )
+    assert engine_of(folder("built", {"Fort.exe": "", "Fort_Data/x": ""})) == "game build"
+    assert engine_of(folder("lua_tool", {"main.lua": ""})) is None  # main.lua alone is not a LÖVE game
+
+
+async def test_status_says_how_to_start_a_game_it_does_not_list(workspace: Path) -> None:
+    config = Config(workspace_root=workspace)
+    found = await call(config, "status")
+    assert "Not seeing your game?" in found["display"] and any("not listed" in n for n in found["next"])
+
+
+async def test_export_package_picks_the_next_open_step(workspace: Path) -> None:
+    config = Config(workspace_root=workspace)
+    await call(config, "init_project", path="game", scan=False)
+    out = await call(config, "export_package", path="game")
+    assert (workspace / "game" / ".steam-mcp" / "exports" / "gate_0" / "CHECKLIST.md").is_file(), out["summary"]
+
+
 async def test_server_info_has_no_secrets(tmp_path: Path) -> None:
     config = Config(workspace_root=tmp_path, publisher_key="SECRETKEY0123456789", http_token=TOKEN)
     info = await call(config, "server_info")

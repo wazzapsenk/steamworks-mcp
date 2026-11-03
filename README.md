@@ -311,8 +311,9 @@ Start with `uvx steamworks-mcp doctor`: it shows what is set up and the command 
 
 ## Known limits
 
-- **Scans** read Unity, Godot and Unreal projects. Other engines answer the questions instead; everything after the
-  scan works the same.
+- **Scans** read Unity, Godot and Unreal projects. GameMaker, Construct, RPG Maker, Defold, LÖVE, Bevy, MonoGame
+  projects and built games are listed too; they answer the questions instead of a scan, and any other folder can be
+  started by name. Everything after the scan works the same.
 - **Still manual in Steamworks:** pricing, the content survey and ratings, the Controller and Accessibility surveys,
   the release date, stat definitions, screenshots and trailers, creating depots, packages and DLC, and setting a
   build live on the default branch. The checklist from `export_package` tells you exactly where.

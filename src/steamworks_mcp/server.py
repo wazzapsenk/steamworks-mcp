@@ -829,14 +829,19 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False))
     @user_errors
-    def export_package(path: str, gate: Gate) -> dict[str, Any]:
+    def export_package(path: str, gate: Gate | None = None) -> dict[str, Any]:
         """Write everything needed to finish a gate by hand to .steam-mcp/exports/gate_<gate>/: correctly named
         files (store localization JSON and per-language texts, store/library images and icons, SteamPipe scripts,
         achievement icons and CSV) and a CHECKLIST.md that says, for every open item, which Steamworks page and
-        field it goes to and what to paste. Done items are ticked. Nothing is uploaded or published."""
+        field it goes to and what to paste. Done items are ticked. Nothing is uploaded or published.
+        Without `gate`: the next release step that is still open."""
         project = open_project(path)
+        step: int = gate if gate is not None else 3
+        if gate is None:
+            report = gap_report_fn(project.values(), project.state, project.files.root, browser=config.browser_enabled)
+            step = next((g["gate"] for g in report["gates"] if not g["ready"]), 3)
         return present.export_package(
-            package.export_package(project.values(), project.state, project.files, gate, browser=config.browser_enabled)
+            package.export_package(project.values(), project.state, project.files, step, browser=config.browser_enabled)
         )
 
     # ------------------------------------------------------------------ execution (API, BROWSER, steamcmd)

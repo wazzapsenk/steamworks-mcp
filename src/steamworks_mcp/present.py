@@ -754,7 +754,9 @@ def status_workspace(data: dict[str, Any]) -> dict[str, Any]:
     games, untracked = data.get("games") or [], data.get("not_tracked_yet") or []
     rows = [[g.get("name") or "—", g["path"], g.get("engine") or "—", "yes"] for g in games]
     rows += [["—", u["path"], u["engine"], "not yet"] for u in untracked]
-    display = table(["Game", "Folder", "Engine", "Tracked"], rows)
+    not_listed = "Not seeing your game? Tell me its folder (any folder works, any engine) and I will start it there."
+    display = join(table(["Game", "Folder", "Engine", "Tracked"], rows), not_listed if rows else "")
+    unlisted = "If the user's game is not listed, ask for its folder and call init_project(path=<that folder>)."
     if games:
         summary = f"{plural(len(games), 'game')} tracked in this workspace"
         if untracked:
@@ -762,7 +764,7 @@ def status_workspace(data: dict[str, Any]) -> dict[str, Any]:
         return result(
             data,
             summary + ".",
-            next="Call status(path=<folder>) for the game the user means, or init_project for a new one.",
+            next=["Call status(path=<folder>) for the game the user means, or init_project for a new one.", unlisted],
             display=display,
         )
     if untracked:
@@ -770,7 +772,7 @@ def status_workspace(data: dict[str, Any]) -> dict[str, Any]:
             data,
             f"Found {plural(len(untracked), 'game project')}, none tracked yet.",
             outcome="needs_input",
-            next="Ask the user which game to start with, then call init_project(path=<its folder>).",
+            next=["Ask the user which game to start with, then call init_project(path=<its folder>).", unlisted],
             display=display,
         )
     if data.get("games_folder_set") is False:
@@ -790,8 +792,9 @@ def status_workspace(data: dict[str, Any]) -> dict[str, Any]:
         f"No game found in {data.get('workspace_root')} yet.",
         outcome="needs_input",
         next=(
-            "Ask the user where the game's folder is. It has to be inside the workspace root above; if it is not, "
-            "they can change STEAMWORKS_MCP_ROOT (steamworks-mcp setup does it). Then call init_project(path=...)."
+            "Ask the user where the game's folder is (any engine; for a game with no folder yet, init_project creates "
+            "one). It has to be inside the workspace root above; if it is not, they can change STEAMWORKS_MCP_ROOT "
+            "(steamworks-mcp setup does it). Then call init_project(path=...)."
         ),
     )
 
