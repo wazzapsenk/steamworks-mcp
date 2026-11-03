@@ -37,7 +37,7 @@ from steamworks_mcp.generate import deterministic as gen_det
 from steamworks_mcp.generate import integration
 from steamworks_mcp.generate import text as gen_text
 from steamworks_mcp.interview.forms import field_id, form_model
-from steamworks_mcp.interview.questions import Question, next_questions
+from steamworks_mcp.interview.questions import DESCRIBE, Question, next_questions
 from steamworks_mcp.localization import store as loc
 from steamworks_mcp.manifest.io import ManifestError, atomic_write, load_drafts
 from steamworks_mcp.manifest.paths import FieldPathError, iter_fields
@@ -333,7 +333,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         )
 
     def interview_form(
-        ctx: Context, path: str, gate: Gate | None = None, max_questions: int = 3, use_form: bool = True
+        ctx: Context, path: str, gate: Gate | None = None, max_questions: int = 5, use_form: bool = True
     ) -> Any:
         caps = ctx.client_capabilities
         if not use_form or caps is None or caps.elicitation is None:
@@ -348,7 +348,7 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
     def start_interview(
         path: str,
         gate: Gate | None = None,
-        max_questions: int = 3,
+        max_questions: int = 5,
         use_form: bool = True,
         form: Annotated[BaseModel | None, Resolve(interview_form)] = None,
     ) -> dict[str, Any]:
@@ -364,13 +364,15 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
         Args:
             path: Folder that holds steamworks.yaml.
             gate: Only questions for this gate (0-3).
-            max_questions: 1-5, default 3.
+            max_questions: 1-5, default 5.
             use_form: Show a form when the client supports it.
         """
         project = open_project(path)
         answered: dict[str, Any] = {}
+        description = None
         if form is not None:
             answered = {field_id(k): v for k, v in form.model_dump().items() if v not in (None, "")}
+            description = answered.pop(DESCRIBE, None)
             if answered:
                 fields_ops.set_fields(project, answered, "user")
                 project.save()
@@ -379,6 +381,8 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             "questions": [q.as_dict() for q in questions],
             "remaining_after_these": remaining,
         }
+        if description:
+            out["game_description"] = description
         if answered:
             out["saved_from_form"] = sorted(answered)
         if not questions:
@@ -1064,7 +1068,9 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
             f"Help me release the game in `{path}` on Steam. Work in this order and keep me in the loop:\n"
             "1. status: where the game stands. If it is not tracked yet, init_project (or scan_project if "
             "steamworks.yaml exists), then gap_report.\n"
-            "2. start_interview: ask me the questions in small batches and save my answers with set_field.\n"
+            "2. start_interview: its first question asks me to describe the game; fill the game inputs from my "
+            "answer as drafts (set_field with source='generated') and let me confirm them in one list. Then ask me "
+            "the rest in small batches and save my answers with set_field; optional ones I may skip.\n"
             "3. generate the drafts (store_short, store_long, achievements, cloud, builds, requirements, code); show "
             "me each one and approve_fields only what I agree with. Before the store text, offer a market study "
             "(the market_research prompt).\n"

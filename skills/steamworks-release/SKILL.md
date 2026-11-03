@@ -13,7 +13,7 @@ Arguments, from the conversation (ask the user for any that are missing):
 
 Help me release the game in `<path>` on Steam. Work in this order and keep me in the loop:
 1. status: where the game stands. If it is not tracked yet, init_project (or scan_project if steamworks.yaml exists), then gap_report.
-2. start_interview: ask me the questions in small batches and save my answers with set_field.
+2. start_interview: its first question asks me to describe the game; fill the game inputs from my answer as drafts (set_field with source='generated') and let me confirm them in one list. Then ask me the rest in small batches and save my answers with set_field; optional ones I may skip.
 3. generate the drafts (store_short, store_long, achievements, cloud, builds, requirements, code); show me each one and approve_fields only what I agree with. Before the store text, offer a market study (the steamworks-market-research skill).
 4. validate, translate every text into every target language (the steamworks-localize skill: localization_pending / localization_set), prepare_images.
 5. In the game's code: integration_code for the Steam SDK code that matches steamworks.yaml, then check_code; explain what it finds and fix it only when I ask.

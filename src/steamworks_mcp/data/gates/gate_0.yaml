@@ -146,6 +146,9 @@ rules:
       kind: present
       fields:
         - prerequisites.steam_direct_fee_paid_on
+    when:
+      - field: prerequisites.steam_direct_fee_paid
+        op: is_true
     execution_mode: MANUAL
     where: n/a (enforced by Valve)
     rule: '>= 21 days from app-fee payment to release.'

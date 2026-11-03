@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from steamworks_mcp.interview.questions import coerce, unit_ancestor
+from steamworks_mcp.interview.questions import (
+    CORE_INPUTS,
+    DESCRIBE,
+    PREREQUISITES,
+    coerce,
+    prerequisite_answers,
+    unit_ancestor,
+)
 from steamworks_mcp.localization.store import Localization, accept_sources
 from steamworks_mcp.manifest import paths as fp
 from steamworks_mcp.manifest.io import ManifestError, load_drafts, save_draft
@@ -42,6 +49,20 @@ def set_fields(
     """
     if not changes:
         raise ValueError("Nothing to set: pass `field` + `value` or `values`.")
+    changes = dict(changes)
+    if DESCRIBE in changes:
+        raise AnswerError(
+            f"{DESCRIBE} is not saved as it is. Fill the game inputs you can from it ("
+            + ", ".join(CORE_INPUTS)
+            + ") with set_field(values=..., source='generated'), then call start_interview so the user confirms them."
+        )
+    if PREREQUISITES in changes:
+        try:
+            done = prerequisite_answers(changes.pop(PREREQUISITES))
+        except ValueError as exc:
+            raise AnswerError(str(exc)) from exc
+        now = project.values()  # steps answered before keep their answer unless named now
+        changes = {**{p: v for p, v in done.items() if v or fp.get(now, p) is None}, **changes}
     for path in changes:
         if not fp.is_valid(path):
             raise fp.FieldPathError(f'"{path}" is not a field of steamworks.yaml (see get_spec_info("schema")).')

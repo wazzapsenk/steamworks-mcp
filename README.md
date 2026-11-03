@@ -159,6 +159,10 @@ Just talk to your assistant. Some things you can say:
 Every answer starts with one plain sentence and, where it helps, a table. The assistant shows you each draft; only
 you approve.
 
+For a new game the assistant first asks you to describe it in a few sentences, then shows what it understood in one
+list for you to confirm. The questions after that come a few at a time; the optional ones you can skip, and "not yet"
+is always a fine answer.
+
 ## Words you will see
 
 | Word | Means |

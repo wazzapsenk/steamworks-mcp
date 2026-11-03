@@ -40,7 +40,10 @@ release), how far each one is, and the one next thing to do. Explain the steps i
 
 ## 4. Ask the first questions
 
-Call `start_interview(path)` and ask its questions a few at a time; save answers with `set_field`.
+Call `start_interview(path)`. Its first question asks the user to describe the game: fill every game input the answer
+gives with `set_field(path, values={...}, source='generated')` (invent nothing), then call it again so the user
+confirms them all in one list. Ask the rest a few at a time and save answers with `set_field`; the optional ones can
+be skipped, and the account steps come as one multiple choice.
 
 ## What to tell the user once
 

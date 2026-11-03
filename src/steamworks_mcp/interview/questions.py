@@ -54,6 +54,43 @@ GAME_INPUTS = [
 ]
 """Inputs for writing the store page; asked first (gate 1), in an order that builds the picture of the game."""
 
+CORE_INPUTS = [
+    "game.name",
+    "game.pitch",
+    "game.genres",
+    "game.players",
+    "game.core_loop",
+    "game.usps",
+    "game.target_audience",
+    "game.tone",
+]
+"""The game inputs the store-text generators cannot do without; the others only make the text better."""
+
+DESCRIBE = "game_description"
+"""Synthetic question: one free answer about the game, which the assistant turns into ``game.*`` drafts."""
+DESCRIBE_WHEN_EMPTY = 4
+"""Ask for the description when at least this many core inputs are empty and none was answered or drafted yet."""
+PREREQUISITES = "prerequisites_done"
+"""Synthetic question: which of the account steps are done, as one multiple choice instead of one question each."""
+PREREQUISITE_LABELS = {
+    "prerequisites.partner_account": "Steamworks partner account",
+    "prerequisites.steam_direct_fee_paid": "Steam Direct fee paid for this game",
+    "prerequisites.tax_interview_done": "Tax interview",
+    "prerequisites.bank_info_done": "Bank information",
+    "prerequisites.identity_verified": "Identity verification",
+    "prerequisites.restricted_account": "Separate, limited Steamworks user for automation",
+}
+NOT_ASKED = re.compile(
+    r"^(assets\.|achievements\b|release\.coming_soon_since$|apps\.\w+\.cloud\.(byte|file)_quota$"
+    r"|apps\.\w+\.builds\.depots\b)"
+)
+"""Fields a chat answer cannot fill well: files go into the game folder and through prepare_images, achievements
+through their own flow, Cloud quotas and depots come from the scan; gap_report says how each gets done."""
+MORE = "more_about_the_game"
+"""Group of the optional game inputs, asked together in one round."""
+SKIP_ANSWERS = {"skip", "pass", "later", "geç", "gec", "sonra", "überspringen", "passer"}
+"""Answers that leave a field empty on purpose: it counts as answered and is not asked again."""
+
 NONE_ANSWERS = {"none", "-", "nothing"}
 """Answers that mean "no languages" in a language list."""
 
@@ -165,7 +202,6 @@ CATALOG: dict[str, dict[str, Any]] = {
     "store.accessibility": {
         "q": "Which accessibility features does the game have (e.g. subtitles, resizable UI, difficulty levels, "
         "save anytime, color alternatives)? Say 'none' if it has none.",
-        "kind": "list",
     },
     "release.planned_date": {"q": "Planned release date? (YYYY-MM-DD; Steam keeps it hidden until you show it)"},
     "release.display_date": {"q": "What should the store show before the exact date (e.g. 'Q2 2027', 'Coming soon')?"},
@@ -200,7 +236,6 @@ CATALOG: dict[str, dict[str, Any]] = {
     "apps.main.installation.redistributables": {
         "q": "Which runtimes must Steam install with the game (e.g. Visual C++ 2022, DirectX)? Say 'none' if it "
         "needs none; Unity and Godot games usually need none.",
-        "kind": "list",
     },
     "release.store_review_passed": {"q": "Has Valve approved the store page review?"},
     "release.build_review_passed": {"q": "Has Valve approved the build review?"},
@@ -225,9 +260,13 @@ class Question:
     """True when the field already has a draft value (e.g. from the scan): the user only needs to confirm it."""
     help: str = ""
     evidence: list[dict[str, Any]] = field(default_factory=list)
+    optional: bool = False
+    """Only makes the store text better: the user may answer "skip"."""
 
     def as_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {"id": self.id, "question": self.question, "type": self.kind}
+        if self.optional:
+            out["optional"] = True
         if self.options:
             out["options"] = self.options
         if self.labels:
@@ -337,9 +376,38 @@ def _humanize(path: str) -> str:
 # ---------------------------------------------------------------------------------------------------- selection
 
 
+def _synthetic(path: str, gate: int, values: dict[str, Any], group: str) -> Question | None:
+    if path == DESCRIBE:
+        return Question(
+            DESCRIBE,
+            "Tell me about your game in a few sentences: what it is, what players do again and again, who it is for, "
+            "how many play together (online or on one screen), and the mood.",
+            "long_text",
+            group,
+            gate,
+            help="Your assistant fills the store-page inputs from this and shows them to you to confirm in one go.",
+        )
+    if path == PREREQUISITES:
+        options = [p for p in PREREQUISITE_LABELS if fp.get(values, p) is None]
+        return Question(
+            PREREQUISITES,
+            "Which of these Steamworks account steps are already done? Pick all that are; the rest become steps on "
+            "your checklist, with links.",
+            "multi",
+            group,
+            gate,
+            options=options,
+            labels={p: PREREQUISITE_LABELS[p] for p in options},
+            help="Answer 'none' or 'not yet' if none of them are done.",
+        )
+    return None
+
+
 def build_question(
     path: str, gate: int, values: dict[str, Any], state: State, group: str, root: Path | None = None
 ) -> Question:
+    if synthetic := _synthetic(path, gate, values, group):
+        return synthetic
     annotation, description = field_info(path)
     kind, options = kind_of(annotation)
     spec = CATALOG.get(path, {})
@@ -375,6 +443,9 @@ def build_question(
             q.evidence = [e.model_dump() for e in fs.evidence]
     elif fs and fs.evidence:
         q.evidence = [e.model_dump() for e in fs.evidence]
+    if group == MORE:
+        q.optional = True
+        q.help = (q.help + " " if q.help else "") + "Optional: answer 'skip' to leave it out."
     return q
 
 
@@ -386,6 +457,14 @@ def _expand_units(path: str, values: dict[str, Any], state: State) -> list[str]:
     fs = state.fields.get(path)
     draft = fs is not None and fs.status in ("draft", "needs_review")
     return [k for k in kids if draft or is_empty(fp.get(values, k))]
+
+
+def _drafted(path: str, state: State) -> bool:
+    """A value waiting for the user's OK (in ``path`` or the unit holding it)."""
+    unit = unit_ancestor(path)
+    return any(
+        (fs := state.fields.get(p)) is not None and fs.status in ("draft", "needs_review") for p in (path, unit) if p
+    )
 
 
 def _open(path: str, values: dict[str, Any], state: State) -> bool:
@@ -402,18 +481,24 @@ def _open(path: str, values: dict[str, Any], state: State) -> bool:
 
 
 def pending_fields(results: list[RuleResult], values: dict[str, Any], state: State) -> list[tuple[str, int, str]]:
-    """``(field, gate, group)`` to ask about, in order (gate 0, the game inputs, the languages, then gates 1-3),
-    without duplicates.
+    """``(field, gate, group)`` to ask about, in order, without duplicates:
 
-    Yes/no confirmations answered "no" are not asked again: they are steps to do in Steamworks first. The source
-    language has a default, so it is confirmed while the translation languages are still open; those are asked after
-    the supported languages, which they default to.
+    1. while most core game inputs are empty, one free description of the game (``game_description``);
+    2. the core game inputs (drafts from that description are confirmed together);
+    3. the languages: the source language has a default, so it is confirmed while the translation languages are
+       still open; those are asked after the supported languages, which they default to;
+    4. the optional game inputs, in one round the user may skip;
+    5. the account steps (``prerequisites_done``), as one multiple choice;
+    6. what the gate rules still miss, gate by gate.
+
+    Yes/no confirmations answered "no" are not asked again: they are steps to do in Steamworks first. Fields a chat
+    answer cannot fill (:data:`NOT_ASKED`) are left to gap_report.
     """
     out: list[tuple[str, int, str]] = []
     seen: set[str] = set()
 
     def add(path: str, gate: int, group: str) -> None:
-        if path in seen or path in GENERATED or path.startswith("checklist."):
+        if path in seen or path in GENERATED or path.startswith("checklist.") or NOT_ASKED.match(path):
             return
         seen.add(path)
         for sub in _expand_units(path, values, state):
@@ -430,35 +515,56 @@ def pending_fields(results: list[RuleResult], values: dict[str, Any], state: Sta
                     continue
                 add(path, r.gate, r.rule.id)
 
-    add_rules({0})
-    for path in GAME_INPUTS:
+    untouched = not any(p == c or p.startswith(c + ".") for p in state.fields for c in CORE_INPUTS)
+    if untouched and sum(is_empty(fp.get(values, p)) for p in CORE_INPUTS) >= DESCRIBE_WHEN_EMPTY:
+        out.append((DESCRIBE, 1, "game"))  # asked once: after it, the gaps are asked one by one
+    for path in CORE_INPUTS:
         fs = state.fields.get(path)
         if is_empty(fp.get(values, path)) or (fs and fs.status in ("draft", "needs_review")):
-            add(path, 1, path.split(".")[1] if path.count(".") > 1 else "game")
-    targets_open = _open("target_languages", values, state)
-    if targets_open:
-        add("source_language", 1, "languages")
+            add(path, 1, "game")
     if _open("store.supported_languages", values, state):
         add("store.supported_languages", 1, "languages")
-    elif targets_open:
+    elif _open("target_languages", values, state):
+        add("source_language", 1, "languages")  # its default is confirmed once, with the translation languages
         add("target_languages", 1, "languages")
-    add_rules({1, 2, 3})
+    for path in GAME_INPUTS:
+        if path not in CORE_INPUTS and _open(path, values, state):
+            add(path, 1, MORE)
+    asked_at_once = [p for p in PREREQUISITE_LABELS if fp.get(values, p) is None]
+    if asked_at_once:
+        out.append((PREREQUISITES, 0, "prerequisites"))
+    seen.update(PREREQUISITE_LABELS)
+    add_rules({0, 1, 2, 3})
     return out
 
 
 def next_questions(
     results: list[RuleResult], values: dict[str, Any], state: State, limit: int = 3, root: Path | None = None
 ) -> tuple[list[Question], int]:
-    """At most ``limit`` questions, keeping a group together; plus how many fields remain after these."""
+    """At most ``limit`` questions, keeping a group together; plus how many fields remain after these.
+
+    Three rounds ignore ``limit``: the game description comes alone, drafted game inputs are confirmed all at once
+    (one table to check), and the optional game inputs come together (one "skip" answers them all)."""
     pending = pending_fields(results, values, state)
     if not pending:
         return [], 0
     first_group = pending[0][2]
-    chosen = [p for p in pending if p[2] == first_group][:limit]
+    if pending[0][0] == DESCRIBE:
+        chosen = pending[:1]
+    elif first_group == MORE:
+        chosen = [p for p in pending if p[2] == MORE]
+    else:
+        chosen = [p for p in pending if p[2] == first_group][:limit]
+    drafted = [p for p in pending if p[2] == "game" and _drafted(p[0], state)]
+    if first_group == "game" and len(drafted) > len(chosen) and all(_drafted(p[0], state) for p in chosen):
+        chosen = drafted
+        limit = len(chosen)
+    if pending[0][0] == DESCRIBE or first_group == MORE:
+        limit = len(chosen)
     for p in pending:
         if len(chosen) >= limit:
             break
-        if p not in chosen and p[1] == chosen[0][1]:
+        if p not in chosen and p[1] == chosen[0][1] and p[2] not in (MORE, "game"):
             chosen.append(p)
     questions = [build_question(path, gate, values, state, group, root) for path, gate, group in chosen]
     return questions, len(pending) - len(questions)
@@ -495,6 +601,8 @@ def _language_codes(value: Any) -> Any:
 def coerce(path: str, value: Any, current: Any = None) -> Any:
     """Turn a chat answer into the field's type (lists from comma-separated text, yes/no into booleans, language
     names into Steam codes). ``current`` is the field's value now: a language table keeps its rows' details."""
+    if isinstance(value, str) and value.strip().lower() in SKIP_ANSWERS:
+        return None
     annotation, _ = field_info(path)
     kind, options = kind_of(annotation)
     lang = language_field(annotation)
@@ -517,8 +625,9 @@ def coerce(path: str, value: Any, current: Any = None) -> Any:
                 by_key = {_option_key(o): o for o in options}
                 return [by_key.get(_option_key(x), x) for x in items]
             item = _strip(get_args(_strip(annotation))[0]) if get_origin(_strip(annotation)) is list else None
-            if isinstance(item, type) and issubclass(item, BaseModel) and "path" in item.model_fields:
-                return [{"path": x} for x in items]  # e.g. trailers given as file paths
+            model_fields = item.model_fields if isinstance(item, type) and issubclass(item, BaseModel) else {}
+            if key := next((k for k in ("path", "executable") if k in model_fields), None):
+                return [{key: x} for x in items]  # trailers as file paths, launch options as the file to start
             return items
         if kind == "bool":
             if v.lower() in TRUE:
@@ -529,6 +638,30 @@ def coerce(path: str, value: Any, current: Any = None) -> Any:
             return None
         return v
     return value
+
+
+def prerequisite_answers(value: Any) -> dict[str, bool]:
+    """The ``prerequisites_done`` answer as one yes/no per account step: the steps named are done, the others not
+    yet. Steps can be named by field path or in words ("bank, tax interview")."""
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in ("all", "all of them", "hepsi"):
+            return dict.fromkeys(PREREQUISITE_LABELS, True)
+        items = [] if text in NONE_ANSWERS | FALSE else [x for x in re.split(r"[,\n]", value) if x.strip()]
+    else:
+        items = [str(x) for x in value or []]
+    done = set()
+    for item in items:
+        key = _option_key(item)
+        if not key:
+            continue
+        for path, label in PREREQUISITE_LABELS.items():
+            if item.strip() == path or key in _option_key(label) or key in _option_key(path.split(".")[-1]):
+                done.add(path)
+                break
+        else:
+            raise ValueError(f"'{item.strip()}' is not one of: {', '.join(PREREQUISITE_LABELS.values())}.")
+    return {path: path in done for path in PREREQUISITE_LABELS}
 
 
 def unit_ancestor(path: str) -> str | None:

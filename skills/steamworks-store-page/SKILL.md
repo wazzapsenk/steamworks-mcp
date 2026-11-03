@@ -28,7 +28,9 @@ that do not show MCP prompts.
 
 ## 1. Interview
 
-Call `start_interview(path, gate=1)` and ask the user its questions in small batches (clients with forms show them
+Call `start_interview(path, gate=1)`. For a new game its first question asks the user to describe the game: fill
+the game inputs the answer gives with `set_field(path, values={...}, source='generated')` (invent nothing) and call
+it again, so the user confirms them in one list. Then ask the user its questions in small batches (clients with forms show them
 as a form and save the answers themselves). Save chat answers with `set_field(path, values={<question id>:
 <answer>})`. Repeat until the store-page inputs are there:
 

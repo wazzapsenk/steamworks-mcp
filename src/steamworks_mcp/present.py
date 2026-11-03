@@ -248,6 +248,15 @@ def _gate_in_short(g: dict[str, Any]) -> dict[str, Any]:
     return short
 
 
+DESCRIBED = (
+    "From the user's description ({text}), fill every game input it answers (game.name, game.pitch, game.genres, "
+    "game.players.min/max and the co-op/PvP flags, game.core_loop, game.usps, game.target_audience, game.tone, and "
+    "any of game.hook, game.comparable_games, game.session_length, game.launch_content it mentions) with "
+    "set_field(path, values={{...}}, source='generated'). Invent nothing it does not say. Then call start_interview "
+    "again: the user confirms them all in one list."
+)
+
+
 def start_interview(data: dict[str, Any]) -> dict[str, Any]:
     questions = data.get("questions") or []
     remaining = data.get("remaining_after_these", 0)
@@ -269,10 +278,26 @@ def start_interview(data: dict[str, Any]) -> dict[str, Any]:
                 line += f" (from {q['suggestion_source']})"
             line += "."
         lines.append(line)
-    steps = [
-        "Ask the user these questions in chat (they may answer in their own words), then save the answers with "
-        "set_field(path, values={<question id>: <answer>})."
-    ]
+    ids = [q.get("id") for q in questions]
+    if data.get("game_description"):
+        steps = [DESCRIBED.format(text=data["game_description"])]
+    elif ids == ["game_description"]:
+        steps = [
+            "Ask the user this question in chat. Do not save the answer as it is: "
+            + DESCRIBED.format(text="<their answer>")
+        ]
+    elif all(q.get("confirm") for q in questions) and len(questions) > 3:
+        steps = [
+            "Show these values to the user as one list and ask whether they are right. If they are, call "
+            f"approve_fields(path, fields={ids}); save any change with set_field(path, values={{<id>: <answer>}})."
+        ]
+    else:
+        steps = [
+            "Ask the user these questions in chat (they may answer in their own words), then save the answers with "
+            "set_field(path, values={<question id>: <answer>})."
+        ]
+        if any(q.get("optional") for q in questions):
+            steps.append("These are optional: 'skip' leaves one out, and 'skip' for all of them is fine.")
     if data.get("saved_from_form"):
         summary = f"Saved {plural(len(data['saved_from_form']), 'answer')} from the form; " + summary
     return result(data, summary + ".", outcome="needs_input", next=steps, display="\n".join(lines))

@@ -220,7 +220,7 @@ class Evaluator:
                 elif isinstance(c, Confirmed) and v is not True:
                     res.missing.append(p)
                     if v is False:
-                        res.message = f"{p} is answered 'no'."
+                        res.message = "Not done yet: do this in Steamworks, then tell your assistant it is done."
         elif isinstance(c, AnyPresent):
             paths = [p for f in c.fields for p in _expand(self.values, f)]
             res.fields = paths

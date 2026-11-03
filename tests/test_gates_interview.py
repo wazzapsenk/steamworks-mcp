@@ -16,11 +16,21 @@ from PIL import Image
 from steamworks_mcp import spec_info as spec_info_module
 from steamworks_mcp.config import Config
 from steamworks_mcp.gates.engine import RuleResult, evaluate_gates
+from steamworks_mcp.generate.text import REQUIRED_INPUTS
 from steamworks_mcp.interview.forms import form_key, form_model
-from steamworks_mcp.interview.questions import build_question, coerce, next_questions, pending_fields
+from steamworks_mcp.interview.questions import (
+    CORE_INPUTS,
+    build_question,
+    coerce,
+    next_questions,
+    pending_fields,
+    prerequisite_answers,
+    unit_ancestor,
+)
 from steamworks_mcp.manifest.drafts import Draft
 from steamworks_mcp.manifest.io import ManifestFile, ProjectFiles, load_state, save_draft
 from steamworks_mcp.manifest.models import Manifest
+from steamworks_mcp.manifest.paths import get as fp_get
 from steamworks_mcp.manifest.state import State
 from steamworks_mcp.references import patterns
 from steamworks_mcp.server import create_server
@@ -64,7 +74,7 @@ def test_example_game_statuses() -> None:
     r = results(example_values())
     assert r["steam_direct_fee"].status == "pass"
     assert r["steam_tags"].status == "pass"
-    assert r["content_survey_complete"].status == "fail" and "answered 'no'" in r["content_survey_complete"].message
+    assert r["content_survey_complete"].status == "fail" and "Not done yet" in r["content_survey_complete"].message
     assert r["early_access_questionnaire"].status == "not_applicable"
     assert r["sign_nda_and_steam_distribution_agreement"].status == "todo"
     assert r["tax_verification_wait"].status == "info"
@@ -231,36 +241,58 @@ def test_ai_disclosure() -> None:
 # ------------------------------------------------------------------------------------------------ interview
 
 
-def test_questions_start_with_gate_zero_then_game_inputs() -> None:
+def test_questions_start_with_the_game() -> None:
     values = Manifest().model_dump(mode="json")
     s = State()
     res = list(results(values, state=s).values())
     order = [p for p, _, _ in pending_fields(res, values, s)]
-    assert order[0].startswith(("prerequisites.", "apps.main.appid"))
-    assert order.index("game.name") < order.index("store.platforms")
+    assert order[0] == "game_description"  # one free answer instead of eight questions
+    assert order.index("game.tone") < order.index("prerequisites_done") < order.index("store.platforms")
+    assert not {"prerequisites.bank_info_done", "prerequisites.tax_interview_done"} & set(order)  # in one question
     assert "store.short_description" not in order and "game.players.max" in order
+    assert not [p for p in order if p.startswith("assets.") or p == "release.coming_soon_since"]
     qs, remaining = next_questions(res, values, s, limit=3)
-    assert len(qs) == 3 and remaining > 10
-    assert all(q.gate == qs[0].gate for q in qs)
+    assert [q.id for q in qs] == ["game_description"] and remaining > 10
+
+
+def test_drafted_game_inputs_are_confirmed_in_one_round() -> None:
+    values = Manifest.model_validate(
+        {"game": {"name": "Pillow Panic", "pitch": "Forts.", "genres": ["Casual"], "tone": "silly"}}
+    ).model_dump(mode="json")
+    s = State()
+    for path in ("game.name", "game.pitch", "game.genres", "game.tone"):
+        s.record_value(path, fp_get(values, path), "generated")
+    qs, _ = next_questions(list(results(values, state=s).values()), values, s, limit=3)
+    assert {"game.name", "game.pitch", "game.genres", "game.tone"} <= {q.id for q in qs}
+    assert all(q.confirm for q in qs if q.id in ("game.name", "game.tone"))
+
+
+def test_optional_inputs_come_together_and_skip_answers_them() -> None:
+    values = example_values(**{"game.hook": None, "game.fantasy": None, "game.run_length": None})
+    s = State()
+    s.reconcile(values)
+    qs, _ = next_questions(list(results(values, state=s).values()), values, s, limit=1)
+    assert {"game.hook", "game.fantasy", "game.run_length"} <= {q.id for q in qs} and all(q.optional for q in qs)
+    assert coerce("game.hook", "skip") is None
+
+
+def test_account_steps_are_one_multiple_choice() -> None:
+    done = prerequisite_answers("bank, tax interview")
+    assert done["prerequisites.bank_info_done"] and done["prerequisites.tax_interview_done"]
+    assert not done["prerequisites.identity_verified"]
+    assert not any(prerequisite_answers("not yet").values()) and all(prerequisite_answers("all").values())
+    with pytest.raises(ValueError, match="not one of"):
+        prerequisite_answers("my cat")
 
 
 def test_store_page_inputs_are_asked() -> None:
     values = Manifest().model_dump(mode="json")
     s = State()
     order = [p for p, _, _ in pending_fields(list(results(values, state=s).values()), values, s)]
-    wanted = [
-        "game.genres",
-        "game.comparable_games",
-        "game.hook",
-        "game.fantasy",
-        "game.core_loop",
-        "game.players.min",
-        "game.run_length",
-        "game.progression",
-        "game.launch_content",
-        "game.tone",
-    ]
-    assert [p for p in order if p in wanted] == wanted
+    core = ["game.genres", "game.players.min", "game.core_loop", "game.tone"]
+    optional = ["game.comparable_games", "game.hook", "game.fantasy", "game.run_length", "game.launch_content"]
+    assert [p for p in order if p in core] == core and [p for p in order if p in optional] == optional
+    assert max(order.index(p) for p in core) < min(order.index(p) for p in optional)  # what the text needs first
     content = build_question("game.launch_content", 1, values, s, "game")
     assert content.kind == "list" and "at launch" in content.question
     assert "solo" in build_question("game.players.min", 1, values, s, "players").question
@@ -326,9 +358,9 @@ def test_language_questions() -> None:
     s = State()
     s.reconcile(empty)
     order = [p for p, _, _ in pending_fields(list(results(empty, state=s).values()), empty, s)]
-    # translations default to the supported languages, so those come first
-    assert order.index("source_language") < order.index("store.supported_languages")
-    assert "target_languages" not in order
+    # translations default to the supported languages, so those come first; the source is confirmed with them
+    assert "store.supported_languages" in order
+    assert "target_languages" not in order and "source_language" not in order
 
     values = Manifest.model_validate(
         {"store": {"supported_languages": {"english": {}, "german": {}, "schinese": {}}}}
@@ -392,9 +424,14 @@ async def test_interview_round_trip(game: Path) -> None:
     report = await tool(config, "gap_report", path="game")
     assert report["fields_to_fill"] > 0 and report["next"]
     assert {g["gate"] for g in report["gates"]} == {0, 1, 2, 3}
+    described = await tool(config, "start_interview", path="game", use_form=False)
+    if [q["id"] for q in described["questions"]] == ["game_description"]:
+        assert "source='generated'" in described["next"][0]
+        inputs = {"game.name": "Pillow Panic", "game.pitch": "Forts.", "game.genres": "Casual", "game.tone": "silly"}
+        await tool(config, "set_field", path="game", values=inputs, source="generated")
     first = await tool(config, "start_interview", path="game", use_form=False)
     ids = [q["id"] for q in first["questions"]]
-    assert 1 <= len(ids) <= 3
+    assert len(ids) >= 1
     answers = {
         i: (
             "yes"
@@ -492,6 +529,7 @@ async def test_interview_form_when_the_client_supports_it(game: Path, mode: str)
 
     async def answer(context: Any, params: Any) -> ElicitResult:
         props = params.requested_schema["properties"]
+        seen.clear()
         seen.update(props)
         content = {
             k: (True if p.get("type") == "boolean" else 1000000 if p.get("type") == "integer" else "2026-09-01")
@@ -499,10 +537,15 @@ async def test_interview_form_when_the_client_supports_it(game: Path, mode: str)
         }
         return ElicitResult(action="accept", content=content)
 
-    out = await tool(config, "start_interview", {"elicitation_callback": answer, "mode": mode}, path="game")
+    kw = {"elicitation_callback": answer, "mode": mode}
+    described = await tool(config, "start_interview", kw, path="game")
+    assert set(seen) == {"game_description"} and described["game_description"]  # handed back to the assistant
+    game_inputs = {"game.name": "Pillow Panic", "game.pitch": "Forts.", "game.genres": "Casual", "game.tone": "silly"}
+    await tool(config, "set_field", path="game", values=game_inputs)
+    out = await tool(config, "start_interview", kw, path="game")
     assert out["saved_from_form"] and len(seen) == len(out["saved_from_form"])
     state = load_state(ProjectFiles(game / "game"))
-    assert all(state.get(f).status == "approved" for f in out["saved_from_form"])
+    assert all(state.get(unit_ancestor(f) or f).status == "approved" for f in out["saved_from_form"])
 
 
 @pytest.fixture
@@ -577,3 +620,61 @@ async def test_get_spec_info(game: Path) -> None:
     assert (await tool(config, "get_spec_info", kind="reference:3527290"))["appid"] == 3527290
     assert "guide" in await tool(config, "get_spec_info", kind="style_guide:coop_party")
     assert (await tool(config, "get_spec_info", kind="store_patterns"))["overall"]["games"] > 0
+
+
+def test_core_inputs_are_what_the_text_generators_need() -> None:
+    assert set(CORE_INPUTS) == {*REQUIRED_INPUTS, "game.players"}
+
+
+def _novice(q: dict[str, Any]) -> Any:
+    """A first-time user: confirms what is suggested, has done none of the account steps, skips the optional."""
+    kind, options = q.get("type"), q.get("options") or []
+    if q.get("suggestion") not in (None, "", []):
+        return q["suggestion"]
+    if q.get("optional"):
+        return "skip"
+    if q["id"] == "prerequisites_done":
+        return "not yet"
+    answers = {
+        "bool": "yes",
+        "int": "1",
+        "number": "4.99",
+        "date": "2027-05-12",
+        "list": "Casual, Indie, Co-op, Physics, Building",
+    }
+    if kind in ("choice", "multi"):
+        return next(o for o in options if o != "none")
+    return answers.get(str(kind), "Something plain")
+
+
+@pytest.mark.anyio
+async def test_a_new_game_reaches_the_store_page_step_in_few_rounds(tmp_path: Path) -> None:
+    config = Config(workspace_root=tmp_path)
+    described = {
+        "game.name": "Pillow Panic",
+        "game.pitch": "Build a pillow fort with friends and defend it from a sneaky cat.",
+        "game.genres": "Casual, Action",
+        "game.core_loop": "Gather pillows, build, defend, upgrade",
+        "game.usps": "Physics forts, chaotic co-op",
+        "game.target_audience": "Friends who play together online",
+        "game.tone": "silly and cozy",
+        "game.players.min": 1,
+        "game.players.max": 4,
+    }
+    rounds = 0
+    async with Client(create_server(config)) as client:
+        await client.call_tool("init_project", {"path": "game", "scan": False})
+        while True:
+            res = await client.call_tool("start_interview", {"path": "game", "gate": 1, "use_form": False})
+            questions = (res.structured_content or {}).get("questions") or []
+            if not questions:
+                break
+            rounds += 1
+            assert rounds <= 8, [q["id"] for q in questions]
+            if [q["id"] for q in questions] == ["game_description"]:
+                values, source = described, "generated"
+            else:
+                values, source = {q["id"]: _novice(q) for q in questions}, "user"
+            saved = await client.call_tool("set_field", {"path": "game", "values": values, "source": source})
+            assert not saved.is_error, getattr(saved.content[0], "text", "")
+    assert rounds >= 5  # description, confirmation, languages, optional inputs, account steps at least
