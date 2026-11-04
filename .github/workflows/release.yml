@@ -1,4 +1,5 @@
-# Pushing a tag like v0.3.0 tests the code, publishes the package to PyPI and the entry to the MCP Registry.
+# Pushing a tag like v0.3.0 tests the code on every supported Python, publishes the package to PyPI and the entry to
+# the MCP Registry.
 # No tokens: PyPI trusts this workflow (trusted publishing, set up once on pypi.org) and the MCP Registry trusts
 # GitHub's OIDC token for the io.github.wazzapsenk namespace.
 name: Release
@@ -8,7 +9,27 @@ on:
     tags: ["v*"]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12", "3.13"]  # requires-python is >=3.11; .python-version alone would test only 3.13
+    env:
+      UV_PYTHON: ${{ matrix.python }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Test
+        run: |
+          uv sync --locked --extra browser
+          uv run ruff check src tests scripts
+          uv run mypy
+          uv run pytest
+
   release:
+    needs: test
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -26,13 +47,6 @@ jobs:
             echo "Tag $GITHUB_REF_NAME does not match the version $version in pyproject.toml." >&2
             exit 1
           fi
-
-      - name: Test
-        run: |
-          uv sync --locked --extra browser
-          uv run ruff check src tests scripts
-          uv run mypy
-          uv run pytest
 
       - name: Build
         run: uv build
