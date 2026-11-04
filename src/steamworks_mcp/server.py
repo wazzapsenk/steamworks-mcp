@@ -953,10 +953,10 @@ def create_server(config: Config, executor: Executor | None = None, oauth: Local
 
         area "store": texts and their length, languages vs translations, platforms vs system requirements and
         depots, genre, categories vs achievements and Steam Cloud, developer, publisher, support, release date,
-        image slots, screenshots and their all-ages marks, tags. Returns `for_you_to_judge` (the texts) for you to
-        assess too. area "build": depots vs platforms, uploaded builds (publisher key), launch options vs the build
-        folder (path, OS, 32/64-bit), install folder, redistributables vs the build's DLLs, steam_api in the build,
-        Steam Cloud, achievement icons and texts, unpublished changes.
+        image slots, screenshots with their Gameplay category and all-ages marks, tags. Returns `for_you_to_judge`
+        (the texts) for you to assess too. area "build": depots vs platforms, uploaded builds (publisher key),
+        launch options vs the build folder (path, OS, 32/64-bit), install folder, redistributables vs the build's
+        DLLs, steam_api in the build, Steam Cloud, achievement icons and texts, unpublished changes.
 
         Each issue: severity (missing, inconsistent, check), area, what, fix and where in Steamworks."""
         return present.steamworks_check(await execu.check(open_project(path), area, app))

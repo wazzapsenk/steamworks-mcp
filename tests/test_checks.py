@@ -42,7 +42,7 @@ def item(**over: Any) -> dict[str, Any]:
             "library_header": full,
             "library_hero": full,
             "library_logo": {**full, "logo_position": {"pinned_position": "BottomLeft"}},
-            "screenshots": [{"english": f"{i}.jpg", "all_ages": "1"} for i in range(5)],
+            "screenshots": [{"english": f"{i}.jpg", "all_ages": "1", "category": "gameplay"} for i in range(5)],
         },
     }
     base.update(over)
@@ -103,6 +103,21 @@ def test_store_page_problems() -> None:
         "Supported but the store page is not translated: turkish (players see english).",
     ) in found
     assert any(i["area"] == "short description" and "steamworks.yaml" in i["what"] for i in issues)
+
+
+def test_screenshots_need_five_in_the_gameplay_category() -> None:
+    page = item()
+    shots = page["assets"]["screenshots"]
+    shots[0]["category"] = "conceptart"
+    del shots[1]["category"]  # Steamworks leaves the key out until a category is picked
+    shots.append({"all_ages": "1", "category": "gameplay"})  # an empty slot, not a screenshot
+    issues = checks.store_issues(page, LOC, list(range(10)), 0, {"byte_quota": 0}, {"1": {"config": {}}}, {})
+    found = {(i["severity"], i["area"], i["what"]) for i in issues}
+    assert (
+        "missing",
+        "screenshots",
+        "3 of 5 screenshots are in the Gameplay category; the review wants at least 5.",
+    ) in found
 
 
 def setup(tmp_path: Path) -> tuple[dict[str, Any], Path]:

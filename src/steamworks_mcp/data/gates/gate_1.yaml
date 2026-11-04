@@ -246,10 +246,12 @@ rules:
       aspect: 16:9
     execution_mode: ARTIFACT
     where: Edit Store Page > Screenshots
-    rule: At least 5 screenshots; minimum 1920x1080; 16:9.
+    rule: At least 5 screenshots, with at least 5 set to the Gameplay category; minimum 1920x1080; 16:9.
     source_doc: https://partner.steamgames.com/doc/store/assets/standard
     quote: You must provide at least 5 screenshots of your product.
     steamworks_checklist: Your Store Presence / 5 Or More Screenshots
+    notes: Since November 2026 each screenshot has a category on Steamworks (Gameplay, In-Game Menu, Cinematic / Cut
+      Scene, Concept Art), and the review wants at least 5 in Gameplay. steamworks_check(area='store') counts them.
   - id: screenshots_all_ages_flag
     title: Screenshots all ages flag
     description: Mark suitable screenshots as "suitable for all ages" so the game can appear on the front page and hover previews.

@@ -27,7 +27,7 @@ Show the user `.steam-mcp/exports/images/preview.html`. It never generates artwo
 - Capsules show the game's art and its name or logo; no review scores, awards, prices, discount or "new" text, and
   no quotes. Capsules must be readable at small sizes.
 - The library hero has no text or logo (the logo is a separate image placed over it).
-- Screenshots show the game itself, not concept art or menus only; at least five, 16:9, high resolution.
+- Screenshots show the game itself, not concept art or menus only; at least five, 16:9, high resolution. On Steamworks set each one's category; the review wants at least five in Gameplay.
 - Trailers: the first one starts on the page; show gameplay early. Check Valve's trailer guidance.
 
 ## 4. Upload

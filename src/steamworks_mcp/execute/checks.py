@@ -274,7 +274,12 @@ def store_issues(
                 "missing", "images", "The library logo has no position.", "Set it with the Library Logo placement tool."
             )
         )
-    shots = [s for s in assets.get("screenshots") or [] if isinstance(s, dict) and any(k != "all_ages" for k in s)]
+    shots = [
+        s
+        for s in assets.get("screenshots") or []
+        if isinstance(s, dict) and any(k not in ("all_ages", "category") for k in s)
+    ]
+    gameplay = sum(s.get("category") == "gameplay" for s in shots)
     if len(shots) < 5:
         out.append(
             issue(
@@ -284,7 +289,16 @@ def store_issues(
                 "Upload more on Graphical Assets.",
             )
         )
-    elif sum(_on(s.get("all_ages")) for s in shots) < 4:
+    elif gameplay < 5:
+        out.append(
+            issue(
+                "missing",
+                "screenshots",
+                f"{gameplay} of {len(shots)} screenshots are in the Gameplay category; the review wants at least 5.",
+                "Set the category of gameplay screenshots to Gameplay on Graphical Assets > Screenshots.",
+            )
+        )
+    if len(shots) >= 5 and sum(_on(s.get("all_ages")) for s in shots) < 4:
         out.append(
             issue(
                 "check",
