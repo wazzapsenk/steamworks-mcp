@@ -108,7 +108,7 @@ _project_locks: dict[str, threading.Lock] = {}
 _project_locks_guard = threading.Lock()
 
 
-def project_lock(path: Any) -> threading.Lock | None:
+def project_lock(path: Any) -> "threading.Lock | None":  # quoted: threading.Lock is a function before Python 3.13
     """One lock per game folder. Every tool reads steamworks.yaml and state.json and writes them back whole, so two
     calls on the same game at once would lose one call's changes; calls on different games still run side by side."""
     if not isinstance(path, str) or not path.strip():
